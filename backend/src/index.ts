@@ -8,6 +8,7 @@ import { createJobsRouter } from './routes/jobs.js';
 import { createProfileRouter } from './routes/profile.js';
 import { createApplicationsRouter } from './routes/applications.js';
 import { MockStorage } from './storage/mock-storage.js';
+import { PrismaStorage } from './storage/prisma-storage.js';
 import { RateLimiter } from './utils/rate-limiter.js';
 import { Orchestrator } from './services/orchestrator.js';
 import { MockAdapter } from './adapters/mock-adapter.js';
@@ -35,7 +36,8 @@ app.use((req, _res, next) => {
 // Data layer
 // ---------------------------------------------------------------------------
 
-const storage = new MockStorage();
+// Use PrismaStorage when DATABASE_URL is configured, fall back to MockStorage
+const storage = config.hasDatabase ? new PrismaStorage() : new MockStorage();
 await storage.connect();
 
 // Seed sample data for development
@@ -85,8 +87,8 @@ app.get('/api/health', (_req, res) => {
     status: 'ok',
     timestamp: new Date().toISOString(),
     uptime: process.uptime(),
-    database: config.hasDatabase ? 'configured' : 'not configured',
-    storage: 'MockStorage',
+    database: config.hasDatabase ? 'connected' : 'not configured',
+    storage: config.hasDatabase ? 'PrismaStorage (PostgreSQL)' : 'MockStorage',
     adapters: Array.from(adapters.keys()),
     rateLimiter: {
       active: rateLimiter.activeCount,
