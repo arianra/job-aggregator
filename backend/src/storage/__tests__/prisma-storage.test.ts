@@ -5,7 +5,7 @@ import type { Job, Source, Company, Profile, Match, Application } from '@job-agg
 
 // Use a test-specific database
 const testPrisma = new PrismaClient({
-  datasources: { db: { url: 'postgresql://job_aggregator:dev_password_local_only@localhost:5432/job_aggregator' } },
+  datasources: { db: { url: 'postgresql://job_aggregator:dev_password_local_only@localhost:5432/job_aggregator_test' } },
 });
 
 function makeJob(overrides: Partial<Job> = {}): Job {

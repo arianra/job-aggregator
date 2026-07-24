@@ -40,15 +40,20 @@ app.use((req, _res, next) => {
 const storage = config.hasDatabase ? new PrismaStorage() : new MockStorage();
 await storage.connect();
 
-// Seed sample data for development
-for (const job of sampleJobs) {
-  await storage.saveJob(job);
+// Seed sample data for development (idempotent — skips if data already exists)
+const existingJobs = await storage.listJobs({ limit: 1 });
+if (existingJobs.length === 0) {
+  for (const job of sampleJobs) {
+    await storage.saveJob(job);
+  }
+  for (const source of sampleSources) {
+    await storage.saveJobSource(source);
+  }
+  await storage.saveProfile(sampleProfile);
+  logger.info('Seeded sample data', { jobs: sampleJobs.length, sources: sampleSources.length, profile: true });
+} else {
+  logger.info('Sample data already seeded, skipping', { existingJobs: existingJobs.length });
 }
-for (const source of sampleSources) {
-  await storage.saveJobSource(source);
-}
-await storage.saveProfile(sampleProfile);
-logger.info('Seeded sample data', { jobs: sampleJobs.length, sources: sampleSources.length, profile: true });
 
 // ---------------------------------------------------------------------------
 // Adapters
