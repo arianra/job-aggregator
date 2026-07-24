@@ -1,0 +1,166 @@
+# Project Development Journal
+
+This document tracks our development progress, decisions, and context to ensure continuity across sessions.
+
+---
+
+## 2026-07-23: Project Kickoff & Infrastructure Setup
+
+### Session Goals
+- Establish project architecture
+- Set up development infrastructure
+- Implement testing and error handling foundations
+
+### Decisions Made
+
+#### Architecture
+- **Monorepo structure**: Using npm workspaces for backend/frontend/shared code
+- **Backend**: Express + TypeScript + Prisma ORM
+- **Frontend**: React + Vite + Tailwind CSS
+- **Database**: PostgreSQL (local development only)
+- **Testing**: Vitest (chosen over Jest for better ESM support)
+
+#### Job Board Strategy (from ontology.md)
+- **Job-first ontology**: Jobs are canonical entities, sources (boards) are just observation points
+- **Deduplication**: Same job on multiple boards = one job with multiple sources
+- **Direct sourcing**: Find company career pages to apply directly
+- **Initial boards**: LinkedIn + Indeed (Phase 1)
+- **Future boards**: Glassdoor, Wellfound, niche boards (Phase 5+)
+
+#### Security & Privacy
+- **Repository**: Public (GitHub: github.com/arianra/job-aggregator)
+- **Sensitive data**: NEVER committed to git
+  - API keys in `.env` (gitignored)
+  - Database runs locally only
+  - Resumes/profiles stored in database, not files
+- **Pre-commit hook**: Blocks commits containing secrets (API keys, passwords, tokens)
+- **Authentication**: SSH keys (not plaintext tokens)
+
+#### Code Quality
+- **TypeScript**: Strict mode enabled across all packages
+- **Testing**: TDD approach - tests before implementation
+- **Logging**: Winston logger with file + console output
+- **Error handling**: AppError class for operational errors, generic for unexpected
+
+### Implementation Progress
+
+#### ✅ Completed
+1. **Git Repository Setup**
+   - Created public repo on GitHub
+   - Configured SSH authentication
+   - Set up pre-commit hook for secret scanning
+
+2. **Monorepo Structure**
+   - Root package.json with workspaces
+   - Shared types package (ontology definitions)
+   - Backend package (Express + Prisma)
+   - Frontend package (React + Vite)
+
+3. **Backend Foundation**
+   - Express server with health endpoint
+   - Winston logger (file + console)
+   - Error handler with AppError class
+   - Request logging middleware
+   - Graceful shutdown handling
+
+4. **Testing Infrastructure**
+   - Vitest configured
+   - 13 tests passing (error handler + health endpoint)
+   - Mock utilities for logger
+
+5. **Database Schema**
+   - Prisma schema defined with all entities
+   - Docker Compose file ready
+   - Environment variable configured
+
+#### ⏸️ Blocked
+- **Database setup**: Need Docker/Podman installed to run PostgreSQL
+  - Docker Compose file ready: `docker-compose.yml`
+  - Credentials: user=job_aggregator, password=dev_password, db=job_aggregator
+  - Once Docker is installed: `docker-compose up -d`
+
+### Key Files Created
+
+#### Documentation
+- `docs/ontology.md` - Domain model and entity definitions
+- `docs/architecture.md` - System design and component interactions
+- `docs/TODO.md` - Implementation roadmap (6 phases)
+- `docs/JOURNAL.md` - This file
+
+#### Backend
+- `backend/src/index.ts` - Express server entry point
+- `backend/src/config.ts` - Environment configuration
+- `backend/src/middleware/errorHandler.ts` - Error handling with logging
+- `backend/src/routes/health.ts` - Health check endpoint
+- `backend/src/utils/logger.ts` - Winston logger configuration
+- `backend/prisma/schema.prisma` - Database schema
+- `backend/src/**/*.test.ts` - Test files (13 tests)
+
+#### Frontend
+- `frontend/src/App.tsx` - React app skeleton
+- `frontend/vite.config.ts` - Vite configuration
+- `frontend/tailwind.config.js` - Tailwind CSS setup
+
+#### Infrastructure
+- `package.json` - Root workspace configuration
+- `tsconfig.base.json` - Shared TypeScript config
+- `.eslintrc.js` - ESLint configuration
+- `.prettierrc` - Prettier configuration
+- `.githooks/pre-commit` - Secret scanning hook
+- `docker-compose.yml` - PostgreSQL container
+- `.env.example` - Environment variable template
+
+### Next Steps
+1. Install Docker and start PostgreSQL
+2. Run Prisma migrations
+3. Begin Phase 1: Job board adapter infrastructure
+4. Build Indeed adapter (simpler, start here)
+5. Build LinkedIn adapter
+6. Create API endpoints for job listings
+7. Build frontend job list page
+
+### Notes for Future Sessions
+- Database is local-only (not deployed)
+- All API keys go in `.env` (see `.env.example`)
+- Run tests before committing: `npm test`
+- Check logs: `backend/logs/combined.log`
+- Health check: `curl http://localhost:3000/health`
+
+---
+
+## Templates for Future Entries
+
+```markdown
+## YYYY-MM-DD: [Session Title]
+
+### Session Goals
+- What we planned to accomplish
+
+### Decisions Made
+- Key architectural or implementation decisions
+- Why we chose one approach over another
+
+### Implementation Progress
+
+#### ✅ Completed
+- What we built
+- Tests added
+- Documentation updated
+
+#### ⏸️ In Progress
+- What we're currently working on
+
+#### ❌ Blocked
+- What's preventing progress
+- What we need to unblock
+
+### Key Files Modified
+- List of important files changed
+
+### Next Steps
+- What to do in the next session
+
+### Notes
+- Context that future sessions need
+- Gotchas or things to remember
+```

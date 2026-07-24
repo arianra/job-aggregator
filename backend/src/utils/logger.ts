@@ -1,0 +1,68 @@
+import winston from 'winston'
+import path from 'path'
+
+const { combine, timestamp, printf, colorize, errors } = winston.format
+
+// Custom format for console output
+const consoleFormat = printf(({ level, message, timestamp, stack, ...meta }) => {
+  let msg = `${timestamp} [${level}]: ${message}`
+  
+  // Add metadata if present
+  if (Object.keys(meta).length > 0) {
+    msg += ` ${JSON.stringify(meta)}`
+  }
+  
+  // Add stack trace if present
+  if (stack) {
+    msg += `\n${stack}`
+  }
+  
+  return msg
+})
+
+// Custom format for file output (JSON)
+const fileFormat = printf(({ level, message, timestamp, stack, ...meta }) => {
+  return JSON.stringify({
+    timestamp,
+    level,
+    message,
+    stack,
+    ...meta,
+  })
+})
+
+const logger = winston.createLogger({
+  level: process.env.LOG_LEVEL || 'info',
+  format: combine(
+    errors({ stack: true }),
+    timestamp({ format: 'YYYY-MM-DD HH:mm:ss' })
+  ),
+  transports: [
+    // Console transport with colors
+    new winston.transports.Console({
+      format: combine(
+        colorize(),
+        consoleFormat
+      ),
+    }),
+    
+    // File transport for errors
+    new winston.transports.File({
+      filename: path.join(process.cwd(), 'logs', 'error.log'),
+      level: 'error',
+      format: fileFormat,
+      maxsize: 5242880, // 5MB
+      maxFiles: 5,
+    }),
+    
+    // File transport for all logs
+    new winston.transports.File({
+      filename: path.join(process.cwd(), 'logs', 'combined.log'),
+      format: fileFormat,
+      maxsize: 5242880, // 5MB
+      maxFiles: 5,
+    }),
+  ],
+})
+
+export default logger

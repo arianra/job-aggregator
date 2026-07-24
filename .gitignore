@@ -57,3 +57,4 @@ coverage/
 
 # Vite
 .vite/
+logs/
