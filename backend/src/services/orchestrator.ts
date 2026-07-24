@@ -1,6 +1,8 @@
 import type { BoardAdapter, AdapterResult, JobSearchQuery } from '@job-aggregator/shared';
 import type { Storage } from '@job-aggregator/shared';
+import type { Job } from '@job-aggregator/shared';
 import { RateLimiter } from '../utils/rate-limiter.js';
+import { deduplicateJobs } from './deduplicator.js';
 import logger from '../utils/logger.js';
 
 /**
@@ -8,7 +10,8 @@ import logger from '../utils/logger.js';
  * applies rate limiting, deduplicates results, and persists to storage.
  *
  * Uses Promise.allSettled so one adapter failure doesn't block others.
- * Per-adapter results are persisted immediately, not after all complete.
+ * Runs deduplication after all adapters complete to prevent saving duplicates
+ * across different boards.
  */
 export class Orchestrator {
   constructor(
@@ -17,7 +20,7 @@ export class Orchestrator {
     private readonly rateLimiter: RateLimiter,
   ) {}
 
-  /** Run all adapters for a query and persist results */
+  /** Run all adapters for a query, deduplicate, and persist */
   async searchAll(query: JobSearchQuery): Promise<OrchestratorResult> {
     const results = await Promise.allSettled(
       Array.from(this.adapters.entries()).map(([name, adapter]) =>
@@ -25,7 +28,50 @@ export class Orchestrator {
       ),
     );
 
-    return this.aggregate(results);
+    // Collect all jobs and sources from successful adapters
+    const allJobs: Job[] = [];
+    const allSources = [];
+    const adapterErrors: string[] = [];
+
+    for (const r of results) {
+      if (r.status === 'fulfilled') {
+        allJobs.push(...r.value.jobs);
+        allSources.push(...r.value.sources);
+        if (r.value.metadata.errors) {
+          adapterErrors.push(...r.value.metadata.errors);
+        }
+      } else {
+        const msg = r.reason instanceof Error ? r.reason.message : String(r.reason);
+        adapterErrors.push(`Adapter rejected: ${msg}`);
+      }
+    }
+
+    // Deduplicate against existing jobs in storage
+    const existingJobs = await this.storage.listJobs();
+    const dedupResult = await deduplicateJobs(
+      allJobs,
+      existingJobs,
+      (job) => this.storage.saveJob(job),
+      (id, updates) => this.storage.updateJob(id, updates),
+      (id) => this.storage.deleteJob(id),
+    );
+
+    // Save all sources (they reference their job's ID)
+    for (const source of allSources) {
+      await this.storage.saveJobSource(source);
+    }
+
+    logger.info(
+      `[orchestrator] dedup: ${dedupResult.deduped} dupes, ${dedupResult.merged} merged, ${dedupResult.saved.length} new`,
+    );
+
+    return {
+      totalJobs: dedupResult.saved.length,
+      totalSources: allSources.length,
+      duplicatesFound: dedupResult.deduped,
+      duplicatesMerged: dedupResult.merged,
+      errors: adapterErrors,
+    };
   }
 
   // ---------------------------------------------------------------------------
@@ -46,22 +92,12 @@ export class Orchestrator {
       const result = await adapter.searchJobs(query);
       const elapsed = Date.now() - start;
       logger.info(`[orchestrator] adapter "${name}" returned ${result.jobs.length} jobs in ${elapsed}ms`);
-
-      // Persist immediately so partial results are never lost
-      for (const job of result.jobs) {
-        await this.storage.saveJob(job);
-      }
-      for (const source of result.sources) {
-        await this.storage.saveJobSource(source);
-      }
-
       return result;
     } catch (err) {
       const elapsed = Date.now() - start;
       const message = err instanceof Error ? err.message : String(err);
       logger.error(`[orchestrator] adapter "${name}" failed after ${elapsed}ms: ${message}`);
 
-      // Return empty result — adapter failure doesn't crash the whole search
       return {
         jobs: [],
         sources: [],
@@ -73,35 +109,12 @@ export class Orchestrator {
       };
     }
   }
-
-  /** Merge adapter results and tally errors */
-  private aggregate(
-    results: PromiseSettledResult<AdapterResult>[],
-  ): OrchestratorResult {
-    let totalJobs = 0;
-    let totalSources = 0;
-    const errors: string[] = [];
-
-    for (const r of results) {
-      if (r.status === 'fulfilled') {
-        totalJobs += r.value.jobs.length;
-        totalSources += r.value.sources.length;
-        if (r.value.metadata.errors) {
-          errors.push(...r.value.metadata.errors);
-        }
-      } else {
-        const msg = r.reason instanceof Error ? r.reason.message : String(r.reason);
-        errors.push(`Adapter promise rejected: ${msg}`);
-      }
-    }
-
-    logger.info(`[orchestrator] aggregate: ${totalJobs} jobs, ${totalSources} sources, ${errors.length} errors`);
-    return { totalJobs, totalSources, errors };
-  }
 }
 
 export interface OrchestratorResult {
   totalJobs: number;
   totalSources: number;
+  duplicatesFound: number;
+  duplicatesMerged: number;
   errors: string[];
 }

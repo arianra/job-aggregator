@@ -59,6 +59,8 @@ export function createJobsRouter(
         success: true,
         totalJobs: result.totalJobs,
         totalSources: result.totalSources,
+        duplicatesFound: result.duplicatesFound,
+        duplicatesMerged: result.duplicatesMerged,
         errors: result.errors,
       });
     } catch (err) {
