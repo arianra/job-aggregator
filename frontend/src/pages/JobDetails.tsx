@@ -1,5 +1,6 @@
 import { useParams, useNavigate } from 'react-router-dom';
 import { useJob } from '../hooks/useJobs';
+import type { Match } from '../types';
 
 export function JobDetails() {
   const { id } = useParams<{ id: string }>();
@@ -31,6 +32,7 @@ export function JobDetails() {
   }
 
   const job = data.data;
+  const match = data.match;
 
   return (
     <div className="max-w-3xl mx-auto">
@@ -42,6 +44,9 @@ export function JobDetails() {
       </button>
 
       <div className="bg-white rounded-lg shadow p-6 border border-gray-100">
+        {/* Score banner */}
+        {match && <ScoreBanner match={match} />}
+
         <h1 className="text-2xl font-bold text-gray-900 mb-1">{job.title}</h1>
         <p className="text-lg text-gray-600 mb-4">{job.company.name}</p>
 
@@ -177,4 +182,71 @@ function boardLabel(board: string) {
     mock: 'Mock',
   };
   return labels[board] ?? board;
+}
+
+// ---------------------------------------------------------------------------
+// Score breakdown banner
+// ---------------------------------------------------------------------------
+
+function ScoreBanner({ match }: { match: Match }) {
+  const dims = [
+    { key: 'skills', label: 'Skills', ...match.dimensions.skills },
+    { key: 'experience', label: 'Experience', ...match.dimensions.experience },
+    { key: 'location', label: 'Location', ...match.dimensions.location },
+    { key: 'salary', label: 'Salary', ...match.dimensions.salary },
+    { key: 'preferences', label: 'Preferences', ...match.dimensions.preferences },
+    { key: 'recency', label: 'Recency', ...match.dimensions.recency },
+  ];
+
+  return (
+    <div className="mb-6 p-4 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg border border-blue-100">
+      <div className="flex items-center justify-between mb-3">
+        <h3 className="text-sm font-semibold text-gray-700">Match Score</h3>
+        <span className={`text-lg font-bold px-3 py-1 rounded ${scoreBadge(match.score)}`}>
+          {match.score}%
+        </span>
+      </div>
+
+      {/* Dimension bars */}
+      <div className="space-y-2">
+        {dims.map((d) => (
+          <div key={d.key} className="flex items-center gap-2 text-sm">
+            <span className="w-24 text-gray-600">{d.label}</span>
+            <div className="flex-1 bg-gray-200 rounded-full h-2.5">
+              <div
+                className={`h-2.5 rounded-full ${barColor(d.score)}`}
+                style={{ width: `${d.score}%` }}
+              />
+            </div>
+            <span className="w-8 text-right text-gray-500 tabular-nums">{d.score}%</span>
+          </div>
+        ))}
+      </div>
+
+      {/* Reasons */}
+      {match.reasons.length > 0 && (
+        <div className="mt-3 flex flex-wrap gap-1.5">
+          {match.reasons.map((r, i) => (
+            <span key={i} className="text-xs bg-white border border-blue-200 text-blue-700 px-2 py-0.5 rounded">
+              {r}
+            </span>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function scoreBadge(score: number): string {
+  if (score >= 80) return 'bg-green-100 text-green-800';
+  if (score >= 60) return 'bg-blue-100 text-blue-800';
+  if (score >= 40) return 'bg-yellow-100 text-yellow-800';
+  return 'bg-red-100 text-red-800';
+}
+
+function barColor(score: number): string {
+  if (score >= 80) return 'bg-green-500';
+  if (score >= 60) return 'bg-blue-500';
+  if (score >= 40) return 'bg-yellow-500';
+  return 'bg-red-500';
 }

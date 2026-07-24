@@ -74,6 +74,30 @@ export interface JobListResponse {
 export interface JobDetailResponse {
   success: boolean;
   data: Job & { sources: JobSource[] };
+  match?: Match;
+}
+
+export interface Match {
+  id: string;
+  score: number;
+  dimensions: MatchDimensions;
+  reasons: string[];
+  flags: string[];
+}
+
+export interface MatchDimensions {
+  skills: DimensionScore;
+  experience: DimensionScore;
+  location: DimensionScore;
+  salary: DimensionScore;
+  preferences: DimensionScore;
+  recency: DimensionScore;
+}
+
+export interface DimensionScore {
+  score: number;
+  weight: number;
+  weighted: number;
 }
 
 export interface SearchResponse {

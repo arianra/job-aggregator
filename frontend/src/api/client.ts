@@ -59,7 +59,9 @@ export async function fetchJobs(filters: JobFilters = {}): Promise<JobListRespon
 }
 
 export async function fetchJobById(id: string): Promise<JobDetailResponse> {
-  const { data } = await api.get<JobDetailResponse>(`/jobs/${id}`);
+  const { data } = await api.get<JobDetailResponse>(`/jobs/${id}`, {
+    params: { scored: true },
+  });
   return data;
 }
 

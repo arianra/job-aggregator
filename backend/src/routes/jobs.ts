@@ -2,7 +2,7 @@ import { Router, Request, Response } from 'express';
 import { z } from 'zod';
 import { Orchestrator } from '../services/orchestrator.js';
 import type { Storage, JobFilter } from '@job-aggregator/shared';
-import { scoreJobs } from '../services/scorer.js';
+import { scoreJob, scoreJobs } from '../services/scorer.js';
 import logger from '../utils/logger.js';
 
 // ---------------------------------------------------------------------------
@@ -123,7 +123,7 @@ export function createJobsRouter(
     }
   });
 
-  // GET /api/jobs/:id — single job with sources
+  // GET /api/jobs/:id — single job with sources, optional scoring
   router.get('/:id', async (req: Request, res: Response) => {
     try {
       const job = await storage.getJob(req.params.id);
@@ -133,10 +133,21 @@ export function createJobsRouter(
       }
 
       const sources = await storage.getJobSourcesByJobId(job.id);
+      const enriched = { ...job, sources };
+
+      // Optionally score against profile
+      let match = undefined;
+      if (req.query.scored === 'true') {
+        const profiles = await storage.listProfiles();
+        if (profiles.length > 0) {
+          match = scoreJob(profiles[0], enriched);
+        }
+      }
 
       res.json({
         success: true,
-        data: { ...job, sources },
+        data: enriched,
+        match,
       });
     } catch (err) {
       logger.error('GET /api/jobs/:id failed', { err });
