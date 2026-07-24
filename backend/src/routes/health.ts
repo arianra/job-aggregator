@@ -7,5 +7,6 @@ healthRouter.get('/', (req, res) => {
     status: 'ok',
     timestamp: new Date().toISOString(),
     uptime: process.uptime(),
+    database: process.env.DATABASE_URL ? 'configured' : 'not configured',
   })
 })
