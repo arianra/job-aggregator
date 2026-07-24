@@ -62,8 +62,8 @@ for file in $STAGED_FILES; do
       continue
     fi
     
-    # Use grep with extended regex
-    if echo "$CONTENT" | grep -Eiq "$pattern"; then
+    # Use grep with extended regex (-- to prevent pattern being treated as option)
+    if echo "$CONTENT" | grep -Eiq -- "$pattern"; then
       echo "${RED}⚠️  FOUND: $description${NC}"
       echo "   File: $file"
       echo "   Pattern: $pattern"
