@@ -59,6 +59,7 @@ export interface JobFilters {
   salaryMax?: number;
   page?: number;
   pageSize?: number;
+  scored?: boolean;
 }
 
 export interface JobListResponse {
@@ -67,6 +68,7 @@ export interface JobListResponse {
   pageSize: number;
   total: number;
   data: Job[];
+  scores?: Record<string, number>;
 }
 
 export interface JobDetailResponse {

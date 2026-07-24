@@ -11,8 +11,8 @@ export function useJobs(page = 1, pageSize = 20) {
   const filters = useFilterStore((s) => s.filters);
 
   return useQuery({
-    queryKey: ['jobs', { ...filters, page, pageSize }],
-    queryFn: () => fetchJobs({ ...filters, page, pageSize }),
+    queryKey: ['jobs', { ...filters, page, pageSize, scored: true }],
+    queryFn: () => fetchJobs({ ...filters, page, pageSize, scored: true }),
     staleTime: 60_000, // 1 minute before refetch
     placeholderData: (prev) => prev, // keep previous data while refetching
   });

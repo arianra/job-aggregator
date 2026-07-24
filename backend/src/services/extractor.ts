@@ -1,6 +1,6 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
-import logger from './logger.js';
+import logger from '../utils/logger.js';
 
 /**
  * Supported file types for resume parsing.

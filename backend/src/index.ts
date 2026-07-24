@@ -10,7 +10,7 @@ import { MockStorage } from './storage/mock-storage.js';
 import { RateLimiter } from './utils/rate-limiter.js';
 import { Orchestrator } from './services/orchestrator.js';
 import { MockAdapter } from './adapters/mock-adapter.js';
-import { sampleJobs, sampleSources } from './storage/sample-data.js';
+import { sampleJobs, sampleSources, sampleProfile } from './storage/sample-data.js';
 import logger from './utils/logger.js';
 
 const app = express();
@@ -44,7 +44,8 @@ for (const job of sampleJobs) {
 for (const source of sampleSources) {
   await storage.saveJobSource(source);
 }
-logger.info('Seeded sample data', { jobs: sampleJobs.length, sources: sampleSources.length });
+await storage.saveProfile(sampleProfile);
+logger.info('Seeded sample data', { jobs: sampleJobs.length, sources: sampleSources.length, profile: true });
 
 // ---------------------------------------------------------------------------
 // Adapters

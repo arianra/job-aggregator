@@ -3,9 +3,10 @@ import type { Job } from '../../types';
 
 interface JobCardProps {
   job: Job;
+  score?: number;
 }
 
-export function JobCard({ job }: JobCardProps) {
+export function JobCard({ job, score }: JobCardProps) {
   const salaryText = formatSalary(job.salary_range);
   const locationText = formatLocation(job.location);
   const postedText = formatPosted(job.posted_date);
@@ -23,11 +24,18 @@ export function JobCard({ job }: JobCardProps) {
           <p className="text-gray-600">{job.company.name}</p>
         </div>
 
-        {salaryText && (
-          <span className="text-sm font-medium text-green-700 bg-green-50 px-2 py-1 rounded whitespace-nowrap">
-            {salaryText}
-          </span>
-        )}
+        <div className="flex items-center gap-2">
+          {score !== undefined && (
+            <span className={`text-sm font-bold px-2 py-1 rounded whitespace-nowrap ${scoreColor(score)}`}>
+              {score}%
+            </span>
+          )}
+          {salaryText && (
+            <span className="text-sm font-medium text-green-700 bg-green-50 px-2 py-1 rounded whitespace-nowrap">
+              {salaryText}
+            </span>
+          )}
+        </div>
       </div>
 
       <div className="flex items-center gap-3 mt-3 text-sm text-gray-500">
@@ -123,4 +131,11 @@ function boardLabel(board: string) {
     mock: 'Mock',
   };
   return labels[board] ?? board;
+}
+
+function scoreColor(score: number): string {
+  if (score >= 80) return 'bg-green-100 text-green-800';
+  if (score >= 60) return 'bg-blue-100 text-blue-800';
+  if (score >= 40) return 'bg-yellow-100 text-yellow-800';
+  return 'bg-red-100 text-red-800';
 }

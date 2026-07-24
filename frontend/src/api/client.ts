@@ -45,13 +45,14 @@ api.interceptors.response.use(
 
 export async function fetchJobs(filters: JobFilters = {}): Promise<JobListResponse> {
   const params: Record<string, string | number | boolean> = {};
-  if (filters.keywords) params.keywords = filters.keywords; // we use keywords in query param for GET
+  if (filters.keywords) params.keywords = filters.keywords;
   if (filters.location) params.location = filters.location;
   if (filters.remote !== undefined) params.remote = filters.remote;
   if (filters.salaryMin) params.salaryMin = filters.salaryMin;
   if (filters.salaryMax) params.salaryMax = filters.salaryMax;
   if (filters.page) params.page = filters.page;
   if (filters.pageSize) params.pageSize = filters.pageSize;
+  if (filters.scored !== undefined) params.scored = filters.scored;
 
   const { data } = await api.get<JobListResponse>('/jobs', { params });
   return data;

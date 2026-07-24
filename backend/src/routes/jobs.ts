@@ -2,6 +2,7 @@ import { Router, Request, Response } from 'express';
 import { z } from 'zod';
 import { Orchestrator } from '../services/orchestrator.js';
 import type { Storage, JobFilter } from '@job-aggregator/shared';
+import { scoreJobs } from '../services/scorer.js';
 import logger from '../utils/logger.js';
 
 // ---------------------------------------------------------------------------
@@ -27,6 +28,7 @@ const listQuerySchema = z.object({
   salaryMax: z.coerce.number().positive().optional(),
   tags: z.string().optional(), // comma-separated
   postedAfter: z.string().optional(), // ISO date
+  scored: z.coerce.boolean().optional(), // attach scores to results
 });
 
 // ---------------------------------------------------------------------------
@@ -93,12 +95,23 @@ export function createJobsRouter(
 
       const jobs = await storage.listJobs(filter);
 
+      // Optionally score jobs against the current profile
+      let scores: Record<string, number> | undefined;
+      if (query.scored) {
+        const profiles = await storage.listProfiles();
+        if (profiles.length > 0) {
+          const matches = scoreJobs(profiles[0], jobs);
+          scores = Object.fromEntries(matches.map((m) => [m.job_id, m.score]));
+        }
+      }
+
       res.json({
         success: true,
         page: query.page,
         pageSize: query.pageSize,
-        total: jobs.length, // Note: MockStorage doesn't track total separately
+        total: jobs.length,
         data: jobs,
+        scores,
       });
     } catch (err) {
       if (err instanceof z.ZodError) {

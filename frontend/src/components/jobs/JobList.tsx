@@ -28,6 +28,7 @@ export function JobList({ page = 1, pageSize = 20 }: JobListProps) {
   }
 
   const jobs = data?.data ?? [];
+  const scores = data?.scores ?? {};
 
   if (jobs.length === 0) {
     return (
@@ -43,7 +44,7 @@ export function JobList({ page = 1, pageSize = 20 }: JobListProps) {
   return (
     <div className="space-y-3">
       {jobs.map((job) => (
-        <JobCard key={job.id} job={job} />
+        <JobCard key={job.id} job={job} score={scores[job.id]} />
       ))}
     </div>
   );
