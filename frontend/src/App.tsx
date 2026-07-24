@@ -3,6 +3,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { HomePage } from './pages/HomePage';
 import { JobDetails } from './pages/JobDetails';
 import { ProfilePage } from './pages/ProfilePage';
+import { DashboardPage } from './pages/DashboardPage';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -25,6 +26,9 @@ function App() {
             </Link>
             <nav className="flex gap-4 text-sm">
               <Link to="/" className="text-gray-600 hover:text-gray-900">
+                Dashboard
+              </Link>
+              <Link to="/jobs" className="text-gray-600 hover:text-gray-900">
                 Jobs
               </Link>
               <Link to="/profile" className="text-gray-600 hover:text-gray-900">
@@ -37,7 +41,8 @@ function App() {
         {/* Main */}
         <main className="max-w-5xl mx-auto px-4 py-6">
           <Routes>
-            <Route path="/" element={<HomePage />} />
+            <Route path="/" element={<DashboardPage />} />
+            <Route path="/jobs" element={<HomePage />} />
             <Route path="/jobs/:id" element={<JobDetails />} />
             <Route path="/profile" element={<ProfilePage />} />
           </Routes>

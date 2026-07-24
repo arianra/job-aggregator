@@ -33,7 +33,7 @@ export function JobDetails() {
           {error instanceof Error ? error.message : 'Job not found'}
         </p>
         <button
-          onClick={() => navigate('/')}
+          onClick={() => navigate('/jobs')}
           className="mt-4 text-blue-500 hover:underline"
         >
           ← Back to jobs
@@ -48,7 +48,7 @@ export function JobDetails() {
   return (
     <div className="max-w-3xl mx-auto">
       <button
-        onClick={() => navigate('/')}
+        onClick={() => navigate('/jobs')}
         className="mb-4 text-blue-500 hover:underline text-sm"
       >
         ← Back to jobs
