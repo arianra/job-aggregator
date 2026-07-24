@@ -1,0 +1,148 @@
+// Prisma Schema - PostgreSQL
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Board {
+  id              String   @id @default(uuid())
+  name            String   @unique
+  adapter_class   String
+  config          Json
+  enabled         Boolean  @default(true)
+  health          Json     @default("{}")
+  created_at      DateTime @default(now())
+  updated_at      DateTime @updatedAt
+
+  sources         Source[]
+}
+
+model Company {
+  id              String   @id @default(uuid())
+  name            String
+  aliases         String[] @default([])
+  website         String?
+  careers_url     String?
+  industry        String?
+  size            String?
+  location        Json?
+  description     String?
+  created_at      DateTime @default(now())
+  updated_at      DateTime @updatedAt
+
+  jobs            Job[]
+
+  @@index([name])
+  @@index([careers_url])
+}
+
+model Job {
+  id                        String   @id @default(uuid())
+  title                     String
+  company_id                String
+  location                  Json
+  description               String
+  requirements              String[] @default([])
+  salary_range              Json?
+  job_type                  String
+  seniority_level           String?
+  is_remote                 Boolean  @default(false)
+  posted_date               DateTime?
+  closing_date              DateTime?
+  tags                      String[] @default([])
+  direct_apply_url          String?
+  direct_apply_confidence   String?
+  status                    String   @default("active")
+  created_at                DateTime @default(now())
+  updated_at                DateTime @updatedAt
+
+  company                   Company  @relation(fields: [company_id], references: [id])
+  sources                   Source[]
+  matches                   Match[]
+
+  @@index([title])
+  @@index([company_id])
+  @@index([status])
+  @@index([posted_date])
+}
+
+model Source {
+  id              String   @id @default(uuid())
+  job_id          String
+  board           String
+  board_job_id    String
+  url             String
+  scraped_at      DateTime @default(now())
+  raw_payload     Json?
+  status          String   @default("active")
+  last_checked_at DateTime?
+
+  job             Job      @relation(fields: [job_id], references: [id], onDelete: Cascade)
+  board_rel       Board    @relation(fields: [board], references: [name])
+
+  @@unique([job_id, board, board_job_id])
+  @@index([job_id])
+  @@index([board])
+}
+
+model Profile {
+  id              String   @id @default(uuid())
+  name            String
+  email           String?
+  phone           String?
+  location        Json?
+  experience      Json[]   @default([])
+  education       Json[]   @default([])
+  certifications  Json[]   @default([])
+  skills          Json[]   @default([])
+  preferences     Json     @default("{}")
+  search_queries  Json[]   @default([])
+  resume          Json
+  created_at      DateTime @default(now())
+  updated_at      DateTime @updatedAt
+
+  matches         Match[]
+}
+
+model Match {
+  id              String   @id @default(uuid())
+  profile_id      String
+  job_id          String
+  score           Float
+  dimensions      Json
+  reasons         String[] @default([])
+  flags           String[] @default([])
+  created_at      DateTime @default(now())
+  updated_at      DateTime @updatedAt
+
+  profile         Profile  @relation(fields: [profile_id], references: [id], onDelete: Cascade)
+  job             Job      @relation(fields: [job_id], references: [id], onDelete: Cascade)
+
+  @@unique([profile_id, job_id])
+  @@index([profile_id])
+  @@index([job_id])
+  @@index([score])
+}
+
+model SearchQuery {
+  id                  String    @id @default(uuid())
+  profile_id          String
+  title_patterns      String[]  @default([])
+  keywords            String[]  @default([])
+  excluded_keywords   String[]  @default([])
+  location            Json?
+  remote_only         Boolean   @default(false)
+  salary_min          Float?
+  job_types           String[]  @default([])
+  posted_within_days  Int?
+  active              Boolean   @default(true)
+  last_run_at         DateTime?
+  run_frequency       String?
+  created_at          DateTime  @default(now())
+  updated_at          DateTime  @updatedAt
+}

@@ -134,6 +134,16 @@ npm run dev:frontend
 4. Trigger a scrape
 5. View scored jobs with source badges and direct apply links
 
+## Monorepo Structure
+
+This project uses npm workspaces to manage three packages:
+
+- **`shared/`** - TypeScript interfaces and types (shared between frontend and backend)
+- **`backend/`** - Express API server with Prisma ORM
+- **`frontend/`** - React app with Vite and Tailwind CSS
+
+All packages share a common TypeScript configuration and are type-safe across boundaries.
+
 ## Development Phases
 
 ### Phase 0: Foundation (Current)

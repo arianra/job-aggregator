@@ -4,8 +4,8 @@ node_modules/
 .pnp.js
 
 # Build outputs
-dist/
-build/
+**/dist/
+**/build/
 *.log
 
 # Environment & Secrets (NEVER push)
@@ -51,3 +51,9 @@ coverage/
 *.tgz
 .cache/
 .parcel-cache/
+
+# Prisma
+**/prisma/migrations/
+
+# Vite
+.vite/
