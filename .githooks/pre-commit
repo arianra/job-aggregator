@@ -23,21 +23,21 @@ if [ -z "$STAGED_FILES" ]; then
 fi
 
 # Define secret patterns
-# Each pattern is: "regex|description"
+# Each pattern is: "regex:::description"
 PATTERNS="
-qwen_[a-zA-Z0-9]{32,}|Qwen API key
-sk-[a-zA-Z0-9]{48,}|OpenAI/Anthropic API key
-key-[a-zA-Z0-9]{32,}|Generic API key
-password\s*[:=]\s*['\"][^'\"]+['\"]|Hardcoded password
-secret\s*[:=]\s*['\"][^'\"]+['\"]|Hardcoded secret
-token\s*[:=]\s*['\"][^'\"]+['\"]|Hardcoded token
-jwt[_-]?secret\s*[:=]\s*['\"][^'\"]+['\"]|JWT secret
-api[_-]?key\s*[:=]\s*['\"][^'\"]+['\"]|API key in code
-ghp_[a-zA-Z0-9]{36,}|GitHub Personal Access Token
-gho_[a-zA-Z0-9]{36,}|GitHub OAuth token
-AKIA[0-9A-Z]{16}|AWS Access Key
------BEGIN (RSA |EC )?PRIVATE KEY-----|Private key
-BEGIN CERTIFICATE|Certificate file
+qwen_[a-zA-Z0-9]{32,}:::Qwen API key
+sk-[a-zA-Z0-9]{48,}:::OpenAI/Anthropic API key
+key-[a-zA-Z0-9]{32,}:::Generic API key
+password\s*[:=]\s*['\"][^'\"]+['\"]:::Hardcoded password
+secret\s*[:=]\s*['\"][^'\"]+['\"]:::Hardcoded secret
+token\s*[:=]\s*['\"][^'\"]+['\"]:::Hardcoded token
+jwt[_-]?secret\s*[:=]\s*['\"][^'\"]+['\"]:::JWT secret
+api[_-]?key\s*[:=]\s*['\"][^'\"]+['\"]:::API key in code
+ghp_[a-zA-Z0-9]{36,}:::GitHub Personal Access Token
+gho_[a-zA-Z0-9]{36,}:::GitHub OAuth token
+AKIA[0-9A-Z]{16}:::AWS Access Key
+-----BEGIN\s+(RSA\s+|EC\s+)?PRIVATE\s+KEY-----:::Private key
+BEGIN\s+CERTIFICATE:::Certificate file
 "
 
 FOUND_SECRETS=0
@@ -57,7 +57,7 @@ for file in $STAGED_FILES; do
   fi
   
   # Check each pattern
-  echo "$PATTERNS" | while IFS='|' read -r pattern description; do
+  echo "$PATTERNS" | while IFS=':::' read -r pattern description; do
     if [ -z "$pattern" ]; then
       continue
     fi
