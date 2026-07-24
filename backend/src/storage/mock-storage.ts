@@ -55,19 +55,21 @@ export class MockStorage implements Storage {
 
       if (filters.location) {
         results = results.filter(j =>
-          j.location.toLowerCase().includes(filters.location!.toLowerCase())
+          j.location.city?.toLowerCase().includes(filters.location!.toLowerCase()) ||
+          j.location.state?.toLowerCase().includes(filters.location!.toLowerCase()) ||
+          j.location.country.toLowerCase().includes(filters.location!.toLowerCase())
         )
       }
 
       if (filters.salaryMin !== undefined) {
         results = results.filter(j =>
-          j.salaryMin !== null && j.salaryMin >= filters.salaryMin!
+          j.salary_range && j.salary_range.min >= filters.salaryMin!
         )
       }
 
       if (filters.salaryMax !== undefined) {
         results = results.filter(j =>
-          j.salaryMax !== null && j.salaryMax <= filters.salaryMax!
+          j.salary_range && j.salary_range.max <= filters.salaryMax!
         )
       }
 
@@ -78,11 +80,11 @@ export class MockStorage implements Storage {
       }
 
       if (filters.postedAfter) {
-        results = results.filter(j => j.postedDate >= filters.postedAfter!)
+        results = results.filter(j => j.posted_date && j.posted_date >= filters.postedAfter!)
       }
 
       if (filters.postedBefore) {
-        results = results.filter(j => j.postedDate <= filters.postedBefore!)
+        results = results.filter(j => j.posted_date && j.posted_date <= filters.postedBefore!)
       }
 
       // Pagination
@@ -211,11 +213,11 @@ export class MockStorage implements Storage {
   }
 
   async getMatchesByJobId(jobId: string): Promise<Match[]> {
-    return Array.from(this.matches.values()).filter(m => m.jobId === jobId)
+    return Array.from(this.matches.values()).filter(m => m.job_id === jobId)
   }
 
   async getMatchesByProfileId(profileId: string): Promise<Match[]> {
-    return Array.from(this.matches.values()).filter(m => m.profileId === profileId)
+    return Array.from(this.matches.values()).filter(m => m.profile_id === profileId)
   }
 
   async deleteMatch(id: string): Promise<boolean> {
