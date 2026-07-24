@@ -1,0 +1,53 @@
+# Dependencies
+node_modules/
+.pnp
+.pnp.js
+
+# Build outputs
+dist/
+build/
+*.log
+
+# Environment & Secrets (NEVER push)
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+*.pem
+*.key
+credentials.json
+secrets.json
+
+# Database (NEVER push)
+*.sql
+*.db
+*.sqlite
+dump/
+backups/
+
+# Resume files (sensitive personal data)
+uploads/
+resumes/
+*.pdf
+*.docx
+!docs/**/*.pdf
+!docs/**/*.docx
+
+# IDE & Editor
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+
+# Testing
+coverage/
+.nyc_output/
+
+# Misc
+*.tgz
+.cache/
+.parcel-cache/
