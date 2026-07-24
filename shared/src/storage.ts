@@ -6,6 +6,8 @@
  * - PostgresStorage: Real database for production
  */
 
+import type { Job, Source, Company, Profile, Match } from './types.js'
+
 export interface Storage {
   // Jobs
   saveJob(job: Job): Promise<Job>
@@ -15,8 +17,8 @@ export interface Storage {
   deleteJob(id: string): Promise<boolean>
 
   // Job Sources
-  saveJobSource(source: JobSource): Promise<JobSource>
-  getJobSourcesByJobId(jobId: string): Promise<JobSource[]>
+  saveJobSource(source: Source): Promise<Source>
+  getJobSourcesByJobId(jobId: string): Promise<Source[]>
   deleteJobSource(id: string): Promise<boolean>
 
   // Companies

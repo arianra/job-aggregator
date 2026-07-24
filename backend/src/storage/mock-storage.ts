@@ -1,5 +1,5 @@
 import { Storage, JobFilter } from '@job-aggregator/shared'
-import { Job, JobSource, Company, Profile, Match } from '@job-aggregator/shared'
+import { Job, Source, Company, Profile, Match } from '@job-aggregator/shared'
 import logger from '../utils/logger.js'
 
 /**
@@ -10,7 +10,7 @@ import logger from '../utils/logger.js'
  */
 export class MockStorage implements Storage {
   private jobs: Map<string, Job> = new Map()
-  private jobSources: Map<string, JobSource> = new Map()
+  private sources: Map<string, Source> = new Map()
   private companies: Map<string, Company> = new Map()
   private profiles: Map<string, Profile> = new Map()
   private matches: Map<string, Match> = new Map()
@@ -25,7 +25,7 @@ export class MockStorage implements Storage {
 
   async clear(): Promise<void> {
     this.jobs.clear()
-    this.jobSources.clear()
+    this.sources.clear()
     this.companies.clear()
     this.profiles.clear()
     this.matches.clear()
@@ -114,7 +114,7 @@ export class MockStorage implements Storage {
       // Also delete related sources and matches
       const sources = await this.getJobSourcesByJobId(id)
       for (const source of sources) {
-        this.jobSources.delete(source.id)
+        this.sources.delete(source.id)
       }
       const matches = await this.getMatchesByJobId(id)
       for (const match of matches) {
@@ -126,18 +126,18 @@ export class MockStorage implements Storage {
   }
 
   // Job Sources
-  async saveJobSource(source: JobSource): Promise<JobSource> {
-    this.jobSources.set(source.id, source)
-    logger.debug('Saved job source', { sourceId: source.id, jobId: source.jobId })
+  async saveJobSource(source: Source): Promise<Source> {
+    this.sources.set(source.id, source)
+    logger.debug('Saved source', { sourceId: source.id, jobId: source.job_id })
     return source
   }
 
-  async getJobSourcesByJobId(jobId: string): Promise<JobSource[]> {
-    return Array.from(this.jobSources.values()).filter(s => s.jobId === jobId)
+  async getJobSourcesByJobId(jobId: string): Promise<Source[]> {
+    return Array.from(this.sources.values()).filter(s => s.job_id === jobId)
   }
 
   async deleteJobSource(id: string): Promise<boolean> {
-    return this.jobSources.delete(id)
+    return this.sources.delete(id)
   }
 
   // Companies
