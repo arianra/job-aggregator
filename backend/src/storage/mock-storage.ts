@@ -61,15 +61,19 @@ export class MockStorage implements Storage {
         )
       }
 
+      if (filters.remote !== undefined) {
+        results = results.filter(j => j.location.remote === filters.remote)
+      }
+
       if (filters.salaryMin !== undefined) {
         results = results.filter(j =>
-          j.salary_range && j.salary_range.min >= filters.salaryMin!
+          j.salary_range && j.salary_range.max >= filters.salaryMin!
         )
       }
 
       if (filters.salaryMax !== undefined) {
         results = results.filter(j =>
-          j.salary_range && j.salary_range.max <= filters.salaryMax!
+          j.salary_range && j.salary_range.min <= filters.salaryMax!
         )
       }
 
