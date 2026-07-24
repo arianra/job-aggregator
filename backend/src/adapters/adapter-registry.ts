@@ -1,6 +1,20 @@
 import type { BoardAdapter, AdapterResult, JobSearchQuery, AdapterHealth } from '@job-aggregator/shared'
 import logger from '../utils/logger.js'
 
+export class AdapterRegistrationError extends Error {
+  constructor(message: string) {
+    super(message)
+    this.name = 'AdapterRegistrationError'
+  }
+}
+
+export class AdapterNotFoundError extends Error {
+  constructor(boardId: string) {
+    super(`Adapter not found: ${boardId}`)
+    this.name = 'AdapterNotFoundError'
+  }
+}
+
 export class AdapterRegistry {
   private adapters = new Map<string, BoardAdapter>()
 
@@ -9,7 +23,7 @@ export class AdapterRegistry {
    */
   register(adapter: BoardAdapter): void {
     if (this.adapters.has(adapter.boardId)) {
-      throw new Error(`Adapter with id '${adapter.boardId}' is already registered`)
+      throw new AdapterRegistrationError(`Adapter with id '${adapter.boardId}' is already registered`)
     }
     this.adapters.set(adapter.boardId, adapter)
     logger.info(`Registered adapter: ${adapter.boardName} (${adapter.boardId})`)
@@ -31,8 +45,12 @@ export class AdapterRegistry {
   /**
    * Get a specific adapter by ID
    */
-  getAdapter(boardId: string): BoardAdapter | undefined {
-    return this.adapters.get(boardId)
+  getAdapter(boardId: string): BoardAdapter {
+    const adapter = this.adapters.get(boardId)
+    if (!adapter) {
+      throw new AdapterNotFoundError(boardId)
+    }
+    return adapter
   }
 
   /**
@@ -112,6 +130,13 @@ export class AdapterRegistry {
     }
     
     return results
+  }
+
+  /**
+   * Check if an adapter exists
+   */
+  hasAdapter(boardId: string): boolean {
+    return this.adapters.has(boardId)
   }
 
   /**

@@ -93,9 +93,9 @@ export class MockAdapter implements BoardAdapter {
       filteredJobs = filteredJobs.slice(0, query.limit)
     }
 
-    const sources = filteredJobs.map(job => 
-      this.mockSources.find(s => s.job_id === job.id)
-    ).filter((s): s is Source => s !== undefined)
+    const sources = filteredJobs
+      .map(job => this.mockSources.find(s => s.job_id === job.id))
+      .filter((s): s is Source => s !== undefined)
 
     return {
       jobs: filteredJobs,
