@@ -5,6 +5,8 @@ import type {
   SearchResponse,
   HealthResponse,
   JobFilters,
+  ApplicationListResponse,
+  ApplicationResponse,
 } from '../types';
 
 const api = axios.create({
@@ -79,6 +81,49 @@ export async function triggerSearch(query: {
 
 export async function fetchHealth(): Promise<HealthResponse> {
   const { data } = await api.get<HealthResponse>('/health');
+  return data;
+}
+
+// ---------------------------------------------------------------------------
+// Application tracking
+// ---------------------------------------------------------------------------
+
+export async function createApplication(body: {
+  job_id: string;
+  status?: 'saved' | 'applied';
+  applied_via?: string;
+  applied_url?: string;
+  notes?: { text: string }[];
+}): Promise<ApplicationResponse> {
+  const { data } = await api.post<ApplicationResponse>('/applications', body);
+  return data;
+}
+
+export async function fetchApplications(params?: {
+  status?: string;
+  limit?: number;
+  offset?: number;
+}): Promise<ApplicationListResponse> {
+  const { data } = await api.get<ApplicationListResponse>('/applications', { params });
+  return data;
+}
+
+export async function updateApplication(
+  id: string,
+  updates: {
+    status?: string;
+    applied_via?: string;
+    applied_url?: string | null;
+    applied_at?: string | null;
+    note?: string;
+  },
+): Promise<ApplicationResponse> {
+  const { data } = await api.put<ApplicationResponse>(`/applications/${id}`, updates);
+  return data;
+}
+
+export async function deleteApplication(id: string): Promise<{ success: boolean }> {
+  const { data } = await api.delete<{ success: boolean }>(`/applications/${id}`);
   return data;
 }
 

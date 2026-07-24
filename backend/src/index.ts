@@ -6,6 +6,7 @@ import { errorHandler } from './middleware/errorHandler.js';
 import { healthRouter } from './routes/health.js';
 import { createJobsRouter } from './routes/jobs.js';
 import { createProfileRouter } from './routes/profile.js';
+import { createApplicationsRouter } from './routes/applications.js';
 import { MockStorage } from './storage/mock-storage.js';
 import { RateLimiter } from './utils/rate-limiter.js';
 import { Orchestrator } from './services/orchestrator.js';
@@ -76,6 +77,7 @@ const orchestrator = new Orchestrator(adapters, storage, rateLimiter);
 app.use('/health', healthRouter);
 app.use('/api/jobs', createJobsRouter(orchestrator, storage));
 app.use('/api/profile', createProfileRouter(storage));
+app.use('/api/applications', createApplicationsRouter(storage));
 
 // Health endpoint with extended info
 app.get('/api/health', (_req, res) => {

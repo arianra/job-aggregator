@@ -116,3 +116,60 @@ export interface HealthResponse {
   adapters: string[];
   rateLimiter: { active: number; pending: number };
 }
+
+// Application tracking types
+
+export interface Application {
+  id: string;
+  profile_id: string;
+  job_id: string;
+  status: ApplicationStatus;
+  notes: ApplicationNote[];
+  applied_via?: string;
+  applied_url?: string;
+  applied_at?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export type ApplicationStatus =
+  | 'saved'
+  | 'applied'
+  | 'screening'
+  | 'interview'
+  | 'offer'
+  | 'accepted'
+  | 'rejected'
+  | 'withdrawn'
+  | 'archived';
+
+export interface ApplicationNote {
+  id: string;
+  text: string;
+  created_at: string;
+}
+
+export interface ApplicationCount {
+  total: number;
+  saved: number;
+  applied: number;
+  screening: number;
+  interview: number;
+  offer: number;
+  accepted: number;
+  rejected: number;
+  withdrawn: number;
+  archived: number;
+}
+
+export interface ApplicationListResponse {
+  success: boolean;
+  data: Application[];
+  total: number;
+  counts: ApplicationCount | null;
+}
+
+export interface ApplicationResponse {
+  success: boolean;
+  data: Application;
+}

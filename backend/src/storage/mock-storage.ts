@@ -1,5 +1,5 @@
-import { Storage, JobFilter } from '@job-aggregator/shared'
-import { Job, Source, Company, Profile, Match } from '@job-aggregator/shared'
+import { Storage, JobFilter, ApplicationFilter } from '@job-aggregator/shared'
+import { Job, Source, Company, Profile, Match, Application, ApplicationCount } from '@job-aggregator/shared'
 import logger from '../utils/logger.js'
 
 /**
@@ -14,6 +14,7 @@ export class MockStorage implements Storage {
   private companies: Map<string, Company> = new Map()
   private profiles: Map<string, Profile> = new Map()
   private matches: Map<string, Match> = new Map()
+  private applications: Map<string, Application> = new Map()
 
   async connect(): Promise<void> {
     logger.info('MockStorage connected (in-memory)')
@@ -29,6 +30,7 @@ export class MockStorage implements Storage {
     this.companies.clear()
     this.profiles.clear()
     this.matches.clear()
+    this.applications.clear()
     logger.info('MockStorage cleared all data')
   }
 
@@ -226,5 +228,70 @@ export class MockStorage implements Storage {
 
   async deleteMatch(id: string): Promise<boolean> {
     return this.matches.delete(id)
+  }
+
+  // Applications
+  async saveApplication(app: Application): Promise<Application> {
+    this.applications.set(app.id, app)
+    logger.debug('Saved application', { appId: app.id, jobId: app.job_id, status: app.status })
+    return app
+  }
+
+  async getApplication(id: string): Promise<Application | null> {
+    return this.applications.get(id) || null
+  }
+
+  async getApplicationByJob(jobId: string, profileId: string): Promise<Application | null> {
+    return Array.from(this.applications.values()).find(
+      a => a.job_id === jobId && a.profile_id === profileId
+    ) || null
+  }
+
+  async listApplications(profileId: string, filters?: ApplicationFilter): Promise<Application[]> {
+    let results = Array.from(this.applications.values()).filter(a => a.profile_id === profileId)
+
+    if (filters?.status) {
+      results = results.filter(a => a.status === filters.status)
+    }
+
+    if (filters?.offset !== undefined) {
+      results = results.slice(filters.offset)
+    }
+
+    if (filters?.limit !== undefined) {
+      results = results.slice(0, filters.limit)
+    }
+
+    return results
+  }
+
+  async updateApplication(id: string, updates: Partial<Application>): Promise<Application | null> {
+    const existing = this.applications.get(id)
+    if (!existing) return null
+
+    const updated = { ...existing, ...updates, id, updated_at: new Date().toISOString() }
+    this.applications.set(id, updated)
+    logger.debug('Updated application', { appId: id, status: updated.status })
+    return updated
+  }
+
+  async deleteApplication(id: string): Promise<boolean> {
+    return this.applications.delete(id)
+  }
+
+  async getApplicationCounts(profileId: string): Promise<ApplicationCount> {
+    const apps = Array.from(this.applications.values()).filter(a => a.profile_id === profileId)
+    const counts: ApplicationCount = {
+      total: apps.length,
+      saved: 0, applied: 0, screening: 0, interview: 0,
+      offer: 0, accepted: 0, rejected: 0, withdrawn: 0, archived: 0,
+    }
+    for (const a of apps) {
+      const key = a.status as keyof ApplicationCount
+      if (key in counts) {
+        (counts as Record<string, number>)[key]++
+      }
+    }
+    return counts
   }
 }

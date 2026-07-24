@@ -6,7 +6,7 @@
  * - PostgresStorage: Real database for production
  */
 
-import type { Job, Source, Company, Profile, Match } from './types.js'
+import type { Job, Source, Company, Profile, Match, Application, ApplicationCount } from './types.js'
 
 export interface Storage {
   // Jobs
@@ -41,6 +41,15 @@ export interface Storage {
   getMatchesByProfileId(profileId: string): Promise<Match[]>
   deleteMatch(id: string): Promise<boolean>
 
+  // Applications
+  saveApplication(app: Application): Promise<Application>
+  getApplication(id: string): Promise<Application | null>
+  getApplicationByJob(jobId: string, profileId: string): Promise<Application | null>
+  listApplications(profileId: string, filters?: ApplicationFilter): Promise<Application[]>
+  updateApplication(id: string, updates: Partial<Application>): Promise<Application | null>
+  deleteApplication(id: string): Promise<boolean>
+  getApplicationCounts(profileId: string): Promise<ApplicationCount>
+
   // Lifecycle
   connect(): Promise<void>
   disconnect(): Promise<void>
@@ -56,6 +65,12 @@ export interface JobFilter {
   postedAfter?: Date
   postedBefore?: Date
   source?: string
+  limit?: number
+  offset?: number
+}
+
+export interface ApplicationFilter {
+  status?: string
   limit?: number
   offset?: number
 }

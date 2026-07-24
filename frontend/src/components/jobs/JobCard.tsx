@@ -1,26 +1,31 @@
 import { Link } from 'react-router-dom';
-import type { Job } from '../../types';
+import type { Job, ApplicationStatus } from '../../types';
 
 interface JobCardProps {
   job: Job;
   score?: number;
+  appStatus?: ApplicationStatus | null;
+  onSave?: (jobId: string) => void;
+  onApply?: (jobId: string) => void;
+  onUndo?: (jobId: string) => void;
+  isApplying?: boolean;
+  isSaving?: boolean;
 }
 
-export function JobCard({ job, score }: JobCardProps) {
+export function JobCard({ job, score, appStatus, onSave, onApply, onUndo, isApplying, isSaving }: JobCardProps) {
   const salaryText = formatSalary(job.salary_range);
   const locationText = formatLocation(job.location);
   const postedText = formatPosted(job.posted_date);
 
   return (
-    <Link
-      to={`/jobs/${job.id}`}
-      className="block bg-white rounded-lg shadow hover:shadow-md transition-shadow p-5 border border-gray-100"
-    >
+    <div className="block bg-white rounded-lg shadow hover:shadow-md transition-shadow p-5 border border-gray-100">
       <div className="flex justify-between items-start gap-4">
         <div className="flex-1 min-w-0">
-          <h3 className="text-lg font-semibold text-gray-900 truncate">
-            {job.title}
-          </h3>
+          <Link to={`/jobs/${job.id}`} className="hover:text-blue-600 transition-colors">
+            <h3 className="text-lg font-semibold text-gray-900 truncate">
+              {job.title}
+            </h3>
+          </Link>
           <p className="text-gray-600">{job.company.name}</p>
         </div>
 
@@ -51,6 +56,11 @@ export function JobCard({ job, score }: JobCardProps) {
             Remote
           </span>
         )}
+        {appStatus && (
+          <span className={`text-xs font-medium px-1.5 py-0.5 rounded ${statusBadge(appStatus)}`}>
+            {statusLabel(appStatus)}
+          </span>
+        )}
       </div>
 
       {job.tags.length > 0 && (
@@ -71,17 +81,49 @@ export function JobCard({ job, score }: JobCardProps) {
         </div>
       )}
 
-      <div className="flex gap-1.5 mt-3">
-        {job.sources.map((s) => (
-          <span
-            key={s.id}
-            className="text-xs border border-gray-200 text-gray-500 px-2 py-0.5 rounded"
-          >
-            {boardLabel(s.board)}
-          </span>
-        ))}
+      <div className="flex items-center justify-between mt-3">
+        <div className="flex gap-1.5">
+          {job.sources.map((s) => (
+            <span
+              key={s.id}
+              className="text-xs border border-gray-200 text-gray-500 px-2 py-0.5 rounded"
+            >
+              {boardLabel(s.board)}
+            </span>
+          ))}
+        </div>
+
+        {/* Action buttons — stop propagation so they don't navigate */}
+        <div className="flex gap-2">
+          {!appStatus && onSave && (
+            <button
+              onClick={(e) => { e.preventDefault(); onSave(job.id); }}
+              disabled={isSaving}
+              className="text-xs bg-gray-100 hover:bg-gray-200 text-gray-700 px-3 py-1 rounded transition-colors disabled:opacity-50"
+            >
+              {isSaving ? '...' : '💾 Save'}
+            </button>
+          )}
+          {!appStatus && onApply && (
+            <button
+              onClick={(e) => { e.preventDefault(); onApply(job.id); }}
+              disabled={isApplying}
+              className="text-xs bg-blue-500 hover:bg-blue-600 text-white px-3 py-1 rounded transition-colors disabled:opacity-50"
+            >
+              {isApplying ? '...' : '✓ Apply'}
+            </button>
+          )}
+          {appStatus && onUndo && (
+            <button
+              onClick={(e) => { e.preventDefault(); onUndo(job.id); }}
+              className="text-xs border border-gray-300 hover:bg-gray-50 text-gray-500 px-2 py-1 rounded transition-colors"
+            >
+              Undo
+            </button>
+          )}
+        </div>
       </div>
-    </Link>
+    </div>
   );
 }
 
@@ -138,4 +180,23 @@ function scoreColor(score: number): string {
   if (score >= 60) return 'bg-blue-100 text-blue-800';
   if (score >= 40) return 'bg-yellow-100 text-yellow-800';
   return 'bg-red-100 text-red-800';
+}
+
+function statusBadge(status: string): string {
+  const colors: Record<string, string> = {
+    saved: 'bg-gray-100 text-gray-700',
+    applied: 'bg-blue-100 text-blue-700',
+    screening: 'bg-purple-100 text-purple-700',
+    interview: 'bg-indigo-100 text-indigo-700',
+    offer: 'bg-green-100 text-green-700',
+    accepted: 'bg-green-200 text-green-800',
+    rejected: 'bg-red-100 text-red-700',
+    withdrawn: 'bg-yellow-100 text-yellow-700',
+    archived: 'bg-gray-200 text-gray-500',
+  };
+  return colors[status] || 'bg-gray-100 text-gray-700';
+}
+
+function statusLabel(status: string): string {
+  return status.charAt(0).toUpperCase() + status.slice(1);
 }

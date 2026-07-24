@@ -13,6 +13,8 @@ export type Proficiency = 'beginner' | 'intermediate' | 'advanced' | 'expert'
 
 export type JobStatus = 'active' | 'expired' | 'removed' | 'applied' | 'saved' | 'rejected'
 
+export type ApplicationStatus = 'saved' | 'applied' | 'screening' | 'interview' | 'offer' | 'accepted' | 'rejected' | 'withdrawn' | 'archived'
+
 export type SourceStatus = 'active' | 'expired' | 'removed' | 'error'
 
 export type BoardHealthStatus = 'healthy' | 'degraded' | 'down' | 'disabled'
@@ -236,6 +238,42 @@ export interface DimensionScore {
   weight: number // configurable importance (0–1)
   weighted: number // score × weight
   details?: string
+}
+
+// ============================================================================
+// Application
+// ============================================================================
+
+export interface Application {
+  id: string
+  profile_id: string
+  job_id: string
+  status: ApplicationStatus
+  notes: ApplicationNote[]
+  applied_via?: string // "linkedin", "indeed", "direct", "email"
+  applied_url?: string
+  applied_at?: Date | string
+  created_at: Date | string
+  updated_at: Date | string
+}
+
+export interface ApplicationNote {
+  id: string
+  text: string
+  created_at: Date | string
+}
+
+export interface ApplicationCount {
+  total: number
+  saved: number
+  applied: number
+  screening: number
+  interview: number
+  offer: number
+  accepted: number
+  rejected: number
+  withdrawn: number
+  archived: number
 }
 
 // ============================================================================

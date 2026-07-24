@@ -1,5 +1,7 @@
 import { useJobs } from '../../hooks/useJobs';
+import { useApplications, useCreateApplication, useDeleteApplication } from '../../hooks/useApplications';
 import { JobCard } from './JobCard';
+import type { ApplicationStatus } from '../../types';
 
 interface JobListProps {
   page?: number;
@@ -8,6 +10,32 @@ interface JobListProps {
 
 export function JobList({ page = 1, pageSize = 20 }: JobListProps) {
   const { data, isLoading, isError, error } = useJobs(page, pageSize);
+  const { data: appData } = useApplications();
+  const createApp = useCreateApplication();
+  const deleteApp = useDeleteApplication();
+
+  // Build a job_id → app lookup
+  const appMap = new Map<string, { id: string; status: ApplicationStatus }>();
+  if (appData?.data) {
+    for (const app of appData.data) {
+      appMap.set(app.job_id, { id: app.id, status: app.status });
+    }
+  }
+
+  const handleSave = (jobId: string) => {
+    createApp.mutate({ job_id: jobId });
+  };
+
+  const handleApply = (jobId: string) => {
+    createApp.mutate({ job_id: jobId, status: 'applied' });
+  };
+
+  const handleUndo = (jobId: string) => {
+    const app = appMap.get(jobId);
+    if (app) {
+      deleteApp.mutate(app.id);
+    }
+  };
 
   if (isLoading) {
     return (
@@ -43,9 +71,22 @@ export function JobList({ page = 1, pageSize = 20 }: JobListProps) {
 
   return (
     <div className="space-y-3">
-      {jobs.map((job) => (
-        <JobCard key={job.id} job={job} score={scores[job.id]} />
-      ))}
+      {jobs.map((job) => {
+        const app = appMap.get(job.id);
+        return (
+          <JobCard
+            key={job.id}
+            job={job}
+            score={scores[job.id]}
+            appStatus={app?.status ?? null}
+            onSave={handleSave}
+            onApply={handleApply}
+            onUndo={handleUndo}
+            isSaving={createApp.isPending}
+            isApplying={createApp.isPending}
+          />
+        );
+      })}
     </div>
   );
 }

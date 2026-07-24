@@ -1,11 +1,22 @@
 import { useParams, useNavigate } from 'react-router-dom';
 import { useJob } from '../hooks/useJobs';
-import type { Match } from '../types';
+import { useApplications, useCreateApplication, useUpdateApplication, useDeleteApplication } from '../hooks/useApplications';
+import type { Match, Application, ApplicationStatus } from '../types';
+import { useState } from 'react';
 
 export function JobDetails() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { data, isLoading, isError, error } = useJob(id);
+  const { data: appData } = useApplications();
+  const createApp = useCreateApplication();
+  const updateApp = useUpdateApplication();
+  const deleteApp = useDeleteApplication();
+  const [noteText, setNoteText] = useState('');
+
+  const application: Application | undefined = appData?.data?.find(
+    (a) => a.job_id === id
+  );
 
   if (isLoading) {
     return (
@@ -139,6 +150,105 @@ export function JobDetails() {
             Apply directly
           </a>
         )}
+
+        {/* Application Tracking */}
+        <div className="mt-6 pt-6 border-t border-gray-200">
+          <h2 className="text-lg font-semibold mb-3">Application</h2>
+
+          {!application ? (
+            <div className="flex gap-3">
+              <button
+                onClick={() => id && createApp.mutate({ job_id: id })}
+                disabled={createApp.isPending}
+                className="bg-gray-100 hover:bg-gray-200 text-gray-700 px-4 py-2 rounded-lg transition-colors disabled:opacity-50"
+              >
+                💾 Save
+              </button>
+              <button
+                onClick={() => id && createApp.mutate({ job_id: id, status: 'applied' })}
+                disabled={createApp.isPending}
+                className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg transition-colors disabled:opacity-50"
+              >
+                ✓ Mark Applied
+              </button>
+            </div>
+          ) : (
+            <div>
+              {/* Status selector */}
+              <div className="flex items-center gap-3 mb-4">
+                <span className="text-sm text-gray-500">Status:</span>
+                <select
+                  value={application.status}
+                  onChange={(e) =>
+                    updateApp.mutate({ id: application.id, status: e.target.value })
+                  }
+                  disabled={updateApp.isPending}
+                  className="text-sm border border-gray-300 rounded px-3 py-1.5 bg-white"
+                >
+                  {[
+                    'saved', 'applied', 'screening', 'interview',
+                    'offer', 'accepted', 'rejected', 'withdrawn', 'archived',
+                  ].map((s) => (
+                    <option key={s} value={s}>
+                      {s.charAt(0).toUpperCase() + s.slice(1)}
+                    </option>
+                  ))}
+                </select>
+                <button
+                  onClick={() => deleteApp.mutate(application.id)}
+                  disabled={deleteApp.isPending}
+                  className="text-xs text-red-500 hover:underline ml-auto"
+                >
+                  Remove
+                </button>
+              </div>
+
+              {/* Notes */}
+              <div className="mb-3">
+                <h3 className="text-sm font-medium text-gray-600 mb-2">Notes</h3>
+                {application.notes.length > 0 && (
+                  <div className="space-y-2 mb-3">
+                    {application.notes.map((note) => (
+                      <div key={note.id} className="text-sm text-gray-600 bg-gray-50 p-2 rounded">
+                        <p>{note.text}</p>
+                        <p className="text-xs text-gray-400 mt-1">
+                          {new Date(note.created_at).toLocaleString()}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={noteText}
+                    onChange={(e) => setNoteText(e.target.value)}
+                    placeholder="Add a note..."
+                    className="flex-1 text-sm border border-gray-300 rounded px-3 py-1.5"
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' && noteText.trim()) {
+                        updateApp.mutate({ id: application.id, note: noteText.trim() });
+                        setNoteText('');
+                      }
+                    }}
+                  />
+                  <button
+                    onClick={() => {
+                      if (noteText.trim()) {
+                        updateApp.mutate({ id: application.id, note: noteText.trim() });
+                        setNoteText('');
+                      }
+                    }}
+                    disabled={!noteText.trim() || updateApp.isPending}
+                    className="text-sm bg-gray-100 hover:bg-gray-200 text-gray-700 px-3 py-1.5 rounded disabled:opacity-50"
+                  >
+                    Add
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );
