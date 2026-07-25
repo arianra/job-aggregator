@@ -12,6 +12,7 @@ import { PrismaStorage } from './storage/prisma-storage.js';
 import { RateLimiter } from './utils/rate-limiter.js';
 import { Orchestrator } from './services/orchestrator.js';
 import { MockAdapter } from './adapters/mock-adapter.js';
+import { GreenhouseAdapter } from './adapters/greenhouse-adapter.js';
 import { sampleJobs, sampleSources, sampleProfile } from './storage/sample-data.js';
 import logger from './utils/logger.js';
 
@@ -59,16 +60,17 @@ if (existingJobs.length === 0) {
 // Adapters
 // ---------------------------------------------------------------------------
 
-// In production, real adapters are wired here.
-// For now, MockAdapter provides controlled test data.
-// TODO: swap in IndeedAdapter / LinkedInAdapter when API keys are configured.
-const adapters = new Map([
-  ['mock', new MockAdapter('mock', 'Mock Board', [], [])],
-]);
+// Initialize adapters - Greenhouse (public API, no auth required)
+const adapters = new Map<string, any>();
 
-// TODO: uncomment when RAPIDAPI_KEY is available
-// const linkedin = new LinkedInAdapter();
-// adapters.set('linkedin', linkedin);
+const greenhouse = new GreenhouseAdapter();
+adapters.set('greenhouse', greenhouse);
+
+// Keep mock adapter for testing if needed
+if (process.env.NODE_ENV !== 'production') {
+  const mock = new MockAdapter('mock', 'Mock Board', [], []);
+  adapters.set('mock', mock);
+}
 
 // ---------------------------------------------------------------------------
 // Orchestrator
