@@ -13,6 +13,9 @@ import { RateLimiter } from './utils/rate-limiter.js';
 import { Orchestrator } from './services/orchestrator.js';
 import { MockAdapter } from './adapters/mock-adapter.js';
 import { GreenhouseAdapter } from './adapters/greenhouse-adapter.js';
+import { LeverAdapter } from './adapters/lever-adapter.js';
+import { AshbyAdapter } from './adapters/ashby-adapter.js';
+import { WorkdayAdapter } from './adapters/workday-adapter.js';
 import { sampleJobs, sampleSources, sampleProfile } from './storage/sample-data.js';
 import logger from './utils/logger.js';
 
@@ -60,11 +63,20 @@ if (existingJobs.length === 0) {
 // Adapters
 // ---------------------------------------------------------------------------
 
-// Initialize adapters - Greenhouse (public API, no auth required)
+// Initialize all adapters - 4 ATS platforms (public APIs, no auth required)
 const adapters = new Map<string, any>();
 
 const greenhouse = new GreenhouseAdapter();
 adapters.set('greenhouse', greenhouse);
+
+const lever = new LeverAdapter();
+adapters.set('lever', lever);
+
+const ashby = new AshbyAdapter();
+adapters.set('ashby', ashby);
+
+const workday = new WorkdayAdapter();
+adapters.set('workday', workday);
 
 // Keep mock adapter for testing if needed
 if (process.env.NODE_ENV !== 'production') {
