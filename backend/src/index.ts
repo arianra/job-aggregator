@@ -7,6 +7,7 @@ import { createHealthRouter } from './routes/health.js';
 import { createJobsRouter } from './routes/jobs.js';
 import { createProfileRouter } from './routes/profile.js';
 import { createApplicationsRouter } from './routes/applications.js';
+import { createDashboardRouter } from './routes/dashboard.js';
 import { createBoardsRouter } from './routes/boards.js';
 import { MockStorage } from './storage/mock-storage.js';
 import { PrismaStorage } from './storage/prisma-storage.js';
@@ -100,6 +101,7 @@ app.use('/health', createHealthRouter(adapters, rateLimiter, config.hasDatabase)
 app.use('/api/jobs', createJobsRouter(orchestrator, storage));
 app.use('/api/profile', createProfileRouter(storage));
 app.use('/api/applications', createApplicationsRouter(storage));
+app.use('/api/dashboard', createDashboardRouter(storage));
 app.use('/api/boards', createBoardsRouter(storage));
 
 // Also mount health at /api/health for frontend compatibility

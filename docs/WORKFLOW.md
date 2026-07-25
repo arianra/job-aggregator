@@ -173,15 +173,16 @@ Dashboard updates automatically with pipeline counts.
                     │  │  (Express)│  │ Orchestrator  │  │  (Prisma ORM) │  │
                     │  └──────────┘  │ Scorer        │  │               │  │
                     │                │ Deduplicator  │  └───────┬───────┘  │
-                    │                │ Extractor     │          │          │
-                    │                └───────┬───────┘  ┌───────▼───────┐  │
-                    │                        │          │  PostgreSQL    │  │
-                    │                ┌───────▼───────┐  │  Port 5432     │  │
-                    │                │   Adapters    │  └───────────────┘  │
-                    │                │ ┌───────────┐ │                     │
-                    │                │ │ Greenhouse │ │  ┌───────────────┐  │
-                    │                │ │ Lever      │ │  │   Qwen AI     │  │
-                    │                │ │ Ashby      │ │  │ (resume parse)│  │
+                    │                │ TagExtractor  │          │          │
+                    │                │ SkillExtractor│  ┌───────▼───────┐  │
+                    │                └───────┬───────┘  │  PostgreSQL    │  │
+                    │                        │          │  Port 5432     │  │
+                    │                ┌───────▼───────┐  └───────────────┘  │
+                    │                │   Adapters    │                     │
+                    │                │ ┌───────────┐ │  ┌───────────────┐  │
+                    │                │ │ Greenhouse │ │  │   Qwen AI     │  │
+                    │                │ │ Lever      │ │  │ (parsing &    │  │
+                    │                │ │ Ashby      │ │  │  extraction)  │  │
                     │                │ │ Workday    │ │  └───────────────┘  │
                     │                │ └───────────┘ │                     │
                     │                └───────────────┘                     │
@@ -193,10 +194,23 @@ Dashboard updates automatically with pipeline counts.
 
 1. **Search** → Orchestrator calls all adapters in parallel
 2. **Adapters** → Fetch from ATS APIs, transform to canonical `Job` schema
-3. **Dedup** → Fingerprints (company::title::location) identify duplicates across boards
-4. **Store** → Jobs persisted to PostgreSQL with source metadata
-5. **Score** → Each job scored against your profile (6 dimensions, weighted)
-6. **Display** → Frontend shows scored, filtered, paginated results
+3. **Tag Extraction** → Extract skills from job text using profile-aware matching (AI or keyword fallback)
+4. **Dedup** → Fingerprints (company::title::location) identify duplicates across boards
+5. **Store** → Jobs persisted to PostgreSQL with source metadata
+6. **Score** → Each job scored against your profile (6 dimensions, weighted)
+7. **Display** → Frontend shows scored, filtered, paginated results
+
+### Skill Extraction
+
+Jobs are tagged with skills extracted from their title, description, and requirements:
+
+- **Profile-aware matching**: Only tags matching skills in your profile are kept
+- **AI extraction**: Uses Qwen AI to identify skills (requires `QWEN_API_KEY`)
+- **Fallback mode**: Keyword matching with common tech terms when AI unavailable
+- **Normalization**: Handles variations (Node.js, NodeJS, node.js → nodejs)
+- **Batch processing**: Processes jobs in batches of 10 for efficiency
+
+This ensures job tags are relevant to your skills and improves match quality.
 
 ---
 

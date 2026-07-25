@@ -463,9 +463,136 @@ function scoreExperience(experience: Experience[], requiredLevel?: SeniorityLeve
 
 ---
 
-### 6. Direct Source Finder
+### 6. Tag Extractor Services
+
+The tag extraction system provides intelligent skill detection for job matching. It combines AI-powered extraction with profile-aware filtering to ensure only relevant skills are tagged.
+
+#### 6.1 Skill Extractor (AI-Powered)
+
+Uses Qwen AI to extract structured skill information from job descriptions. Processes multiple jobs in batches for efficiency.
+
+**Implementation:** `backend/src/services/skill-extractor.ts`
+
+```typescript
+export async function extractSkillsFromText(
+  jobTexts: string[],
+  options: { apiKey: string; batchSize?: number } = { apiKey: '', batchSize: 10 }
+): Promise<Set<string>> {
+  const batchSize = options.batchSize ?? 10;
+  const allSkills = new Set<string>();
+  
+  // Process in batches for cost efficiency
+  for (let i = 0; i < jobTexts.length; i += batchSize) {
+    const batch = jobTexts.slice(i, i + batchSize);
+    
+    const response = await qwenClient.chat.completions.create({
+      model: 'qwen-max',
+      messages: [{
+        role: 'system',
+        content: SKILL_EXTRACTION_PROMPT
+      }, {
+        role: 'user', 
+        content: batch.join('\n\n---\n\n')
+      }],
+      response_format: { type: 'json_object' }
+    });
+    
+    const skills = parseSkillsResponse(response);
+    skills.forEach(skill => allSkills.add(normalizeSkill(skill)));
+  }
+  
+  return allSkills;
+}
+```
+
+**Key features:**
+- **Batch processing**: Handles 10 jobs per API call for cost efficiency
+- **Normalization**: Standardizes skill names across variations (React.js → react, NodeJS → nodejs)
+- **Structured output**: Uses Qwen's JSON response format for reliable parsing
+- **Error handling**: Gracefully handles API failures and malformed responses
+
+#### 6.2 Tag Extractor (Profile-Aware)
+
+Combines AI extraction with profile matching to ensure only relevant skills are tagged. Falls back to keyword matching when AI is unavailable.
+
+**Implementation:** `backend/src/services/tag-extractor.ts`
+
+```typescript
+export async function extractFallbackTags(
+  job: Job, 
+  profileSkillNames: Set<string>
+): Promise<string[]> {
+  const jobText = [
+    job.title,
+    job.description,
+    job.requirements.join(' ')
+  ].join('\n').toLowerCase();
+  
+  // Try multiple pattern variations for each skill
+  return Array.from(profileSkillNames).filter(skill => {
+    const baseName = skill.replace(/\.?js$/i, '');
+    const patterns = [
+      `\\b${baseName}\\b`,           // word boundary
+      `\\b${baseName}\\.js\\b`,       // with .js
+      `\\b${baseName}js\\b`,          // without dot
+      `\\b${skill}\\b`                // original
+    ];
+    
+    return patterns.some(pattern => 
+      new RegExp(pattern, 'i').test(jobText)
+    );
+  });
+}
+```
+
+**Workflow:**
+1. **Extract skills**: Use AI to get comprehensive skill list from job text
+2. **Normalize**: Convert to standard format (react, nodejs, python)
+3. **Match profile**: Filter to only skills that appear in user's profile
+4. **Fallback**: If AI unavailable, use keyword matching with profile skills
+
+**Benefits:**
+- **Relevance**: Only tags skills the user actually has, improving match accuracy
+- **Efficiency**: Keyword fallback works offline and is instant
+- **Flexibility**: Users can add skills to profile to expand matching
+- **Normalization**: Handles variations automatically (Node.js, NodeJS, node.js → nodejs)
+
+#### Integration with Scoring
+
+Tags are used in the scoring engine's skill dimension (Section 5):
+
+```typescript
+function scoreSkills(profileSkills: Skill[], jobTags: string[]): DimensionScore {
+  const profileSkillNames = new Set(
+    profileSkills.map(s => normalizeSkill(s.name))
+  );
+  const jobSkillNames = new Set(
+    jobTags.map(tag => normalizeSkill(tag))
+  );
+  
+  // Calculate overlap
+  const matches = [...jobSkillNames].filter(skill => 
+    profileSkillNames.has(skill)
+  );
+  
+  const coverage = matches.length / Math.max(jobSkillNames.size, 1);
+  
+  return {
+    score: Math.round(coverage * 100),
+    weight: DEFAULT_WEIGHTS.skills,
+    weighted: 0 // calculated by scorer
+  };
+}
+```
+
+The tag extraction services ensure that the skill matching dimension (35% of total score) is accurate and meaningful.
+
+---
+
+### 7. Direct Source Finder
 
 Finds the company's own career page for a job, enabling direct application.
+
 
 #### Strategy
 

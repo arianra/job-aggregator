@@ -52,7 +52,11 @@ export function createProfileRouter(storage: Storage): Router {
         res.json({ success: true, data: null });
         return;
       }
-      res.json({ success: true, data: profiles[0] });
+      // Return the most recently updated profile
+      const currentProfile = profiles.reduce((latest, current) =>
+        current.updated_at > latest.updated_at ? current : latest
+      );
+      res.json({ success: true, data: currentProfile });
     } catch (err) {
       logger.error('GET /api/profile failed', { err });
       res.status(500).json({ error: 'Internal server error' });
@@ -68,7 +72,11 @@ export function createProfileRouter(storage: Storage): Router {
         return;
       }
 
-      const updated = await storage.updateProfile(profiles[0].id, req.body);
+      // Update the most recently updated profile
+      const currentProfile = profiles.reduce((latest, current) =>
+        current.updated_at > latest.updated_at ? current : latest
+      );
+      const updated = await storage.updateProfile(currentProfile.id, req.body);
       res.json({ success: true, data: updated });
     } catch (err) {
       logger.error('PUT /api/profile failed', { err });
