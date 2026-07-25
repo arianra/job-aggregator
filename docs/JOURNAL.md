@@ -391,3 +391,151 @@ Total: 202 tests passing
 - ✅ 202 tests passing (100% coverage)
 - ✅ Committed and pushed to GitHub (commit 1285a0d)
 - ⏸️ Ready for integration testing with real APIs
+
+---
+
+## 2026-07-25: Documentation Overhaul
+
+### Goals
+- Create comprehensive end-user workflow documentation
+- Update stale README and setup guides
+- Audit codebase from multiple expert perspectives
+- Clean up outdated documentation
+
+### What We Did
+
+#### 1. Created AUDIT.md
+Comprehensive expert audit from 7 perspectives:
+- **Security**: Input validation, secrets management, CORS, rate limiting
+- **Architecture**: Layered design, adapter isolation, orchestrator patterns
+- **Maintainability**: Test coverage (296 tests), code organization, missing linting
+- **Modularity**: Clean boundaries, pure functions, frontend type duplication issue
+- **Functional Paradigm**: Pure transforms, stateless services, class-based adapters
+- **Frontend**: Solid UI, board label bugs, missing profile editing
+- **Product**: Working end-to-end flow, unclear value prop, no auto-refresh
+
+**Key findings:**
+- No critical vulnerabilities for single-user tool
+- Need to test adapters with live APIs (all tests use mocks)
+- Board labels in UI still reference deleted LinkedIn/Indeed adapters
+- Profile preferences can't be edited in UI (must use API)
+- No notifications, no auto-refresh, no CSV export
+
+#### 2. Created WORKFLOW.md
+End-user guide covering:
+- Step-by-step workflow: Upload Resume → Configure Preferences → Search → Review → Apply
+- Current limitations (profile editing must use API, no auto-refresh, etc.)
+- API reference quick guide
+- Architecture diagram and data flow
+- Scoring dimensions breakdown
+- Troubleshooting guide
+
+#### 3. Updated README.md
+- Added current status section (Phase 3 complete)
+- Updated tech stack (PostgreSQL, not just SQLite)
+- Added adapter coverage table (4 ATS platforms, 78+ boards)
+- Documented known issues from audit
+- Added links to new docs (AUDIT.md, WORKFLOW.md)
+- Removed LinkedIn/Indeed references
+
+#### 4. Updated TODO.md
+- Added quick reference table (phase status)
+- Reorganized into Critical / Should Have / Would Like / Future sections
+- Added adapter coverage table
+- Documented technical debt (no ESLint, no CI, no frontend tests)
+- Listed all completed work with checkmarks
+
+#### 5. Updated setup-guide.md
+- Removed LinkedIn/Indeed references
+- Updated adapter list (Greenhouse, Lever, Ashby, Workday)
+- Added Qwen API key section (optional for resume parsing)
+- Added troubleshooting for Board table FK constraint bug
+- Updated expected output (shows 4 adapters registered)
+
+#### 6. Cleaned Up Stale Docs
+Deleted:
+- `indeed-adapter-design.md` (adapter removed)
+- `linkedin-strategy.md` (adapter removed)
+- `HANDOFF.md` (Phase 1 handoff no longer relevant)
+- `TOKEN_EFFICIENT_PLAN.md` (session planning from 2026-07-23)
+- `implementation-plan-phase1.md` (Phase 1 complete)
+- `implementation-plan-phase2-frontend.md` (Phase 2 complete)
+
+### Current Documentation Structure
+```
+docs/
+├── AUDIT.md              # Expert audit (NEW)
+├── WORKFLOW.md           # End-user workflow (NEW)
+├── JOURNAL.md            # Development history
+├── CODE_VALIDATION.md    # Validation framework
+├── TODO.md               # Roadmap (UPDATED)
+├── README.md             # Project overview (UPDATED)
+├── setup-guide.md        # Development setup (UPDATED)
+├── ontology.md           # Domain model
+├── architecture.md       # System design
+├── orchestrator-design.md # Orchestrator patterns
+├── api-contract.md       # API specification
+├── database-schema.md    # Database design
+├── adapter-plan-*.md     # Adapter implementation plans (4 files)
+├── adapter-master-plan.md # Adapter execution plan
+└── adapter-implementation-validation.md # Validation report
+```
+
+### Key Decisions
+1. **Documentation as living reference**: README, TODO, setup-guide kept current; JOURNAL preserves history
+2. **Separate audit from workflow**: AUDIT.md for technical debt/issues, WORKFLOW.md for how to use the system
+3. **Delete vs keep stale docs**: Deleted implementation plans (phases complete), kept design docs (still relevant)
+4. **No auto-generated docs**: Manual updates for now (could add OpenAPI/Swagger later)
+
+### What's Still Missing
+- **OpenAPI/Swagger spec**: Auto-generated API docs from route definitions
+- **Frontend component docs**: Storybook or similar for UI components
+- **Deployment guide**: How to deploy to production (if ever needed)
+- **Contributing guide**: How to add new adapters, how to contribute (currently solo project)
+
+### Next Steps
+1. Test adapters with live APIs (all tests use mocks currently)
+2. Populate company lists for each adapter
+3. Fix board labels in UI (greenhouse, lever, ashby, workday instead of linkedin, indeed)
+4. Fix pagination bug (total hardcoded to 100)
+5. Fix health endpoint (return adapters, storage, rateLimiter fields)
+6. Add profile preferences editing UI
+7. Fix Board table FK constraint (populate rows or remove constraint)
+
+### Status
+- ✅ Documentation comprehensive and current
+- ✅ 296 tests passing
+- ✅ Build clean
+- ⏸️ Ready for live API testing
+
+---
+
+## 2026-07-25 (earlier): Cleanup Commit
+
+### What We Did
+- Removed LinkedIn and Indeed adapters (broken, replaced by ATS adapters)
+- Fixed Workday adapter (added job_type, is_remote, status fields)
+- Updated storage interface (added remote filter to JobFilter)
+- Fixed storage implementations (use is_remote field for filtering)
+- Updated PDF extractor to pdf-parse v2 API
+- Wrapped PrismaStorage.saveJob in transaction for atomicity
+- Fixed ApplicationCount type casts
+- Updated test fixtures with required Company timestamps
+- Fixed frontend DashboardPage.tsx type cast
+
+### Test Results
+- 296 tests passing across 15 test files
+- Build clean (backend + frontend)
+- Committed: 985bf84
+- Pushed to GitHub
+
+### Files Modified
+- Deleted: `indeed-adapter.ts`, `linkedin-adapter.ts` + tests
+- Updated: `workday-adapter.ts`, `extractor.ts`, `prisma-storage.ts`, `mock-storage.ts`
+- Updated: `applications.ts`, `jobs.ts`, various test files
+- Updated: `DashboardPage.tsx` (frontend type cast fix)
+
+### Status
+- ✅ All changes committed and pushed
+- ✅ No breaking changes (sample data still works)
+- ⏸️ Ready for documentation update (which we did above)
