@@ -186,8 +186,8 @@ export function createApplicationsRouter(storage: Storage): Router {
       }
 
       if (body.applied_via !== undefined) updates.applied_via = body.applied_via;
-      if (body.applied_url !== undefined) updates.applied_url = body.applied_url;
-      if (body.applied_at !== undefined) updates.applied_at = body.applied_at;
+      if (body.applied_url !== undefined) updates.applied_url = body.applied_url ?? undefined;
+      if (body.applied_at !== undefined) updates.applied_at = body.applied_at ?? undefined;
 
       // Add a note
       if (body.note) {

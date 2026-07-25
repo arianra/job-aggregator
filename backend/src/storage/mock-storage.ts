@@ -64,7 +64,7 @@ export class MockStorage implements Storage {
       }
 
       if (filters.remote !== undefined) {
-        results = results.filter(j => j.location.remote === filters.remote)
+        results = results.filter(j => j.is_remote === filters.remote)
       }
 
       if (filters.salaryMin !== undefined) {
@@ -289,7 +289,7 @@ export class MockStorage implements Storage {
     for (const a of apps) {
       const key = a.status as keyof ApplicationCount
       if (key in counts) {
-        (counts as Record<string, number>)[key]++
+        (counts as unknown as Record<string, number>)[key]++
       }
     }
     return counts

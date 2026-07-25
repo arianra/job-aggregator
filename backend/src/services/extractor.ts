@@ -59,11 +59,12 @@ export async function extractText(filePath: string, filename: string): Promise<E
 async function extractPdf(filePath: string): Promise<string> {
   try {
     // Dynamic import so pdf-parse (which has native deps) only loads when needed
-    const pdfParse = (await import('pdf-parse')).default;
+    const { PDFParse } = await import('pdf-parse');
     const buffer = await fs.readFile(filePath);
-    const data = await pdfParse(buffer);
-    logger.info(`[extractor] PDF parsed: ${data.numpages} pages, ${data.text.length} chars`);
-    return data.text;
+    const parser = new PDFParse({ data: buffer });
+    const textResult = await parser.getText();
+    logger.info(`[extractor] PDF parsed: ${textResult.text.length} chars`);
+    return textResult.text;
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
     logger.error(`[extractor] PDF extraction failed: ${msg}`);

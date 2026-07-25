@@ -3,7 +3,7 @@ import { Orchestrator } from '../orchestrator.js';
 import { MockAdapter } from '../../adapters/mock-adapter.js';
 import { MockStorage } from '../../storage/mock-storage.js';
 import { RateLimiter } from '../../utils/rate-limiter.js';
-import type { Job, Source, JobSearchQuery } from '@job-aggregator/shared';
+import type { Job, Source, JobSearchQuery, BoardAdapter } from '@job-aggregator/shared';
 
 function makeJob(overrides: Partial<Job> = {}): Job {
   return {
@@ -74,7 +74,7 @@ describe('Orchestrator', () => {
       const jobShared = makeJob({
         id: 'same-job',
         title: 'Full Stack Engineer',
-        company: { id: 'c1', name: 'Google', aliases: [] },
+        company: { id: 'c1', name: 'Google', aliases: [], created_at: new Date(), updated_at: new Date() },
         location: { city: 'Mountain View', state: 'CA', country: 'US', remote: false },
       });
 
@@ -99,7 +99,7 @@ describe('Orchestrator', () => {
       const existing = makeJob({
         id: 'existing',
         title: 'Dev',
-        company: { id: 'c1', name: 'Corp', aliases: [] },
+        company: { id: 'c1', name: 'Corp', aliases: [], created_at: new Date(), updated_at: new Date() },
         description: 'Original.',
         tags: ['a'],
         requirements: ['req1'],
@@ -108,7 +108,7 @@ describe('Orchestrator', () => {
       const incoming = makeJob({
         id: 'incoming',
         title: 'Dev',
-        company: { id: 'c1', name: 'Corp', aliases: [] },
+        company: { id: 'c1', name: 'Corp', aliases: [], created_at: new Date(), updated_at: new Date() },
         description: 'A much richer description from the second board.',
         tags: ['a', 'b', 'c'],
         requirements: ['req1', 'req2'],
@@ -138,7 +138,7 @@ describe('Orchestrator', () => {
       const job1 = makeJob({ id: 'job-1' });
       const goodAdapter = new MockAdapter('indeed', 'Indeed', [job1], [makeSource('job-1', 'indeed')]);
 
-      const badAdapter = {
+      const badAdapter: BoardAdapter = {
         boardId: 'broken',
         boardName: 'BrokenBoard',
         searchJobs: () => { throw new Error('Connection refused'); },
@@ -157,7 +157,7 @@ describe('Orchestrator', () => {
     });
 
     it('handles all adapters failing', async () => {
-      const badAdapter = {
+      const badAdapter: BoardAdapter = {
         boardId: 'broken',
         boardName: 'BrokenBoard',
         searchJobs: () => { throw new Error('Down'); },
@@ -189,8 +189,8 @@ describe('Orchestrator', () => {
 
     it('does not deduplicate when existing storage is empty', async () => {
       const jobs = [
-        makeJob({ id: 'job-a', title: 'Frontend Dev', company: { id: 'c1', name: 'CorpA', aliases: [] } }),
-        makeJob({ id: 'job-b', title: 'Backend Dev', company: { id: 'c2', name: 'CorpB', aliases: [] } }),
+        makeJob({ id: 'job-a', title: 'Frontend Dev', company: { id: 'c1', name: 'CorpA', aliases: [], created_at: new Date(), updated_at: new Date() } }),
+        makeJob({ id: 'job-b', title: 'Backend Dev', company: { id: 'c2', name: 'CorpB', aliases: [], created_at: new Date(), updated_at: new Date() } }),
       ];
       const adapter = new MockAdapter('indeed', 'Indeed', jobs, [makeSource('job-a', 'indeed'), makeSource('job-b', 'indeed')]);
       const adapters = new Map([['indeed', adapter]]);

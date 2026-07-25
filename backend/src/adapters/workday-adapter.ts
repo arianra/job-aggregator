@@ -1,5 +1,5 @@
 import axios, { AxiosInstance, AxiosError } from 'axios';
-import { BoardAdapter, Job, Source, AdapterResult, JobSearchQuery, AdapterHealth } from '@job-aggregator/shared';
+import { BoardAdapter, Job, Source, AdapterResult, JobSearchQuery, AdapterHealth, JobType } from '@job-aggregator/shared';
 import logger from '../utils/logger.js';
 
 // ============================================================================
@@ -146,6 +146,13 @@ export function transformWorkdayJob(raw: WorkdayJob, tenant: WorkdayTenant): { j
   const seniority = parseSeniority(raw.title);
   const tags = extractTags(raw.title);
   
+  // Determine if job is remote based on location
+  const isRemote = Boolean(location.remote || location.city?.toLowerCase() === 'remote' || 
+                           location.city?.toLowerCase().includes('remote'));
+  
+  // Default to full-time if not specified
+  const jobType: JobType = 'full-time';
+  
   const job: Job = {
     id: `workday-${tenant.slug}-${raw.jobId}`,
     title: raw.title,
@@ -159,6 +166,9 @@ export function transformWorkdayJob(raw: WorkdayJob, tenant: WorkdayTenant): { j
     location,
     description: '',
     requirements: [],
+    job_type: jobType,
+    is_remote: isRemote,
+    status: 'active',
     tags,
     seniority_level: seniority,
     posted_date: postedDate,
@@ -173,6 +183,7 @@ export function transformWorkdayJob(raw: WorkdayJob, tenant: WorkdayTenant): { j
     board: 'workday',
     board_job_id: raw.jobId,
     url: `https://${tenant.slug}.myworkdayjobs.com${raw.externalPath}`,
+    status: 'active',
     scraped_at: new Date(),
     raw_payload: {
       title: raw.title,

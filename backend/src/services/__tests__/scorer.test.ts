@@ -13,11 +13,6 @@ function makeProfile(overrides: Partial<Profile> = {}): Profile {
     updated_at: new Date('2024-01-01'),
     name: 'Test User',
     email: 'test@example.com',
-    skills: [
-      { name: 'TypeScript', proficiency: 'expert', years: 4, category: 'language' },
-      { name: 'React', proficiency: 'advanced', years: 3, category: 'framework' },
-      { name: 'Node.js', proficiency: 'expert', years: 5, category: 'framework' },
-    ],
     experience: [
       {
         company: 'Corp',
@@ -32,17 +27,6 @@ function makeProfile(overrides: Partial<Profile> = {}): Profile {
       { institution: 'University', degree: 'BS', field: 'CS', graduation_year: 2018 },
     ],
     certifications: [],
-    preferences: {
-      locations: [{ city: 'San Francisco', state: 'CA', country: 'US', remote: false }],
-      remote_ok: true,
-      hybrid_ok: true,
-      onsite_ok: true,
-      job_types: ['full-time'],
-      seniority_levels: ['mid', 'senior'],
-      salary_min: 120000,
-      currency: 'USD',
-      keywords: ['backend', 'fullstack'],
-    },
     search_queries: [],
     resume: { filename: 'resume.pdf', mime_type: 'application/pdf', stored_path: '/tmp/resume.pdf' },
     ...overrides,

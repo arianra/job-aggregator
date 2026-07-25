@@ -12,6 +12,8 @@ function makeJob(overrides: Partial<Job> = {}): Job {
       id: 'company-1',
       name: 'TestCorp',
       aliases: [],
+      created_at: new Date(),
+      updated_at: new Date(),
     },
     location: {
       city: 'San Francisco',
@@ -32,27 +34,27 @@ function makeJob(overrides: Partial<Job> = {}): Job {
 
 describe('generateFingerprint', () => {
   it('generates a stable fingerprint for a job', () => {
-    const job = makeJob({ title: 'Software Engineer', company: { id: 'c1', name: 'Google', aliases: [] } });
+    const job = makeJob({ title: 'Software Engineer', company: { id: 'c1', name: 'Google', aliases: [], created_at: new Date(), updated_at: new Date() } });
     const fp = generateFingerprint(job);
     expect(fp).toBe('google::software engineer::san francisco ca us');
   });
 
   it('normalizes casing and punctuation', () => {
-    const a = makeJob({ title: 'Sr. Software Engineer!', company: { id: 'c1', name: 'Google LLC', aliases: [] } });
-    const b = makeJob({ title: 'Sr Software Engineer', company: { id: 'c1', name: 'Google LLC', aliases: [] } });
+    const a = makeJob({ title: 'Sr. Software Engineer!', company: { id: 'c1', name: 'Google LLC', aliases: [], created_at: new Date(), updated_at: new Date() } });
+    const b = makeJob({ title: 'Sr Software Engineer', company: { id: 'c1', name: 'Google LLC', aliases: [], created_at: new Date(), updated_at: new Date() } });
     // Both should normalize to the same thing
     expect(generateFingerprint(a)).toBe(generateFingerprint(b));
   });
 
   it('collapses whitespace', () => {
-    const a = makeJob({ title: 'Software   Engineer', company: { id: 'c1', name: 'Google', aliases: [] } });
-    const b = makeJob({ title: 'Software Engineer', company: { id: 'c1', name: 'Google', aliases: [] } });
+    const a = makeJob({ title: 'Software   Engineer', company: { id: 'c1', name: 'Google', aliases: [], created_at: new Date(), updated_at: new Date() } });
+    const b = makeJob({ title: 'Software Engineer', company: { id: 'c1', name: 'Google', aliases: [], created_at: new Date(), updated_at: new Date() } });
     expect(generateFingerprint(a)).toBe(generateFingerprint(b));
   });
 
   it('differs for different companies', () => {
-    const a = makeJob({ company: { id: 'c1', name: 'Google', aliases: [] } });
-    const b = makeJob({ company: { id: 'c2', name: 'Meta', aliases: [] } });
+    const a = makeJob({ company: { id: 'c1', name: 'Google', aliases: [], created_at: new Date(), updated_at: new Date() } });
+    const b = makeJob({ company: { id: 'c2', name: 'Meta', aliases: [], created_at: new Date(), updated_at: new Date() } });
     expect(generateFingerprint(a)).not.toBe(generateFingerprint(b));
   });
 
@@ -112,7 +114,7 @@ describe('deduplicateJobs', () => {
     const existing = makeJob({
       id: 'existing-1',
       title: 'React Developer',
-      company: { id: 'c1', name: 'Google', aliases: [] },
+      company: { id: 'c1', name: 'Google', aliases: [], created_at: new Date(), updated_at: new Date() },
       location: { city: 'Mountain View', state: 'CA', country: 'US', remote: false },
       description: 'Old description',
       tags: ['react'],
@@ -124,7 +126,7 @@ describe('deduplicateJobs', () => {
       makeJob({
         id: 'new-1',
         title: 'React Developer',
-        company: { id: 'c1', name: 'Google', aliases: [] },
+        company: { id: 'c1', name: 'Google', aliases: [], created_at: new Date(), updated_at: new Date() },
         location: { city: 'Mountain View', state: 'CA', country: 'US', remote: false },
         description: 'New longer description with more details about the role.',
         tags: ['react', 'typescript'],
@@ -150,7 +152,7 @@ describe('deduplicateJobs', () => {
     const existing = makeJob({
       id: 'existing-1',
       title: 'Dev',
-      company: { id: 'c1', name: 'Corp', aliases: [] },
+      company: { id: 'c1', name: 'Corp', aliases: [], created_at: new Date(), updated_at: new Date() },
       description: 'A very long description that is much longer than the duplicate.',
       tags: ['a', 'b', 'c'],
     });
@@ -159,7 +161,7 @@ describe('deduplicateJobs', () => {
       makeJob({
         id: 'new-1',
         title: 'Dev',
-        company: { id: 'c1', name: 'Corp', aliases: [] },
+        company: { id: 'c1', name: 'Corp', aliases: [], created_at: new Date(), updated_at: new Date() },
         description: 'Short.',
         tags: ['a'],
       }),
@@ -176,7 +178,7 @@ describe('deduplicateJobs', () => {
     const existing = makeJob({
       id: 'existing-1',
       title: 'Dev',
-      company: { id: 'c1', name: 'Corp', aliases: [] },
+      company: { id: 'c1', name: 'Corp', aliases: [], created_at: new Date(), updated_at: new Date() },
     });
 
     const incoming = [
@@ -184,14 +186,14 @@ describe('deduplicateJobs', () => {
       makeJob({
         id: 'new-dup',
         title: 'Dev',
-        company: { id: 'c1', name: 'Corp', aliases: [] },
+        company: { id: 'c1', name: 'Corp', aliases: [], created_at: new Date(), updated_at: new Date() },
         description: 'Richer description.',
       }),
       // New job
       makeJob({
         id: 'new-unique',
         title: 'Designer',
-        company: { id: 'c2', name: 'OtherCorp', aliases: [] },
+        company: { id: 'c2', name: 'OtherCorp', aliases: [], created_at: new Date(), updated_at: new Date() },
       }),
     ];
 
@@ -212,14 +214,14 @@ describe('deduplicateJobs', () => {
     const existing = makeJob({
       id: 'existing-1',
       title: 'Frontend Engineer',
-      company: { id: 'c1', name: 'Google', aliases: [] },
+      company: { id: 'c1', name: 'Google', aliases: [], created_at: new Date(), updated_at: new Date() },
     });
 
     const incoming = [
       makeJob({
         id: 'new-1',
         title: 'Backend Engineer',
-        company: { id: 'c1', name: 'Google', aliases: [] },
+        company: { id: 'c1', name: 'Google', aliases: [], created_at: new Date(), updated_at: new Date() },
       }),
     ];
 

@@ -60,7 +60,7 @@ export function DashboardPage() {
                 { key: 'offer', label: 'Offer', color: 'bg-green-400' },
                 { key: 'accepted', label: 'Accepted', color: 'bg-green-500' },
               ].map((stage) => {
-                const val = (counts as Record<string, number>)[stage.key] ?? 0;
+                const val = (counts as unknown as Record<string, number>)[stage.key] ?? 0;
                 const width = counts.total > 0 ? (val / counts.total) * 100 : 0;
                 return (
                   <div key={stage.key} className="flex items-center gap-3">

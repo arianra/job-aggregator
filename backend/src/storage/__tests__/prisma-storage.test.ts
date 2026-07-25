@@ -15,14 +15,16 @@ function makeJob(overrides: Partial<Job> = {}): Job {
     company: {
       id: overrides.company?.id ?? 'company-1',
       name: overrides.company?.name ?? 'TestCorp',
-      aliases: [],
+      aliases: overrides.company?.aliases ?? [],
+      created_at: overrides.company?.created_at ?? new Date(),
+      updated_at: overrides.company?.updated_at ?? new Date(),
     },
     location: { city: 'San Francisco', state: 'CA', country: 'USA', remote: false },
     description: 'A great job',
     requirements: ['TypeScript', 'Node.js'],
     salary_range: { min: 100000, max: 150000, currency: 'USD', period: 'annual' },
     job_type: 'full-time',
-    is_remote: false,
+    remote: false,
     tags: ['typescript', 'nodejs'],
     posted_date: new Date('2024-01-10'),
     sources: [],
@@ -155,8 +157,8 @@ describe('PrismaStorage', () => {
     });
 
     it('filters by company name', async () => {
-      await storage.saveJob(makeJob({ id: 'j1', company: { id: 'c1', name: 'Google', aliases: [] } }));
-      await storage.saveJob(makeJob({ id: 'j2', company: { id: 'c2', name: 'Meta', aliases: [] } }));
+      await storage.saveJob(makeJob({ id: 'j1', company: { id: 'c1', name: 'Google', aliases: [], created_at: new Date(), updated_at: new Date() } }));
+      await storage.saveJob(makeJob({ id: 'j2', company: { id: 'c2', name: 'Meta', aliases: [], created_at: new Date(), updated_at: new Date() } }));
 
       const jobs = await storage.listJobs({ company: 'google' });
       expect(jobs).toHaveLength(1);

@@ -112,7 +112,7 @@ describe('MockStorage', () => {
 
       expect(remoteJobs).toHaveLength(2)
       remoteJobs.forEach(job => {
-        expect(job.location.remote).toBe(true)
+        expect(job.is_remote).toBe(true)
       })
     })
 

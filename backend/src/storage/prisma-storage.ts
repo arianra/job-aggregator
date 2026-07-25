@@ -48,66 +48,69 @@ export class PrismaStorage implements Storage {
 
   async saveJob(job: Job): Promise<Job> {
     const companyId = job.company.id;
-    await this.prisma.company.upsert({
-      where: { id: companyId },
-      create: {
-        id: companyId,
-        name: job.company.name,
-        aliases: (job.company.aliases ?? []) as any,
-        website: job.company.website,
-        careers_url: job.company.careers_url,
-        industry: job.company.industry,
-        size: job.company.size,
-        location: (job.company.location ?? null) as any,
-        description: job.company.description,
-      },
-      update: {
-        name: job.company.name,
-        aliases: (job.company.aliases ?? []) as any,
-        website: job.company.website,
-        careers_url: job.company.careers_url,
-        industry: job.company.industry,
-        size: job.company.size,
-        location: (job.company.location ?? null) as any,
-        description: job.company.description,
-      },
-    });
+    
+    await this.prisma.$transaction(async (tx) => {
+      await tx.company.upsert({
+        where: { id: companyId },
+        create: {
+          id: companyId,
+          name: job.company.name,
+          aliases: (job.company.aliases ?? []) as any,
+          website: job.company.website,
+          careers_url: job.company.careers_url,
+          industry: job.company.industry,
+          size: job.company.size,
+          location: (job.company.location ?? null) as any,
+          description: job.company.description,
+        },
+        update: {
+          name: job.company.name,
+          aliases: (job.company.aliases ?? []) as any,
+          website: job.company.website,
+          careers_url: job.company.careers_url,
+          industry: job.company.industry,
+          size: job.company.size,
+          location: (job.company.location ?? null) as any,
+          description: job.company.description,
+        },
+      });
 
-    await this.prisma.job.upsert({
-      where: { id: job.id },
-      create: {
-        id: job.id,
-        title: job.title,
-        company_id: companyId,
-        location: job.location as any,
-        description: job.description,
-        requirements: (job.requirements ?? []) as any,
-        salary_range: (job.salary_range ?? null) as any,
-        job_type: job.job_type,
-        seniority_level: job.seniority_level,
-        is_remote: job.is_remote,
-        posted_date: job.posted_date ?? null,
-        closing_date: (job as any).closing_date ?? null,
-        tags: (job.tags ?? []) as any,
-        direct_apply_url: job.direct_apply_url,
-        direct_apply_confidence: job.direct_apply_confidence,
-        status: job.status ?? 'active',
-      },
-      update: {
-        title: job.title,
-        location: job.location as any,
-        description: job.description,
-        requirements: (job.requirements ?? []) as any,
-        salary_range: (job.salary_range ?? null) as any,
-        job_type: job.job_type,
-        seniority_level: job.seniority_level,
-        is_remote: job.is_remote,
-        posted_date: job.posted_date ?? null,
-        tags: (job.tags ?? []) as any,
-        direct_apply_url: job.direct_apply_url,
-        direct_apply_confidence: job.direct_apply_confidence,
-        status: job.status ?? 'active',
-      },
+      await tx.job.upsert({
+        where: { id: job.id },
+        create: {
+          id: job.id,
+          title: job.title,
+          company_id: companyId,
+          location: job.location as any,
+          description: job.description,
+          requirements: (job.requirements ?? []) as any,
+          salary_range: (job.salary_range ?? null) as any,
+          job_type: job.job_type,
+          seniority_level: job.seniority_level,
+          is_remote: job.is_remote,
+          posted_date: job.posted_date ?? null,
+          closing_date: (job as any).closing_date ?? null,
+          tags: (job.tags ?? []) as any,
+          direct_apply_url: job.direct_apply_url,
+          direct_apply_confidence: job.direct_apply_confidence,
+          status: job.status ?? 'active',
+        },
+        update: {
+          title: job.title,
+          location: job.location as any,
+          description: job.description,
+          requirements: (job.requirements ?? []) as any,
+          salary_range: (job.salary_range ?? null) as any,
+          job_type: job.job_type,
+          seniority_level: job.seniority_level,
+          is_remote: job.is_remote,
+          posted_date: job.posted_date ?? null,
+          tags: (job.tags ?? []) as any,
+          direct_apply_url: job.direct_apply_url,
+          direct_apply_confidence: job.direct_apply_confidence,
+          status: job.status ?? 'active',
+        },
+      });
     });
 
     return job;
@@ -160,7 +163,7 @@ export class PrismaStorage implements Storage {
     }
 
     if (filters?.remote !== undefined) {
-      results = results.filter((j) => j.location.remote === filters.remote);
+      results = results.filter((j) => j.is_remote === filters.remote);
     }
 
     if (filters?.salaryMin !== undefined) {
@@ -555,7 +558,7 @@ export class PrismaStorage implements Storage {
     for (const a of apps) {
       const key = a.status as keyof ApplicationCount;
       if (key in counts) {
-        (counts as Record<string, number>)[key]++;
+        (counts as unknown as Record<string, number>)[key]++;
       }
     }
 

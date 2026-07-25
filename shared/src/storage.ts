@@ -59,6 +59,7 @@ export interface Storage {
 export interface JobFilter {
   company?: string
   location?: string
+  remote?: boolean
   salaryMin?: number
   salaryMax?: number
   tags?: string[]

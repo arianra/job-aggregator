@@ -154,7 +154,7 @@ describe('Jobs Routes', () => {
     });
 
     it('filters by company', async () => {
-      const job = makeJob({ id: 'job-1', title: 'Dev', company: { id: 'c1', name: 'CoolCorp', aliases: [] } });
+      const job = makeJob({ id: 'job-1', title: 'Dev', company: { id: 'c1', name: 'CoolCorp', aliases: [], created_at: new Date(), updated_at: new Date() } });
       await storage.saveJob(job);
 
       const res = await request(app)
@@ -166,8 +166,8 @@ describe('Jobs Routes', () => {
     });
 
     it('filters by remote', async () => {
-      const remote = makeJob({ id: 'job-1', title: 'Remote', location: { city: '', state: '', country: 'US', remote: true } });
-      const onsite = makeJob({ id: 'job-2', title: 'Onsite', location: { city: 'NYC', state: 'NY', country: 'US', remote: false } });
+      const remote = makeJob({ id: 'job-1', title: 'Remote', is_remote: true, location: { city: '', state: '', country: 'US', remote: true } });
+      const onsite = makeJob({ id: 'job-2', title: 'Onsite', is_remote: false, location: { city: 'NYC', state: 'NY', country: 'US', remote: false } });
       await storage.saveJob(remote);
       await storage.saveJob(onsite);
 
