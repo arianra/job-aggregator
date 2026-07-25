@@ -34,14 +34,32 @@
 ## Phase 1: Core Scraping
 **Estimated: 5-7 days**
 
-- [ ] Implement `JobBoardAdapter` interface
-- [ ] Build adapter registry
-- [ ] Implement LinkedIn adapter
+- [x] Implement `JobBoardAdapter` interface
+- [x] Build adapter registry
+- [x] Implement LinkedIn adapter
   - Search API or scraping strategy
   - Rate limiting (respect ToS)
   - Error handling
-- [ ] Implement Indeed adapter
+- [x] Implement Indeed adapter
   - Similar structure
+  - [x] Implement Greenhouse adapter
+  - 18 tests passing
+  - Rate limiting: 30 concurrent, 500ms delay
+  - Company list: 6,782 companies
+- [x] Implement Lever adapter
+  - 38 tests passing
+  - Rate limiting: 30 concurrent, 500ms delay
+  - Company list: 2,126 companies
+- [x] Implement Ashby adapter
+  - 45 tests passing
+  - Rate limiting: 5 concurrent, 2s jitter
+  - Retry logic with exponential backoff
+  - Company list: 3,580 companies
+- [x] Implement Workday adapter
+  - 47 tests passing
+  - Rate limiting: 50 concurrent, 500ms delay
+  - Silent blocking detection
+  - Company list: 4,047 companies
 - [ ] Build `ScraperOrchestrator`
   - Parallel execution with Promise.allSettled
   - Per-adapter timeout

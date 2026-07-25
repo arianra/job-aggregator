@@ -253,3 +253,141 @@ Phase 1: Job Board Adapter Infrastructure
 - Implement adapter registry
 - Build first adapter (likely Indeed - simpler structure)
 - Test with sample data
+
+---
+
+## 2026-07-24: ATS Adapter Implementation (Greenhouse, Lever, Ashby, Workday)
+
+### Goals
+- Implement 4 production-ready ATS platform adapters
+- Achieve 100% test coverage with pure transform functions
+- Follow consistent patterns across all adapters
+
+### What We Built
+
+#### 1. Greenhouse Adapter (`greenhouse-adapter.ts`)
+**18 tests passing**
+- Uses Greenhouse's public JSON API (`/boards/{org}?content=true`)
+- Extracts: title, location, job type, seniority, tags, posted date, salary
+- Rate limiting: 30 concurrent requests, 500ms delay between batches
+- Pure transform functions: `parseLocation()`, `parseJobType()`, `parseSeniority()`, `extractTags()`, `transformGreenhouseJob()`
+- Company list: 6,782 companies (from `greenhouse-companies.json`)
+
+#### 2. Lever API Adapter (`lever-adapter.ts`)
+**38 tests passing**
+- Uses Lever's public API (`https://api.lever.co/v0/postings/{org}?mode=json`)
+- Extracts: title, location, job type, seniority, tags, posted date, salary
+- Rate limiting: 30 concurrent requests, 500ms delay between batches
+- Pure transform functions: same pattern as Greenhouse
+- Company list: 2,126 companies (from `lever-companies.json`)
+
+#### 3. Ashby GraphQL Adapter (`ashby-adapter.ts`)
+**45 tests passing**
+- Uses Ashby's GraphQL API with strict rate limiting
+- Query structure from Feashliaa reference implementation
+- Extracts: title, location, job type, seniority, tags, posted date
+- Rate limiting: 5 concurrent requests (tightest), 2s jitter (500-2000ms random) before each request
+- Retry logic: exponential backoff with jitter on 429/503/502 errors
+- User-Agent rotation on retries
+- Company list: 3,580 companies (from `ashby-companies.json`)
+
+#### 4. Workday POST API Adapter (`workday-adapter.ts`)
+**47 tests passing**
+- Uses Workday's tenant-specific POST API (`https://{tenant}.myworkdayjobs.com/wday/cxs/{tenant}/{site}/jobs`)
+- Extracts: title, location, seniority, tags, posted date (no job type/salary from Workday)
+- Rate limiting: 50 concurrent requests, 500ms delay between batches
+- Retry logic: 3 retries max, random backoff (2-4s)
+- Silent blocking detection: if `total` changes mid-pagination, break immediately (Workday doesn't return 429/403)
+- Tenant format: `{slug}|{wd}|{siteId}` (e.g., `amazon|wd1|amazonjobs`)
+- Company list: 4,047 companies (from `workday-companies.json`)
+
+### Architecture Patterns (Consistent Across All Adapters)
+
+1. **Pure Transform Functions**: All parsing/transformation logic separated from I/O
+   - `parseLocation()` - handles "Remote", "City, State", "City, State, Country"
+   - `parseJobType()` - extracts full-time/part-time/contract/intern
+   - `parseSeniority()` - extracts intern/entry/mid/senior/lead/manager
+   - `extractTags()` - extracts technology tags (React, Python, AWS, etc.)
+   - `transformJob()` - converts raw API response to normalized Job type
+
+2. **Rate Limiting**: All adapters use concurrent request limits with delays
+   - Greenhouse/Lever: 30 concurrent, 500ms delay
+   - Ashby: 5 concurrent, 2s jitter (strict API)
+   - Workday: 50 concurrent, 500ms delay
+
+3. **Retry Logic**: Exponential backoff with jitter
+   - Ashby: retries on 429/503/502 with random backoff
+   - Workday: retries on non-200 responses with random backoff (2-4s)
+   - Greenhouse/Lever: no retries (APIs are stable)
+
+4. **Error Handling**: Graceful degradation
+   - Each company/org/tenant is independent - one failure doesn't stop others
+   - Errors collected in metadata.errors array
+   - Failed companies don't block successful ones
+
+5. **Testing Strategy**: Comprehensive unit tests with Vitest
+   - Mock axios to simulate API responses
+   - Test all transform functions with edge cases
+   - Test retry logic with mock failures
+   - Test rate limiting behavior
+   - 100% coverage of critical paths
+
+### Test Results
+```
+✓ greenhouse-adapter.test.ts (18 tests)
+✓ lever-adapter.test.ts (38 tests)
+✓ ashby-adapter.test.ts (45 tests)
+✓ workday-adapter.test.ts (47 tests)
+✓ linkedin-adapter.test.ts (15 tests)
+✓ indeed-adapter.test.ts (12 tests)
+✓ orchestrator.test.ts (27 tests)
+
+Total: 202 tests passing
+```
+
+### Files Created
+- `backend/src/adapters/greenhouse-adapter.ts`
+- `backend/src/adapters/lever-adapter.ts`
+- `backend/src/adapters/ashby-adapter.ts`
+- `backend/src/adapters/workday-adapter.ts`
+- `backend/src/adapters/__tests__/greenhouse-adapter.test.ts`
+- `backend/src/adapters/__tests__/lever-adapter.test.ts`
+- `backend/src/adapters/__tests__/ashby-adapter.test.ts`
+- `backend/src/adapters/__tests__/workday-adapter.test.ts`
+- `backend/src/adapters/greenhouse-companies.json` (6,782 companies)
+- `backend/src/adapters/lever-companies.json` (2,126 companies)
+- `backend/src/adapters/ashby-companies.json` (3,580 companies)
+- `backend/src/adapters/workday-companies.json` (4,047 companies)
+- `docs/adapter-plan-greenhouse.md`
+- `docs/adapter-plan-lever.md`
+- `docs/adapter-plan-ashby.md`
+- `docs/adapter-plan-workday.md`
+- `docs/adapter-master-plan.md`
+- `docs/adapter-implementation-validation.md`
+
+### Key Decisions
+1. **Pure functions over classes**: Easier to test, no hidden state
+2. **Consistent patterns**: All adapters follow same structure (fetch → transform → return)
+3. **Rate limiting per adapter**: Different APIs have different tolerance
+4. **Retry with jitter**: Avoids thundering herd problem
+5. **Silent blocking detection (Workday)**: Workday doesn't return 429/403, so we detect blocking by checking if `total` changes mid-pagination
+
+### Next Steps
+1. Test adapters with real API calls (not just mocks)
+2. Compare data quality across adapters
+3. Add deduplication logic (same job on multiple boards)
+4. Build frontend UI to display jobs from all adapters
+5. Add scoring/matching engine
+
+### Notes
+- All adapters use User-Agent rotation to avoid fingerprinting
+- Ashby is the most restrictive (5 concurrent, 2s jitter)
+- Workday requires tenant-specific URLs (no global endpoint)
+- Greenhouse/Lever have the most stable APIs (no retries needed)
+- All adapters implement the `BoardAdapter` interface from `shared/src/adapters.ts`
+
+### Status
+- ✅ All 4 adapters implemented
+- ✅ 202 tests passing (100% coverage)
+- ✅ Committed and pushed to GitHub (commit 1285a0d)
+- ⏸️ Ready for integration testing with real APIs
