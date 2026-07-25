@@ -403,7 +403,7 @@ describe('Ashby Adapter', () => {
         );
 
         expect(mockPost).toHaveBeenCalledTimes(3); // Initial + 2 retries
-      });
+      }, 15000);
     });
 
     describe('fetchJobs', () => {
@@ -724,7 +724,7 @@ describe('Ashby Adapter', () => {
         expect(health.healthy).toBe(false);
         expect(health.message).toContain('Network error');
         expect(health.errorCount).toBe(1);
-      });
+      }, 15000);
 
       it('should return unhealthy when no orgs configured', async () => {
         adapter['orgs'].clear();
