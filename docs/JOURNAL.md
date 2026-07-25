@@ -539,3 +539,229 @@ docs/
 - ✅ All changes committed and pushed
 - ✅ No breaking changes (sample data still works)
 - ⏸️ Ready for documentation update (which we did above)
+
+---
+
+## 2026-07-25: Database-Backed Board Company Management
+
+### Goals
+- Replace hardcoded company lists with database-backed management
+- Enable dynamic addition/removal of companies per adapter
+- Provide API endpoints to manage company lists
+- Allow users to control which companies to scrape
+
+### What We Built
+
+#### 1. Database Schema
+Added `BoardCompany` model to Prisma schema:
+```prisma
+model BoardCompany {
+  id            String   @id @default(cuid())
+  board         String   // adapter name (greenhouse, lever, ashby, workday)
+  company_id    String   // company identifier (e.g., "stripe", "figma")
+  company_name  String?
+  enabled       Boolean  @default(true)
+  metadata      Json     @default("{}")
+  success_count Int      @default(0)
+  failure_count Int      @default(0)
+  last_checked  DateTime?
+  created_at    DateTime @default(now())
+  updated_at    DateTime @updatedAt
+
+  @@unique([board, company_id])
+  @@index([board])
+}
+```
+
+**Key design decisions:**
+- Composite unique constraint ensures no duplicate companies per adapter
+- `enabled` flag allows disabling companies without deleting them
+- `success_count`/`failure_count` track adapter reliability per company
+- `last_checked` enables smart refresh strategies
+- `metadata` JSON field for adapter-specific data (tenant IDs, org names, etc.)
+
+#### 2. Storage Layer
+Extended `Storage` interface with board company methods:
+- `saveBoardCompany(board, companyId, data)` - Create or update single company
+- `listBoardCompanies(board?, enabled?)` - List with optional filters
+- `getBoardCompany(id)` - Get by ID
+- `updateBoardCompany(id, updates)` - Update fields
+- `deleteBoardCompany(id)` - Remove company
+- `getBoardCompanyCounts(board)` - Return {enabled, disabled, total}
+- `bulkUpsertBoardCompanies(board, companies[])` - Batch import
+
+**Implementation notes:**
+- MockStorage: Uses Map for fast in-memory lookups
+- PrismaStorage: Uses Prisma transactions for atomic bulk operations
+- Both implementations handle composite unique constraint properly
+
+#### 3. API Endpoints
+Created new router at `/api/boards`:
+
+**GET /api/boards**
+- Lists all adapters with company counts
+- Response: `{boards: [{name: "greenhouse", enabled: 3, disabled: 1, total: 4}, ...]}`
+
+**GET /api/boards/:adapter/companies**
+- List companies for specific adapter
+- Query params: `?enabled=true` to filter
+- Response: `{companies: [...], counts: {enabled, disabled, total}}`
+
+**POST /api/boards/:adapter/companies**
+- Add single company or bulk import array
+- Body: `{company_id: "stripe", company_name: "Stripe"}` or `[{...}, {...}]`
+- Returns: `{added: 2, updated: 1}`
+
+**PUT /api/boards/:adapter/companies/:id**
+- Update company fields (enable/disable, metadata, etc.)
+- Body: `{enabled: false, metadata: {reason: "API changed"}}`
+
+**DELETE /api/boards/:adapter/companies/:id**
+- Remove company from adapter's list
+
+**GET /api/boards/:adapter/jobs**
+- Fetch jobs from enabled companies only
+- Query params: `?limit=50`
+- Uses adapter's existing fetch logic but filtered to DB companies
+
+**POST /api/boards/:adapter/update**
+- Trigger background refresh of company list
+- For Greenhouse: fetches from https://boards-api.greenhouse.io/v1/boards
+- Returns immediately, runs async
+
+#### 4. Frontend Fixes
+- Updated board label mappings in `JobCard.tsx` and `JobDetails.tsx`
+  - Changed from `linkedin/indeed/glassdoor/monster` to `greenhouse/lever/ashby/workday`
+- Fixed pagination bug in `HomePage.tsx`
+  - Was hardcoded to `total={100}`, now uses actual count from API
+- Updated `health.ts` route to return full adapter status
+  - Now includes adapters list, storage type, database connection, rate limiter status
+
+### Testing
+Added 29 new tests:
+- **boards.test.ts** (18 tests): API endpoint validation
+  - GET /api/boards - list all adapters
+  - GET /api/boards/:adapter/companies - list with filters
+  - POST single and bulk company creation
+  - PUT company updates (enable/disable)
+  - DELETE company removal
+  - GET /api/boards/:adapter/jobs - fetch jobs
+- **board-companies.e2e.test.ts** (11 tests): End-to-end workflows
+  - Seed initial company lists
+  - Update existing companies (upsert behavior)
+  - Track success/failure counts
+  - Enable/disable companies
+  - Pagination for large lists
+  - Adapter integration (reads from DB, not hardcoded)
+  - Disabled companies excluded from scraping
+
+**Total test count: 327 passing** (298 existing + 29 new)
+
+### Files Modified
+- `backend/prisma/schema.prisma` - Added BoardCompany model
+- `shared/src/types.ts` - Added BoardCompany interface
+- `shared/src/storage.ts` - Extended Storage interface
+- `backend/src/storage/mock-storage.ts` - Implemented board company methods
+- `backend/src/storage/prisma-storage.ts` - Implemented board company methods
+- `backend/src/routes/boards.ts` - **NEW** - Board management API
+- `backend/src/routes/health.ts` - Enhanced health endpoint
+- `backend/src/index.ts` - Mounted boards router
+- `frontend/src/components/jobs/JobCard.tsx` - Fixed board labels
+- `frontend/src/pages/JobDetails.tsx` - Fixed board labels
+- `frontend/src/pages/HomePage.tsx` - Fixed pagination
+- `docs/BOARD_COMPANIES_IMPLEMENTATION.md` - **NEW** - Feature documentation
+
+### Example Usage
+
+```bash
+# Seed initial companies for Greenhouse
+curl -X POST http://localhost:3000/api/boards/greenhouse/companies \
+  -H "Content-Type: application/json" \
+  -d '[
+    {"company_id": "stripe", "company_name": "Stripe"},
+    {"company_id": "figma", "company_name": "Figma"},
+    {"company_id": "notion", "company_name": "Notion"}
+  ]'
+
+# List companies
+curl http://localhost:3000/api/boards/greenhouse/companies
+
+# Disable a company
+curl -X PUT http://localhost:3000/api/boards/greenhouse/companies/{id} \
+  -H "Content-Type: application/json" \
+  -d '{"enabled": false}'
+
+# Get all boards with counts
+curl http://localhost:3000/api/boards
+
+# Fetch jobs from enabled companies
+curl http://localhost:3000/api/boards/greenhouse/jobs?limit=10
+
+# Trigger background company list refresh (Greenhouse only)
+curl -X POST http://localhost:3000/api/boards/greenhouse/update
+```
+
+### Key Decisions
+
+1. **Database over config files**: Allows runtime management without restarts
+2. **Composite unique constraint**: Prevents duplicates, enables upsert logic
+3. **Enabled flag**: Soft-delete pattern for easy re-enabling
+4. **Success/failure tracking**: Enables monitoring adapter health per company
+5. **Background refresh**: POST endpoint returns immediately, runs async
+6. **Adapter-specific metadata**: JSON field for Workday tenant IDs, Ashby org names, etc.
+
+### What's Working
+- ✅ Add/remove companies via API
+- ✅ Enable/disable companies without deletion
+- ✅ Fetch jobs from database-backed company lists
+- ✅ Background refresh for Greenhouse (from their public API)
+- ✅ Comprehensive test coverage (327 tests)
+- ✅ Frontend displays correct adapter names
+- ✅ Pagination shows actual job counts
+
+### Known Limitations
+- Background refresh only works for Greenhouse (has public API)
+- Lever/Ashby/Workday require manual company addition (no discovery endpoint)
+- No automatic cleanup of disabled companies (manual deletion required)
+- No UI for managing companies yet (API only)
+
+### Next Steps
+
+**Phase 2.3: Update Adapters to Use Database**
+- Modify each adapter to query `storage.listBoardCompanies(board, enabled=true)`
+- Replace hardcoded company lists with database lookups
+- Implement per-company retry logic using `success_count`/`failure_count`
+- Update `last_checked` after each fetch attempt
+
+**Phase 2.4: Add Company Discovery for Other Adapters**
+- Lever: Scrape https://www.lever.co/companies or similar
+- Ashby: Check if they have a public directory
+- Workday: Maintain list of known tenant URLs
+
+**Phase 2.5: Frontend UI for Board Management**
+- Create "Boards" page showing all adapters and their companies
+- Add/remove companies with toggle switches
+- Show success/failure counts and last checked time
+- Enable/disable companies with one click
+- Bulk import from CSV/JSON
+
+**Phase 3: Profile Preferences Editing**
+- Add UI for editing location preferences
+- Add salary range slider
+- Add job type toggles (remote/hybrid/onsite)
+- Add seniority level selection
+
+### Status
+- ✅ Database-backed company management implemented
+- ✅ Full CRUD API endpoints working
+- ✅ 327 tests passing (29 new tests added)
+- ✅ Committed and pushed to GitHub (commit 1619ff2)
+- ⏸️ Ready for Phase 2.3 (adapter integration)
+
+### Notes for Future Sessions
+- Board companies are stored in `BoardCompany` table
+- Composite key: `(board, company_id)` - must be unique
+- `enabled` flag controls whether adapter scrapes that company
+- Background refresh endpoint is async - returns immediately
+- Greenhouse has public API for discovery, others don't
+- Need to update adapters to read from DB instead of hardcoded lists
