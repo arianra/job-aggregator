@@ -166,10 +166,10 @@ function formatPosted(date?: string) {
 
 function boardLabel(board: string) {
   const labels: Record<string, string> = {
-    linkedin: 'LinkedIn',
-    indeed: 'Indeed',
-    glassdoor: 'Glassdoor',
-    monster: 'Monster',
+    greenhouse: 'Greenhouse',
+    lever: 'Lever',
+    ashby: 'Ashby',
+    workday: 'Workday',
     mock: 'Mock',
   };
   return labels[board] ?? board;

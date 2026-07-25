@@ -1,8 +1,9 @@
 import { PrismaClient, Prisma } from '@prisma/client';
-import type { Storage, JobFilter, ApplicationFilter } from '@job-aggregator/shared';
+import type { Storage, JobFilter, ApplicationFilter, BoardCompanyFilter } from '@job-aggregator/shared';
 import type {
   Job, Source, Company, Profile, Match,
   Application, ApplicationCount, ApplicationNote,
+  BoardCompany,
 } from '@job-aggregator/shared';
 import logger from '../utils/logger.js';
 
@@ -38,6 +39,7 @@ export class PrismaStorage implements Storage {
     await this.prisma.job.deleteMany();
     await this.prisma.company.deleteMany();
     await this.prisma.profile.deleteMany();
+    await this.prisma.boardCompany.deleteMany();
     await this.prisma.board.deleteMany();
     logger.info('PrismaStorage cleared all data');
   }
@@ -566,6 +568,216 @@ export class PrismaStorage implements Storage {
   }
 
   // -------------------------------------------------------------------------
+  // Board Companies
+  // -------------------------------------------------------------------------
+
+  async saveBoardCompany(company: BoardCompany): Promise<BoardCompany> {
+    await this.prisma.boardCompany.upsert({
+      where: { id: company.id },
+      create: {
+        id: company.id,
+        board: company.board,
+        company_id: company.company_id,
+        company_name: company.company_name,
+        metadata: (company.metadata ?? {}) as any,
+        last_checked: company.last_checked ?? null,
+        success_count: company.success_count,
+        failure_count: company.failure_count,
+        enabled: company.enabled,
+      },
+      update: {
+        company_name: company.company_name,
+        metadata: (company.metadata ?? {}) as any,
+        last_checked: company.last_checked ?? null,
+        success_count: company.success_count,
+        failure_count: company.failure_count,
+        enabled: company.enabled,
+      },
+    });
+    return company;
+  }
+
+  async listBoardCompanies(filters?: BoardCompanyFilter): Promise<BoardCompany[]> {
+    const where: Prisma.BoardCompanyWhereInput = {};
+
+    if (filters?.board) {
+      where.board = filters.board;
+    }
+    if (filters?.enabled !== undefined) {
+      where.enabled = filters.enabled;
+    }
+
+    const rows = await this.prisma.boardCompany.findMany({
+      where,
+      orderBy: { company_name: 'asc' },
+      skip: filters?.offset ?? 0,
+      take: filters?.limit ?? 100,
+    });
+
+    return rows.map((r) => this.hydrateBoardCompany(r));
+  }
+
+  async getBoardCompany(id: string): Promise<BoardCompany | null> {
+    const row = await this.prisma.boardCompany.findUnique({ where: { id } });
+    if (!row) return null;
+    return this.hydrateBoardCompany(row);
+  }
+
+  async updateBoardCompany(id: string, updates: Partial<BoardCompany>): Promise<BoardCompany | null> {
+    const data: Prisma.BoardCompanyUpdateInput = {};
+    if (updates.company_name !== undefined) data.company_name = updates.company_name;
+    if (updates.metadata !== undefined) data.metadata = updates.metadata as any;
+    if (updates.last_checked !== undefined) data.last_checked = updates.last_checked;
+    if (updates.success_count !== undefined) data.success_count = updates.success_count;
+    if (updates.failure_count !== undefined) data.failure_count = updates.failure_count;
+    if (updates.enabled !== undefined) data.enabled = updates.enabled;
+
+    const row = await this.prisma.boardCompany.update({
+      where: { id },
+      data,
+    }).catch(() => null);
+
+    if (!row) return null;
+    return this.hydrateBoardCompany(row);
+  }
+
+  async deleteBoardCompany(id: string): Promise<boolean> {
+    try {
+      await this.prisma.boardCompany.delete({ where: { id } });
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  async bulkUpsertBoardCompanies(
+    board: string,
+    companies: Array<{
+      company_id: string;
+      company_name?: string;
+      metadata?: Record<string, unknown>;
+    }>
+  ): Promise<{ added: number; updated: number }> {
+    // Ensure the Board record exists first
+    const existingBoard = await this.prisma.board.findUnique({
+      where: { name: board },
+    });
+
+    if (!existingBoard) {
+      await this.prisma.board.create({
+        data: {
+          name: board,
+          adapter_class: `${board}-adapter`,
+          config: {},
+        },
+      });
+    }
+
+    let added = 0;
+    let updated = 0;
+
+    // Get existing companies for this board
+    const existing = await this.prisma.boardCompany.findMany({
+      where: { board },
+      select: { company_id: true },
+    });
+    const existingIds = new Set(existing.map((e) => e.company_id));
+
+    // Process each company
+    for (const company of companies) {
+      if (existingIds.has(company.company_id)) {
+        // Update existing
+        await this.prisma.boardCompany.update({
+          where: {
+            board_company_id: { board, company_id: company.company_id },
+          },
+          data: {
+            company_name: company.company_name,
+            metadata: (company.metadata ?? {}) as any,
+            updated_at: new Date(),
+          },
+        });
+        updated++;
+      } else {
+        // Create new
+        await this.prisma.boardCompany.create({
+          data: {
+            id: `bc-${Date.now()}-${Math.random().toString(36).slice(2, 11)}`,
+            board,
+            company_id: company.company_id,
+            company_name: company.company_name,
+            metadata: (company.metadata ?? {}) as any,
+            last_checked: null,
+            success_count: 0,
+            failure_count: 0,
+            enabled: true,
+          },
+        });
+        added++;
+      }
+    }
+
+    logger.info('Bulk upserted board companies', { board, added, updated });
+    return { added, updated };
+  }
+
+  async getBoardCompanyCounts(board: string): Promise<{ enabled: number; disabled: number; total: number }> {
+    const all = await this.prisma.boardCompany.findMany({
+      where: { board },
+      select: { enabled: true },
+    });
+
+    const enabled = all.filter((c) => c.enabled).length;
+    const disabled = all.length - enabled;
+
+    return {
+      enabled,
+      disabled,
+      total: all.length,
+    };
+  }
+
+  async saveBoardCompanies(companies: BoardCompany[]): Promise<BoardCompany[]> {
+    for (const company of companies) {
+      await this.saveBoardCompany(company);
+    }
+    return companies;
+  }
+
+  async getBoardCompanyByBoardAndId(board: string, companyId: string): Promise<BoardCompany | null> {
+    const row = await this.prisma.boardCompany.findUnique({
+      where: { board_company_id: { board, company_id: companyId } },
+    });
+    if (!row) return null;
+    return this.hydrateBoardCompany(row);
+  }
+
+  async updateBoardCompaniesByBoard(board: string, updates: Partial<BoardCompany>): Promise<number> {
+    const data: Prisma.BoardCompanyUpdateManyMutationInput = {};
+    if (updates.company_name !== undefined) data.company_name = updates.company_name;
+    if (updates.metadata !== undefined) data.metadata = updates.metadata as any;
+    if (updates.last_checked !== undefined) data.last_checked = updates.last_checked;
+    if (updates.success_count !== undefined) data.success_count = updates.success_count;
+    if (updates.failure_count !== undefined) data.failure_count = updates.failure_count;
+    if (updates.enabled !== undefined) data.enabled = updates.enabled;
+
+    const result = await this.prisma.boardCompany.updateMany({
+      where: { board },
+      data,
+    });
+
+    return result.count;
+  }
+
+  async deleteBoardCompaniesByBoard(board: string): Promise<number> {
+    const result = await this.prisma.boardCompany.deleteMany({
+      where: { board },
+    });
+
+    return result.count;
+  }
+
+  // -------------------------------------------------------------------------
   // Hydration helpers — Prisma rows → shared types (native JSON, no parsing)
   // -------------------------------------------------------------------------
 
@@ -666,6 +878,22 @@ export class PrismaStorage implements Storage {
       applied_at: row.applied_at?.toISOString() ?? undefined,
       created_at: row.created_at.toISOString(),
       updated_at: row.updated_at.toISOString(),
+    };
+  }
+
+  private hydrateBoardCompany(row: any): BoardCompany {
+    return {
+      id: row.id,
+      board: row.board,
+      company_id: row.company_id,
+      company_name: row.company_name ?? undefined,
+      metadata: (row.metadata ?? {}) as Record<string, unknown>,
+      last_checked: row.last_checked ?? undefined,
+      success_count: row.success_count,
+      failure_count: row.failure_count,
+      enabled: row.enabled,
+      created_at: row.created_at,
+      updated_at: row.updated_at,
     };
   }
 }

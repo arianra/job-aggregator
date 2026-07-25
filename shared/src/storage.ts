@@ -6,7 +6,7 @@
  * - PostgresStorage: Real database for production
  */
 
-import type { Job, Source, Company, Profile, Match, Application, ApplicationCount } from './types.js'
+import type { Job, Source, Company, Profile, Match, Application, ApplicationCount, BoardCompany, BoardCompanyFilter } from './types.js'
 
 export interface Storage {
   // Jobs
@@ -49,6 +49,23 @@ export interface Storage {
   updateApplication(id: string, updates: Partial<Application>): Promise<Application | null>
   deleteApplication(id: string): Promise<boolean>
   getApplicationCounts(profileId: string): Promise<ApplicationCount>
+
+  // Board Companies
+  saveBoardCompany(company: BoardCompany): Promise<BoardCompany>
+  saveBoardCompanies(companies: BoardCompany[]): Promise<BoardCompany[]>
+  getBoardCompany(id: string): Promise<BoardCompany | null>
+  getBoardCompanyByBoardAndId(board: string, companyId: string): Promise<BoardCompany | null>
+  listBoardCompanies(filters?: BoardCompanyFilter): Promise<BoardCompany[]>
+  updateBoardCompany(id: string, updates: Partial<BoardCompany>): Promise<BoardCompany | null>
+  updateBoardCompaniesByBoard(board: string, updates: Partial<BoardCompany>): Promise<number>
+  deleteBoardCompany(id: string): Promise<boolean>
+  deleteBoardCompaniesByBoard(board: string): Promise<number>
+  getBoardCompanyCounts(board: string): Promise<{ enabled: number; disabled: number; total: number }>
+  bulkUpsertBoardCompanies(board: string, companies: Array<{
+    company_id: string
+    company_name?: string
+    metadata?: Record<string, unknown>
+  }>): Promise<{ added: number; updated: number }>
 
   // Lifecycle
   connect(): Promise<void>

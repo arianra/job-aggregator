@@ -2,11 +2,12 @@ import { useState } from 'react';
 import { FilterPanel } from '../components/jobs/FilterPanel';
 import { JobList } from '../components/jobs/JobList';
 import { Pagination } from '../components/ui/Pagination';
-import { useHealth } from '../hooks/useJobs';
+import { useHealth, useJobs } from '../hooks/useJobs';
 
 export function HomePage() {
   const [page, setPage] = useState(1);
   const { data: health } = useHealth();
+  const { data: jobData } = useJobs(page, 20);
 
   return (
     <div className="space-y-6">
@@ -23,7 +24,7 @@ export function HomePage() {
       <Pagination
         page={page}
         pageSize={20}
-        total={100} // TODO: get real total from backend
+        total={jobData?.total ?? 0}
         onPageChange={setPage}
       />
     </div>

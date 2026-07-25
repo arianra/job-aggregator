@@ -1,5 +1,5 @@
-import { Storage, JobFilter, ApplicationFilter } from '@job-aggregator/shared'
-import { Job, Source, Company, Profile, Match, Application, ApplicationCount } from '@job-aggregator/shared'
+import { Storage, JobFilter, ApplicationFilter, BoardCompanyFilter } from '@job-aggregator/shared'
+import { Job, Source, Company, Profile, Match, Application, ApplicationCount, BoardCompany } from '@job-aggregator/shared'
 import logger from '../utils/logger.js'
 
 /**
@@ -15,6 +15,7 @@ export class MockStorage implements Storage {
   private profiles: Map<string, Profile> = new Map()
   private matches: Map<string, Match> = new Map()
   private applications: Map<string, Application> = new Map()
+  private boardCompanies: Map<string, BoardCompany> = new Map()
 
   async connect(): Promise<void> {
     logger.info('MockStorage connected (in-memory)')
@@ -31,6 +32,7 @@ export class MockStorage implements Storage {
     this.profiles.clear()
     this.matches.clear()
     this.applications.clear()
+    this.boardCompanies.clear()
     logger.info('MockStorage cleared all data')
   }
 
@@ -293,5 +295,136 @@ export class MockStorage implements Storage {
       }
     }
     return counts
+  }
+
+  // Board Companies
+  async saveBoardCompany(company: BoardCompany): Promise<BoardCompany> {
+    this.boardCompanies.set(company.id, company)
+    logger.debug('Saved board company', { id: company.id, board: company.board, companyId: company.company_id })
+    return company
+  }
+
+  async saveBoardCompanies(companies: BoardCompany[]): Promise<BoardCompany[]> {
+    for (const company of companies) {
+      this.boardCompanies.set(company.id, company)
+    }
+    return companies
+  }
+
+  async listBoardCompanies(filters?: BoardCompanyFilter): Promise<BoardCompany[]> {
+    let results = Array.from(this.boardCompanies.values())
+
+    if (filters) {
+      if (filters.board) {
+        results = results.filter(bc => bc.board === filters.board)
+      }
+      if (filters.enabled !== undefined) {
+        results = results.filter(bc => bc.enabled === filters.enabled)
+      }
+      if (filters.offset !== undefined) {
+        results = results.slice(filters.offset)
+      }
+      if (filters.limit !== undefined) {
+        results = results.slice(0, filters.limit)
+      }
+    }
+
+    return results
+  }
+
+  async getBoardCompany(id: string): Promise<BoardCompany | null> {
+    return this.boardCompanies.get(id) || null
+  }
+
+  async getBoardCompanyByBoardAndId(board: string, companyId: string): Promise<BoardCompany | null> {
+    for (const company of this.boardCompanies.values()) {
+      if (company.board === board && company.company_id === companyId) {
+        return company
+      }
+    }
+    return null
+  }
+
+  async updateBoardCompany(id: string, updates: Partial<BoardCompany>): Promise<BoardCompany | null> {
+    const existing = this.boardCompanies.get(id)
+    if (!existing) return null
+
+    const updated = { ...existing, ...updates, updated_at: new Date() }
+    this.boardCompanies.set(id, updated)
+    logger.debug('Updated board company', { id, board: updated.board })
+    return updated
+  }
+
+  async updateBoardCompaniesByBoard(board: string, updates: Partial<BoardCompany>): Promise<number> {
+    let count = 0
+    for (const [id, company] of this.boardCompanies.entries()) {
+      if (company.board === board) {
+        const updated = { ...company, ...updates, updated_at: new Date() }
+        this.boardCompanies.set(id, updated)
+        count++
+      }
+    }
+    return count
+  }
+
+  async deleteBoardCompany(id: string): Promise<boolean> {
+    return this.boardCompanies.delete(id)
+  }
+
+  async deleteBoardCompaniesByBoard(board: string): Promise<number> {
+    let count = 0
+    for (const [id, company] of this.boardCompanies.entries()) {
+      if (company.board === board) {
+        this.boardCompanies.delete(id)
+        count++
+      }
+    }
+    return count
+  }
+
+  async getBoardCompanyCounts(board: string): Promise<{ enabled: number; disabled: number; total: number }> {
+    const companies = Array.from(this.boardCompanies.values()).filter(bc => bc.board === board)
+    const enabled = companies.filter(bc => bc.enabled).length
+    const disabled = companies.filter(bc => !bc.enabled).length
+    return { enabled, disabled, total: companies.length }
+  }
+
+  async bulkUpsertBoardCompanies(board: string, companies: Array<{
+    company_id: string
+    company_name?: string
+    metadata?: Record<string, unknown>
+  }>): Promise<{ added: number; updated: number }> {
+    let added = 0
+    let updated = 0
+
+    for (const company of companies) {
+      const existing = await this.getBoardCompanyByBoardAndId(board, company.company_id)
+
+      if (existing) {
+        existing.company_name = company.company_name || existing.company_name
+        existing.metadata = company.metadata || existing.metadata
+        existing.updated_at = new Date()
+        updated++
+      } else {
+        const newCompany: BoardCompany = {
+          id: `bc-${Date.now()}-${Math.random().toString(36).slice(2, 11)}`,
+          board,
+          company_id: company.company_id,
+          company_name: company.company_name || undefined,
+          metadata: (company.metadata || {}) as Record<string, unknown>,
+          last_checked: undefined,
+          success_count: 0,
+          failure_count: 0,
+          enabled: true,
+          created_at: new Date(),
+          updated_at: new Date()
+        }
+        this.boardCompanies.set(newCompany.id, newCompany)
+        added++
+      }
+    }
+
+    logger.info('Bulk upserted board companies', { board, added, updated })
+    return { added, updated }
   }
 }

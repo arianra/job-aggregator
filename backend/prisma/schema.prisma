@@ -87,6 +87,27 @@ model Board {
   updated_at    DateTime @updatedAt
 
   sources       Source[]
+  companies     BoardCompany[]
+}
+
+model BoardCompany {
+  id            String   @id @default(cuid())
+  board         String
+  company_id    String
+  company_name  String?
+  metadata      Json     @default("{}")
+  last_checked  DateTime?
+  success_count Int      @default(0)
+  failure_count Int      @default(0)
+  enabled       Boolean  @default(true)
+  created_at    DateTime @default(now())
+  updated_at    DateTime @updatedAt
+
+  board_rel     Board    @relation(fields: [board], references: [name], onDelete: Cascade)
+
+  @@unique([board, company_id])
+  @@index([board])
+  @@index([enabled])
 }
 
 model Profile {

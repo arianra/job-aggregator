@@ -3,10 +3,11 @@ import cors from 'cors';
 import 'express-async-errors';
 import { config } from './config.js';
 import { errorHandler } from './middleware/errorHandler.js';
-import { healthRouter } from './routes/health.js';
+import { createHealthRouter } from './routes/health.js';
 import { createJobsRouter } from './routes/jobs.js';
 import { createProfileRouter } from './routes/profile.js';
 import { createApplicationsRouter } from './routes/applications.js';
+import { createBoardsRouter } from './routes/boards.js';
 import { MockStorage } from './storage/mock-storage.js';
 import { PrismaStorage } from './storage/prisma-storage.js';
 import { RateLimiter } from './utils/rate-limiter.js';
@@ -95,26 +96,14 @@ const orchestrator = new Orchestrator(adapters, storage, rateLimiter);
 // Routes
 // ---------------------------------------------------------------------------
 
-app.use('/health', healthRouter);
+app.use('/health', createHealthRouter(adapters, rateLimiter, config.hasDatabase));
 app.use('/api/jobs', createJobsRouter(orchestrator, storage));
 app.use('/api/profile', createProfileRouter(storage));
 app.use('/api/applications', createApplicationsRouter(storage));
+app.use('/api/boards', createBoardsRouter(storage));
 
-// Health endpoint with extended info
-app.get('/api/health', (_req, res) => {
-  res.json({
-    status: 'ok',
-    timestamp: new Date().toISOString(),
-    uptime: process.uptime(),
-    database: config.hasDatabase ? 'connected' : 'not configured',
-    storage: config.hasDatabase ? 'PrismaStorage (PostgreSQL)' : 'MockStorage',
-    adapters: Array.from(adapters.keys()),
-    rateLimiter: {
-      active: rateLimiter.activeCount,
-      pending: rateLimiter.pendingCount,
-    },
-  });
-});
+// Also mount health at /api/health for frontend compatibility
+app.use('/api/health', createHealthRouter(adapters, rateLimiter, config.hasDatabase));
 
 // ---------------------------------------------------------------------------
 // Error handling

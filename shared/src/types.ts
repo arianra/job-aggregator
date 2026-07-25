@@ -346,6 +346,27 @@ export interface BoardHealth {
   avg_response_ms?: number
 }
 
+export interface BoardCompany {
+  id: string
+  board: string
+  company_id: string
+  company_name?: string
+  metadata?: Record<string, unknown>
+  last_checked?: Date
+  success_count: number
+  failure_count: number
+  enabled: boolean
+  created_at: Date
+  updated_at: Date
+}
+
+export interface BoardCompanyFilter {
+  board?: string
+  enabled?: boolean
+  limit?: number
+  offset?: number
+}
+
 // ============================================================================
 // Adapter Types
 // ============================================================================
