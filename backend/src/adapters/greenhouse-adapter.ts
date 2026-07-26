@@ -1,5 +1,7 @@
 import type { BoardAdapter, AdapterResult, JobSearchQuery, AdapterHealth, Job, Source, Location } from '@job-aggregator/shared'
 import logger from '../utils/logger.js'
+import { safeHttp } from '../utils/safe-http.js'
+import { httpResponseCache, discoveryCache } from '../utils/cache.js'
 
 // ============================================================================
 // Greenhouse API Response Types
@@ -38,9 +40,8 @@ interface GreenhouseBoardsResponse {
 // ============================================================================
 
 const BASE_URL = 'https://boards-api.greenhouse.io/v1'
-const USER_AGENT = 'JobAggregator/1.0 (personal project)'
-const CONCURRENCY = 10
-const DELAY_MS = 500
+const CONCURRENCY = 5  // Reduced from 10 to prevent API abuse
+const DELAY_MS = 1000  // Increased from 500ms to 1000ms between batches
 
 // ============================================================================
 // Pure transform functions
@@ -216,16 +217,16 @@ export class GreenhouseAdapter implements BoardAdapter {
 
   async discoverBoards(): Promise<Map<string, string>> {
     try {
-      const response = await fetch(`${BASE_URL}/boards`, {
-        headers: { 'User-Agent': USER_AGENT },
-      })
-      
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}`)
-      }
+      const response = await safeHttp.get<GreenhouseBoardsResponse>(
+        `${BASE_URL}/boards`,
+        {
+          cache: discoveryCache,
+          cacheTtlMs: 60 * 60 * 1000, // 1 hour cache for discovery
+          rateLimitKey: 'greenhouse',
+        }
+      )
 
-      const data = await response.json() as GreenhouseBoardsResponse
-      for (const board of data.boards) {
+      for (const board of response.data.boards) {
         this.boards.set(board.board_token, board.company_name)
       }
       
@@ -288,14 +289,17 @@ export class GreenhouseAdapter implements BoardAdapter {
   async fetchJob(boardJobId: string): Promise<AdapterResult | null> {
     for (const [token, companyName] of this.boards) {
       try {
-        const response = await fetch(`${BASE_URL}/boards/${token}/jobs/${boardJobId}`, {
-          headers: { 'User-Agent': USER_AGENT },
-        })
+        const response = await safeHttp.get<GreenhouseJob>(
+          `${BASE_URL}/boards/${token}/jobs/${boardJobId}`,
+          {
+            rateLimitKey: 'greenhouse',
+            cache: null, // Don't cache single job lookups
+          }
+        )
         
-        if (!response.ok) continue
+        if (response.status !== 200) continue
         
-        const rawJob = await response.json() as GreenhouseJob
-        const { job, source } = transformGreenhouseJob(rawJob, token, companyName)
+        const { job, source } = transformGreenhouseJob(response.data, token, companyName)
 
         return {
           jobs: [job],
@@ -404,10 +408,14 @@ export class GreenhouseAdapter implements BoardAdapter {
 
   async healthCheck(): Promise<AdapterHealth> {
     try {
-      const response = await fetch(`${BASE_URL}/boards`, {
-        headers: { 'User-Agent': USER_AGENT },
-        signal: AbortSignal.timeout(5000),
-      })
+      const response = await safeHttp.get<GreenhouseBoardsResponse>(
+        `${BASE_URL}/boards`,
+        {
+          rateLimitKey: 'greenhouse',
+          cache: null, // Don't cache health checks
+          timeoutMs: 5000,
+        }
+      )
       
       return {
         healthy: true,
@@ -428,19 +436,23 @@ export class GreenhouseAdapter implements BoardAdapter {
     const companyName = this.boards.get(boardToken) || 'Unknown'
 
     try {
-      const response = await fetch(`${BASE_URL}/boards/${boardToken}/jobs`, {
-        headers: { 'User-Agent': USER_AGENT },
-      })
+      const response = await safeHttp.get<GreenhouseJobsResponse>(
+        `${BASE_URL}/boards/${boardToken}/jobs`,
+        {
+          cache: httpResponseCache,
+          cacheTtlMs: 15 * 60 * 1000, // 15 minutes cache for job listings
+          rateLimitKey: 'greenhouse',
+        }
+      )
 
-      if (!response.ok) {
+      if (response.status !== 200) {
         throw new Error(`HTTP ${response.status}`)
       }
 
-      const data = await response.json() as GreenhouseJobsResponse
       const jobs: Job[] = []
       const sources: Source[] = []
 
-      for (const rawJob of data.jobs) {
+      for (const rawJob of response.data.jobs) {
         try {
           const { job, source } = transformGreenhouseJob(rawJob, boardToken, companyName)
           jobs.push(job)

@@ -1,5 +1,5 @@
-import axios, { AxiosInstance, AxiosError } from 'axios';
 import { BoardAdapter, Job, Source, AdapterResult, JobSearchQuery, AdapterHealth, JobType } from '@job-aggregator/shared';
+import { safeHttp } from '../utils/safe-http.js';
 import logger from '../utils/logger.js';
 
 // ============================================================================
@@ -202,19 +202,12 @@ export function transformWorkdayJob(raw: WorkdayJob, tenant: WorkdayTenant): { j
 // ============================================================================
 
 export class WorkdayAdapter implements BoardAdapter {
-  private readonly client: AxiosInstance;
   private readonly tenants: Map<string, WorkdayTenant> = new Map();
-  private readonly CONCURRENCY = 50;
-  private readonly DELAY_MS = 500;
-  private readonly MAX_RETRIES = 2;
+  private readonly CONCURRENCY = 5;
+  private readonly DELAY_MS = 2000;
   private readonly PAGE_SIZE = 20;
 
   constructor() {
-    this.client = axios.create({
-      timeout: 30000,
-      validateStatus: () => true,
-    });
-    
     // Default tenants from reference implementations
     this.addTenants([
       'amazon|wd1|amazonjobs',
@@ -407,20 +400,11 @@ export class WorkdayAdapter implements BoardAdapter {
   ): Promise<{ jobs: Job[]; sources: Source[] }> {
     const baseUrl = `https://${slug}.myworkdayjobs.com`;
     const apiUrl = `${baseUrl}/wday/cxs/${slug}/${config.siteId}/jobs`;
-    
-    const headers = {
-      'Accept': 'application/json',
-      'Content-Type': 'application/json',
-      'Origin': baseUrl,
-      'Referer': `${baseUrl}/${config.siteId}`,
-      'User-Agent': randomUA(),
-    };
 
     const allJobs: Job[] = [];
     const allSources: Source[] = [];
     let offset = 0;
     let observedTotal: number | null = null;
-    let retries = 0;
 
     while (true) {
       const payload = {
@@ -431,15 +415,18 @@ export class WorkdayAdapter implements BoardAdapter {
       };
 
       try {
-        const resp = await this.client.post<WorkdayJobsResponse>(apiUrl, payload, { headers });
+        const resp = await safeHttp.post<WorkdayJobsResponse>(apiUrl, payload, {
+          domain: `workday-${slug}`,
+          headers: {
+            'Accept': 'application/json',
+            'Content-Type': 'application/json',
+            'Origin': baseUrl,
+            'Referer': `${baseUrl}/${config.siteId}`,
+          },
+        });
 
-        if (resp.status !== 200) {
-          if (retries < this.MAX_RETRIES) {
-            retries++;
-            await new Promise(resolve => setTimeout(resolve, 2000 + Math.random() * 2000));
-            continue;
-          }
-          throw new Error(`Workday returned status ${resp.status} for tenant ${slug}`);
+        if (resp.status < 200 || resp.status >= 300) {
+          throw new Error(`Workday returned status ${resp.status}`);
         }
 
         const { jobPostings, total } = resp.data;

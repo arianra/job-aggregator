@@ -1,128 +1,138 @@
 import { describe, it, expect } from 'vitest';
-import { RateLimiter } from '../rate-limiter.js';
+import { TokenBucketRateLimiter } from '../token-bucket.js';
 
-describe('RateLimiter', () => {
+describe('TokenBucketRateLimiter', () => {
   describe('waitForSlot', () => {
-    it('allows requests up to the configured limit', async () => {
-      const limiter = new RateLimiter(3, 60_000);
+    it('allows immediate requests when bucket is full', async () => {
+      const limiter = new TokenBucketRateLimiter(3, 60_000);
 
+      const start = Date.now();
       await limiter.waitForSlot();
       await limiter.waitForSlot();
       await limiter.waitForSlot();
+      const elapsed = Date.now() - start;
 
-      expect(limiter.activeCount).toBe(3);
-      expect(limiter.pendingCount).toBe(0);
+      expect(elapsed).toBeLessThan(100); // Should be nearly instant
+      const stats = limiter.getStats();
+      expect(stats?.totalRequests).toBe(3);
     });
 
-    it('queues requests beyond the limit', async () => {
-      const limiter = new RateLimiter(2, 60_000);
+    it('waits when bucket is empty', async () => {
+      const limiter = new TokenBucketRateLimiter(2, 100); // 2 tokens per 100ms
 
       await limiter.waitForSlot();
       await limiter.waitForSlot();
 
-      expect(limiter.pendingCount).toBe(0);
-      expect(limiter.activeCount).toBe(2);
+      const start = Date.now();
+      await limiter.waitForSlot(); // Should wait for token refill
+      const elapsed = Date.now() - start;
 
-      void limiter.waitForSlot();
-      expect(limiter.pendingCount).toBe(1);
+      expect(elapsed).toBeGreaterThanOrEqual(40); // At least ~50ms wait
+      const stats = limiter.getStats();
+      expect(stats?.totalRequests).toBe(3);
     });
 
-    it('drains queued requests when slots expire', async () => {
-      const limiter = new RateLimiter(2, 10);
+    it('handles concurrent requests', async () => {
+      const limiter = new TokenBucketRateLimiter(5, 1000);
 
-      await limiter.waitForSlot();
-      await limiter.waitForSlot();
+      const promises = Array.from({ length: 5 }, () => limiter.waitForSlot());
+      await Promise.all(promises);
 
-      const p1 = limiter.waitForSlot();
-      expect(limiter.pendingCount).toBe(1);
-
-      // Wait for window to expire
-      await new Promise(resolve => setTimeout(resolve, 30));
-
-      // prune frees 2 slots, drains 1 queued + takes 1 for new call
-      // Actually: prune frees 2, drains 1 (p1). New call sees 1 slot, takes it.
-      await limiter.waitForSlot();
-      await p1;
-
-      expect(limiter.pendingCount).toBe(0);
+      const stats = limiter.getStats();
+      expect(stats?.totalRequests).toBe(5);
     });
 
-    it('drains multiple queued requests in FIFO order', async () => {
-      const limiter = new RateLimiter(3, 10);
+    it('separates state per domain', async () => {
+      const limiter = new TokenBucketRateLimiter(2, 60_000);
 
-      await limiter.waitForSlot();
-      await limiter.waitForSlot();
-      await limiter.waitForSlot();
+      await limiter.waitForSlot('api1');
+      await limiter.waitForSlot('api1');
+      
+      await limiter.waitForSlot('api2'); // Should not wait, different bucket
 
-      const p1 = limiter.waitForSlot();
-      const p2 = limiter.waitForSlot();
-      const p3 = limiter.waitForSlot();
-      expect(limiter.pendingCount).toBe(3);
-
-      // Wait for window to expire
-      await new Promise(resolve => setTimeout(resolve, 30));
-
-      // prune frees 3 slots, drains all 3 queued (p1,p2,p3 resolve)
-      // But the new call itself sees 3 active (from drain) so it gets queued
-      const p4 = limiter.waitForSlot();
-
-      // p1, p2, p3 should be resolved
-      await p1;
-      await p2;
-      await p3;
-
-      // p4 is still queued (3 slots filled by drained entries)
-      expect(limiter.pendingCount).toBe(1);
-    });
-
-    it('handles concurrent requests under the limit', async () => {
-      const limiter = new RateLimiter(5, 60_000);
-
-      const results = await Promise.all(
-        Array.from({ length: 5 }, () => limiter.waitForSlot()),
-      );
-
-      expect(limiter.activeCount).toBe(5);
-      expect(results).toHaveLength(5);
+      const stats1 = limiter.getStats('api1');
+      const stats2 = limiter.getStats('api2');
+      
+      expect(stats1?.totalRequests).toBe(2);
+      expect(stats2?.totalRequests).toBe(1);
     });
   });
 
-  describe('abort', () => {
-    it('rejects all queued requests', async () => {
-      const limiter = new RateLimiter(1, 60_000);
+  describe('backoff', () => {
+    it('reports success resets backoff', async () => {
+      const limiter = new TokenBucketRateLimiter(10, 60_000);
+
       await limiter.waitForSlot();
+      limiter.reportFailure();
+      
+      let stats = limiter.getStats();
+      expect(stats?.backoffMultiplier).toBe(2);
 
-      const p1 = limiter.waitForSlot();
-      const p2 = limiter.waitForSlot();
+      limiter.reportSuccess();
+      
+      stats = limiter.getStats();
+      expect(stats?.backoffMultiplier).toBe(1);
+      expect(stats?.backoffUntil).toBe(0);
+    });
 
-      expect(limiter.pendingCount).toBe(2);
+    it('reports failure triggers exponential backoff', async () => {
+      const limiter = new TokenBucketRateLimiter(10, 60_000);
 
-      limiter.abort('shutting down');
+      await limiter.waitForSlot();
+      limiter.reportFailure('default', 500);
+      
+      let stats = limiter.getStats();
+      expect(stats?.backoffMultiplier).toBe(2);
+      expect(stats?.backoffUntil).toBeGreaterThan(Date.now());
 
-      await expect(p1).rejects.toThrow('shutting down');
-      await expect(p2).rejects.toThrow('shutting down');
-      expect(limiter.pendingCount).toBe(0);
+      limiter.reportFailure('default', 500);
+      
+      stats = limiter.getStats();
+      expect(stats?.backoffMultiplier).toBe(4);
+    });
+
+    it('caps backoff multiplier at 10', async () => {
+      const limiter = new TokenBucketRateLimiter(10, 60_000);
+
+      await limiter.waitForSlot();
+      
+      for (let i = 0; i < 20; i++) {
+        limiter.reportFailure('default', 500);
+      }
+      
+      const stats = limiter.getStats();
+      expect(stats?.backoffMultiplier).toBe(10);
     });
   });
 
-  describe('activeCount / pendingCount', () => {
-    it('returns correct counts', async () => {
-      const limiter = new RateLimiter(2, 60_000);
+  describe('getStats', () => {
+    it('returns null for unknown domain', () => {
+      const limiter = new TokenBucketRateLimiter(10, 60_000);
+      expect(limiter.getStats('unknown')).toBeNull();
+    });
 
-      expect(limiter.activeCount).toBe(0);
-      expect(limiter.pendingCount).toBe(0);
+    it('returns stats after requests', async () => {
+      const limiter = new TokenBucketRateLimiter(10, 60_000);
 
-      await limiter.waitForSlot();
-      await limiter.waitForSlot();
+      await limiter.waitForSlot('api');
+      await limiter.waitForSlot('api');
 
-      expect(limiter.activeCount).toBe(2);
-      expect(limiter.pendingCount).toBe(0);
+      const stats = limiter.getStats('api');
+      expect(stats).not.toBeNull();
+      expect(stats?.totalRequests).toBe(2);
+      expect(stats?.tokens).toBe(8);
+    });
+  });
 
-      void limiter.waitForSlot();
-      void limiter.waitForSlot();
+  describe('reset', () => {
+    it('clears state for domain', async () => {
+      const limiter = new TokenBucketRateLimiter(10, 60_000);
 
-      expect(limiter.activeCount).toBe(2);
-      expect(limiter.pendingCount).toBe(2);
+      await limiter.waitForSlot('api');
+      expect(limiter.getStats('api')).not.toBeNull();
+
+      limiter.reset('api');
+      expect(limiter.getStats('api')).toBeNull();
     });
   });
 });

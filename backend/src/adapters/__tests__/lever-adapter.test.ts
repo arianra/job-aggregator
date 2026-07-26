@@ -1,14 +1,25 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { LeverAdapter, transformLeverJob } from '../lever-adapter.js'
+import { safeHttp } from '../../utils/safe-http.js'
 
 // Import module-level functions directly
 import * as leverAdapterModule from '../lever-adapter.js'
 
+// Mock the safeHttp module
+vi.mock('../../utils/safe-http.js', () => ({
+  safeHttp: {
+    get: vi.fn(),
+  },
+}))
+
 describe('LeverAdapter', () => {
   let adapter: LeverAdapter
+  let getMock: ReturnType<typeof vi.fn>
 
   beforeEach(() => {
     adapter = new LeverAdapter()
+    getMock = (safeHttp.get as ReturnType<typeof vi.fn>)
+    getMock.mockReset()
   })
 
   describe('parseLocation', () => {
@@ -282,6 +293,12 @@ describe('LeverAdapter', () => {
   })
 
   describe('searchJobs', () => {
+    beforeEach(() => {
+      // Clear companies and add one for testing
+      adapter['companies'].clear()
+      adapter['companies'].add('test-company')
+    })
+
     it('should fetch all jobs from configured companies', async () => {
       const mockJobs = [
         {
@@ -291,33 +308,18 @@ describe('LeverAdapter', () => {
           description: 'Build software',
           descriptionPlain: 'Build software',
           lists: [],
-          hostedUrl: 'https://jobs.lever.co/stripe/job-1',
+          hostedUrl: 'https://jobs.lever.co/test-company/job-1',
           createdAt: Date.now()
         }
       ]
 
-      // Mock fetch
-      const mockFetch = vi.fn().mockResolvedValue({
-        ok: true,
-        status: 200,
-        json: async () => mockJobs
-      })
-      global.fetch = mockFetch
+      getMock.mockResolvedValueOnce({ status: 200, data: mockJobs })
 
       const result = await adapter.searchJobs({})
 
-      expect(result.jobs).toHaveLength(3) // 3 companies configured
-      expect(result.sources).toHaveLength(3)
-      expect(result.metadata.totalAvailable).toBe(3)
-      expect(mockFetch).toHaveBeenCalledTimes(3) // Once per company
-    })
-
-  describe('searchJobs filtering', () => {
-    beforeEach(() => {
-      // Clear companies to avoid duplicates from multiple fetches
-      adapter['companies'].clear()
-      // Add at least one company so the fetch loop executes
-      adapter['companies'].add('test-company')
+      expect(result.jobs).toHaveLength(1)
+      expect(result.sources).toHaveLength(1)
+      expect(getMock).toHaveBeenCalledTimes(1)
     })
 
     it('should filter jobs by title', async () => {
@@ -329,7 +331,7 @@ describe('LeverAdapter', () => {
           description: 'Build software',
           descriptionPlain: 'Build software',
           lists: [],
-          hostedUrl: 'https://jobs.lever.co/stripe/job-1',
+          hostedUrl: 'https://jobs.lever.co/test-company/job-1',
           createdAt: Date.now()
         },
         {
@@ -339,17 +341,12 @@ describe('LeverAdapter', () => {
           description: 'Manage products',
           descriptionPlain: 'Manage products',
           lists: [],
-          hostedUrl: 'https://jobs.lever.co/stripe/job-2',
+          hostedUrl: 'https://jobs.lever.co/test-company/job-2',
           createdAt: Date.now()
         }
       ]
 
-      const mockFetch = vi.fn().mockResolvedValue({
-        ok: true,
-        status: 200,
-        json: async () => mockJobs
-      })
-      global.fetch = mockFetch
+      getMock.mockResolvedValueOnce({ status: 200, data: mockJobs })
 
       const result = await adapter.searchJobs({ title: 'Engineer' })
 
@@ -366,7 +363,7 @@ describe('LeverAdapter', () => {
           description: 'Build software',
           descriptionPlain: 'Build software',
           lists: [],
-          hostedUrl: 'https://jobs.lever.co/stripe/job-1',
+          hostedUrl: 'https://jobs.lever.co/test-company/job-1',
           createdAt: Date.now()
         },
         {
@@ -376,17 +373,12 @@ describe('LeverAdapter', () => {
           description: 'Build software',
           descriptionPlain: 'Build software',
           lists: [],
-          hostedUrl: 'https://jobs.lever.co/stripe/job-2',
+          hostedUrl: 'https://jobs.lever.co/test-company/job-2',
           createdAt: Date.now()
         }
       ]
 
-      const mockFetch = vi.fn().mockResolvedValue({
-        ok: true,
-        status: 200,
-        json: async () => mockJobs
-      })
-      global.fetch = mockFetch
+      getMock.mockResolvedValueOnce({ status: 200, data: mockJobs })
 
       const result = await adapter.searchJobs({ location: 'San Francisco' })
 
@@ -403,7 +395,7 @@ describe('LeverAdapter', () => {
           description: 'Build software',
           descriptionPlain: 'Build software',
           lists: [],
-          hostedUrl: 'https://jobs.lever.co/stripe/job-1',
+          hostedUrl: 'https://jobs.lever.co/test-company/job-1',
           createdAt: Date.now()
         },
         {
@@ -413,17 +405,12 @@ describe('LeverAdapter', () => {
           description: 'Build software',
           descriptionPlain: 'Build software',
           lists: [],
-          hostedUrl: 'https://jobs.lever.co/stripe/job-2',
+          hostedUrl: 'https://jobs.lever.co/test-company/job-2',
           createdAt: Date.now()
         }
       ]
 
-      const mockFetch = vi.fn().mockResolvedValue({
-        ok: true,
-        status: 200,
-        json: async () => mockJobs
-      })
-      global.fetch = mockFetch
+      getMock.mockResolvedValueOnce({ status: 200, data: mockJobs })
 
       const result = await adapter.searchJobs({ remote: true })
 
@@ -440,7 +427,7 @@ describe('LeverAdapter', () => {
           description: 'Salary: $150k - $200k',
           descriptionPlain: 'Salary: $150k - $200k',
           lists: [],
-          hostedUrl: 'https://jobs.lever.co/stripe/job-1',
+          hostedUrl: 'https://jobs.lever.co/test-company/job-1',
           createdAt: Date.now()
         },
         {
@@ -450,24 +437,18 @@ describe('LeverAdapter', () => {
           description: 'Salary: $80k - $95k',
           descriptionPlain: 'Salary: $80k - $95k',
           lists: [],
-          hostedUrl: 'https://jobs.lever.co/stripe/job-2',
+          hostedUrl: 'https://jobs.lever.co/test-company/job-2',
           createdAt: Date.now()
         }
       ]
 
-      const mockFetch = vi.fn().mockResolvedValue({
-        ok: true,
-        status: 200,
-        json: async () => mockJobs
-      })
-      global.fetch = mockFetch
+      getMock.mockResolvedValueOnce({ status: 200, data: mockJobs })
 
       const result = await adapter.searchJobs({ salaryMin: 100000 })
 
       expect(result.jobs).toHaveLength(1)
       expect(result.jobs[0].salary_range?.min).toBe(150000)
     })
-  })
 
     it('should limit results', async () => {
       const mockJobs = Array.from({ length: 10 }, (_, i) => ({
@@ -477,16 +458,11 @@ describe('LeverAdapter', () => {
         description: 'Build software',
         descriptionPlain: 'Build software',
         lists: [],
-        hostedUrl: `https://jobs.lever.co/stripe/job-${i}`,
+        hostedUrl: `https://jobs.lever.co/test-company/job-${i}`,
         createdAt: Date.now()
       }))
 
-      const mockFetch = vi.fn().mockResolvedValue({
-        ok: true,
-        status: 200,
-        json: async () => mockJobs
-      })
-      global.fetch = mockFetch
+      getMock.mockResolvedValueOnce({ status: 200, data: mockJobs })
 
       const result = await adapter.searchJobs({ limit: 5 })
 
@@ -496,12 +472,7 @@ describe('LeverAdapter', () => {
 
   describe('healthCheck', () => {
     it('should return healthy when API is reachable', async () => {
-      const mockFetch = vi.fn().mockResolvedValue({
-        ok: true,
-        status: 200,
-        json: async () => []
-      })
-      global.fetch = mockFetch
+      getMock.mockResolvedValueOnce({ status: 200, data: [] })
 
       const health = await adapter.healthCheck()
 
@@ -511,8 +482,7 @@ describe('LeverAdapter', () => {
     })
 
     it('should return unhealthy when API fails', async () => {
-      const mockFetch = vi.fn().mockRejectedValue(new Error('Network error'))
-      global.fetch = mockFetch
+      getMock.mockRejectedValueOnce(new Error('Network error'))
 
       const health = await adapter.healthCheck()
 

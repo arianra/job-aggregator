@@ -1,5 +1,6 @@
 import type { BoardAdapter, AdapterResult, JobSearchQuery, AdapterHealth, Job, Source, Location } from '@job-aggregator/shared'
 import logger from '../utils/logger.js'
+import { safeHttp } from '../utils/safe-http.js'
 
 // ============================================================================
 // Lever API Response Types
@@ -30,9 +31,10 @@ interface LeverJobsResponse extends Array<LeverJob> {}
 // ============================================================================
 
 const BASE_URL = 'https://api.lever.co/v0/postings'
-const USER_AGENT = 'JobAggregator/1.0 (personal project)'
-const CONCURRENCY = 10
-const DELAY_MS = 500
+
+// Reduced from 10 to 5 to be gentler on the API
+const CONCURRENCY = 5
+const DELAY_MS = 1000
 
 // ============================================================================
 // Pure transform functions
@@ -274,13 +276,8 @@ export class LeverAdapter implements BoardAdapter {
     // Lever doesn't have a single job endpoint, we need to fetch all and filter
     for (const company of this.companies) {
       try {
-        const response = await fetch(`${BASE_URL}/${company}?mode=json`, {
-          headers: { 'User-Agent': USER_AGENT },
-        })
-        
-        if (!response.ok) continue
-        
-        const data = await response.json() as LeverJobsResponse
+        const response = await safeHttp.get<LeverJobsResponse>(`${BASE_URL}/${company}?mode=json`)
+        const data = response.data
         const rawJob = data.find(job => job.id === boardJobId)
         
         if (rawJob) {
@@ -389,10 +386,7 @@ export class LeverAdapter implements BoardAdapter {
 
   async healthCheck(): Promise<AdapterHealth> {
     try {
-      const response = await fetch(`${BASE_URL}/stripe?mode=json`, {
-        headers: { 'User-Agent': USER_AGENT },
-        signal: AbortSignal.timeout(5000),
-      })
+      await safeHttp.get(`${BASE_URL}/stripe?mode=json`)
       
       return {
         healthy: true,
@@ -411,15 +405,8 @@ export class LeverAdapter implements BoardAdapter {
 
   private async fetchCompanyJobs(company: string): Promise<{ jobs: Job[]; sources: Source[] }> {
     try {
-      const response = await fetch(`${BASE_URL}/${company}?mode=json`, {
-        headers: { 'User-Agent': USER_AGENT },
-      })
-
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}`)
-      }
-
-      const data = await response.json() as LeverJobsResponse
+      const response = await safeHttp.get<LeverJobsResponse>(`${BASE_URL}/${company}?mode=json`)
+      const data = response.data
       const jobs: Job[] = []
       const sources: Source[] = []
 

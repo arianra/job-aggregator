@@ -1,20 +1,28 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { GreenhouseAdapter } from '../greenhouse-adapter.js'
 import type { GreenhouseJob, GreenhouseJobsResponse, GreenhouseBoardsResponse } from '../../types/greenhouse.js'
+import { safeHttp } from '../../utils/safe-http.js'
 
 // Helper to access module-level transform function
 import { transformGreenhouseJob } from '../greenhouse-adapter.js'
 
+// Mock the safeHttp module
+vi.mock('../../utils/safe-http.js', () => ({
+  safeHttp: {
+    get: vi.fn(),
+  },
+}))
+
 describe('GreenhouseAdapter', () => {
   let adapter: GreenhouseAdapter
-  let fetchMock: any
+  let getMock: ReturnType<typeof vi.fn>
 
   beforeEach(() => {
     adapter = new GreenhouseAdapter()
     // Clear pre-populated boards for testing
     adapter['boards'].clear()
-    fetchMock = vi.fn()
-    global.fetch = fetchMock
+    getMock = (safeHttp.get as ReturnType<typeof vi.fn>)
+    getMock.mockReset()
   })
 
   afterEach(() => {
@@ -217,14 +225,14 @@ describe('GreenhouseAdapter', () => {
         ],
       }
 
-      fetchMock.mockResolvedValueOnce({
-        ok: true,
-        json: async () => mockResponse,
+      getMock.mockResolvedValueOnce({
+        status: 200,
+        data: mockResponse,
       })
 
       const result = await adapter.discoverBoards()
 
-      expect(fetchMock).toHaveBeenCalledWith(
+      expect(getMock).toHaveBeenCalledWith(
         'https://boards-api.greenhouse.io/v1/boards',
         expect.any(Object)
       )
@@ -234,7 +242,7 @@ describe('GreenhouseAdapter', () => {
     })
 
     it('should handle discovery errors gracefully', async () => {
-      fetchMock.mockRejectedValueOnce(new Error('Network error'))
+      getMock.mockRejectedValueOnce(new Error('Network error'))
 
       const result = await adapter.discoverBoards()
 
@@ -261,14 +269,14 @@ describe('GreenhouseAdapter', () => {
         ],
       }
 
-      fetchMock.mockResolvedValueOnce({
-        ok: true,
-        json: async () => mockResponse,
+      getMock.mockResolvedValueOnce({
+        status: 200,
+        data: mockResponse,
       })
 
       const result = await adapter['fetchBoardJobs']('stripe')
 
-      expect(fetchMock).toHaveBeenCalledWith(
+      expect(getMock).toHaveBeenCalledWith(
         'https://boards-api.greenhouse.io/v1/boards/stripe/jobs',
         expect.any(Object)
       )
@@ -278,10 +286,7 @@ describe('GreenhouseAdapter', () => {
     })
 
     it('should handle fetch errors', async () => {
-      fetchMock.mockResolvedValueOnce({
-        ok: false,
-        status: 404,
-      })
+      getMock.mockRejectedValueOnce(new Error('HTTP 404'))
 
       await expect(adapter['fetchBoardJobs']('nonexistent')).rejects.toThrow()
     })
@@ -323,9 +328,9 @@ describe('GreenhouseAdapter', () => {
         ],
       }
 
-      fetchMock.mockResolvedValueOnce({
-        ok: true,
-        json: async () => mockResponse,
+      getMock.mockResolvedValueOnce({
+        status: 200,
+        data: mockResponse,
       })
 
       const result = await adapter.searchJobs({ title: 'Engineer' })
@@ -364,9 +369,9 @@ describe('GreenhouseAdapter', () => {
         ],
       }
 
-      fetchMock.mockResolvedValueOnce({
-        ok: true,
-        json: async () => mockResponse,
+      getMock.mockResolvedValueOnce({
+        status: 200,
+        data: mockResponse,
       })
 
       const result = await adapter.searchJobs({ remote: true })
@@ -410,9 +415,9 @@ describe('GreenhouseAdapter', () => {
         ],
       }
 
-      fetchMock.mockResolvedValueOnce({
-        ok: true,
-        json: async () => mockResponse,
+      getMock.mockResolvedValueOnce({
+        status: 200,
+        data: mockResponse,
       })
 
       const result = await adapter.searchJobs({ salaryMin: 100000 })
@@ -437,9 +442,9 @@ describe('GreenhouseAdapter', () => {
         })),
       }
 
-      fetchMock.mockResolvedValueOnce({
-        ok: true,
-        json: async () => mockResponse,
+      getMock.mockResolvedValueOnce({
+        status: 200,
+        data: mockResponse,
       })
 
       const result = await adapter.searchJobs({ limit: 5 })
@@ -450,8 +455,9 @@ describe('GreenhouseAdapter', () => {
 
   describe('healthCheck', () => {
     it('should return healthy when API is reachable', async () => {
-      fetchMock.mockResolvedValueOnce({
-        ok: true,
+      getMock.mockResolvedValueOnce({
+        status: 200,
+        data: {},
       })
 
       const result = await adapter.healthCheck()
@@ -461,7 +467,7 @@ describe('GreenhouseAdapter', () => {
     })
 
     it('should return unhealthy when API is unreachable', async () => {
-      fetchMock.mockRejectedValueOnce(new Error('Network error'))
+      getMock.mockRejectedValueOnce(new Error('Network error'))
 
       const result = await adapter.healthCheck()
 

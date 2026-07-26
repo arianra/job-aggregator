@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { extractSkillsFromText } from '../skill-extractor.js';
-import { parseResumeWithQwen } from './qwen-parser.js';
+import { parseResumeWithQwen } from '../qwen-parser.js';
 
 // Mock fetch globally
 const mockFetch = vi.fn();

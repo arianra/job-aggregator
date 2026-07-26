@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import {
   AshbyAdapter,
   parseLocation,
@@ -9,21 +9,24 @@ import {
   randomUA,
   randomJitter,
 } from '../ashby-adapter.js';
+import { safeHttp } from '../../utils/safe-http.js';
 
-// Mock axios
-vi.mock('axios', () => {
-  const mockAxiosInstance = {
+// Mock safeHttp
+vi.mock('../../utils/safe-http.js', () => ({
+  safeHttp: {
     post: vi.fn(),
-  };
-
-  return {
-    default: {
-      create: vi.fn(() => mockAxiosInstance),
-    },
-  };
-});
+  },
+}));
 
 describe('Ashby Adapter', () => {
+  let adapter: AshbyAdapter;
+  const mockPost = vi.mocked(safeHttp.post);
+
+  beforeEach(() => {
+    adapter = new AshbyAdapter();
+    vi.clearAllMocks();
+  });
+
   describe('Helper Functions', () => {
     describe('parseLocation', () => {
       it('should parse city and state', () => {
@@ -169,10 +172,10 @@ describe('Ashby Adapter', () => {
     });
 
     describe('randomJitter', () => {
-      it('should return a jitter value between 750 and 2250', () => {
+      it('should return a jitter value between 0 and 2000', () => {
         const jitter = randomJitter();
-        expect(jitter).toBeGreaterThanOrEqual(750);
-        expect(jitter).toBeLessThanOrEqual(2250);
+        expect(jitter).toBeGreaterThanOrEqual(0);
+        expect(jitter).toBeLessThanOrEqual(2000);
       });
     });
   });
@@ -233,7 +236,7 @@ describe('Ashby Adapter', () => {
         locationName: '',
       };
 
-      const { job } = transformAshbyJob(posting, 'test');
+      const { job } = transformAshbyJob(posting as any, 'test');
 
       expect(job.title).toBe('Developer');
       expect(job.location).toEqual({
@@ -258,13 +261,6 @@ describe('Ashby Adapter', () => {
   });
 
   describe('AshbyAdapter', () => {
-    let adapter: AshbyAdapter;
-
-    beforeEach(() => {
-      adapter = new AshbyAdapter();
-      vi.clearAllMocks();
-    });
-
     describe('constructor', () => {
       it('should initialize with default orgs', () => {
         expect(adapter['orgs'].size).toBeGreaterThan(0);
@@ -286,7 +282,6 @@ describe('Ashby Adapter', () => {
     describe('fetchOrgJobs', () => {
       it('should fetch and transform jobs successfully', async () => {
         const mockResponse = {
-          status: 200,
           data: {
             data: {
               jobBoard: {
@@ -313,8 +308,6 @@ describe('Ashby Adapter', () => {
           },
         };
 
-        const axios = await import('axios');
-        const mockPost = axios.default.create().post as any;
         mockPost.mockResolvedValueOnce(mockResponse);
 
         const result = await adapter['fetchOrgJobs']('test-org');
@@ -327,7 +320,6 @@ describe('Ashby Adapter', () => {
 
       it('should filter out archived jobs', async () => {
         const mockResponse = {
-          status: 200,
           data: {
             data: {
               jobBoard: {
@@ -350,8 +342,6 @@ describe('Ashby Adapter', () => {
           },
         };
 
-        const axios = await import('axios');
-        const mockPost = axios.default.create().post as any;
         mockPost.mockResolvedValueOnce(mockResponse);
 
         const result = await adapter['fetchOrgJobs']('test-org');
@@ -360,59 +350,18 @@ describe('Ashby Adapter', () => {
         expect(result.jobs[0].title).toBe('Active Engineer');
       });
 
-      it('should retry on 429/503/502 errors', async () => {
-        const axios = await import('axios');
-        const mockPost = axios.default.create().post as any;
+      it('should throw on error', async () => {
+        mockPost.mockRejectedValueOnce(new Error('Network error'));
 
-        // First attempt fails with 429
-        mockPost.mockResolvedValueOnce({ status: 429 });
-        // Second attempt succeeds
-        mockPost.mockResolvedValueOnce({
-          status: 200,
-          data: {
-            data: {
-              jobBoard: {
-                jobPostings: [
-                  {
-                    id: 'job-1',
-                    title: 'Engineer',
-                    locationName: 'Remote',
-                    isArchived: false,
-                  },
-                ],
-              },
-            },
-          },
-        });
+        await expect(adapter['fetchOrgJobs']('test-org')).rejects.toThrow('Network error');
 
-        const result = await adapter['fetchOrgJobs']('test-org');
-
-        expect(mockPost).toHaveBeenCalledTimes(2);
-        expect(result.jobs).toHaveLength(1);
+        expect(mockPost).toHaveBeenCalledTimes(1);
       });
-
-      it('should throw after max retries', async () => {
-        const axios = await import('axios');
-        const mockPost = axios.default.create().post as any;
-
-        // All attempts fail with 500
-        mockPost.mockResolvedValue({ status: 500 });
-
-        await expect(adapter['fetchOrgJobs']('test-org')).rejects.toThrow(
-          'Ashby returned status 500 for org test-org'
-        );
-
-        expect(mockPost).toHaveBeenCalledTimes(3); // Initial + 2 retries
-      }, 15000);
     });
 
     describe('fetchJobs', () => {
       it('should fetch jobs from multiple orgs', async () => {
-        const axios = await import('axios');
-        const mockPost = axios.default.create().post as any;
-
         mockPost.mockResolvedValue({
-          status: 200,
           data: {
             data: {
               jobBoard: {
@@ -443,11 +392,7 @@ describe('Ashby Adapter', () => {
       });
 
       it('should respect limit parameter', async () => {
-        const axios = await import('axios');
-        const mockPost = axios.default.create().post as any;
-
         mockPost.mockResolvedValue({
-          status: 200,
           data: {
             data: {
               jobBoard: {
@@ -481,11 +426,7 @@ describe('Ashby Adapter', () => {
 
     describe('fetchJob', () => {
       it('should fetch a specific job by ID', async () => {
-        const axios = await import('axios');
-        const mockPost = axios.default.create().post as any;
-
         mockPost.mockResolvedValue({
-          status: 200,
           data: {
             data: {
               jobBoard: {
@@ -512,11 +453,7 @@ describe('Ashby Adapter', () => {
       });
 
       it('should return null if job not found', async () => {
-        const axios = await import('axios');
-        const mockPost = axios.default.create().post as any;
-
         mockPost.mockResolvedValue({
-          status: 200,
           data: {
             data: {
               jobBoard: {
@@ -537,11 +474,7 @@ describe('Ashby Adapter', () => {
 
     describe('searchJobs', () => {
       it('should filter jobs by title', async () => {
-        const axios = await import('axios');
-        const mockPost = axios.default.create().post as any;
-
         mockPost.mockResolvedValue({
-          status: 200,
           data: {
             data: {
               jobBoard: {
@@ -574,11 +507,7 @@ describe('Ashby Adapter', () => {
       });
 
       it('should filter jobs by location', async () => {
-        const axios = await import('axios');
-        const mockPost = axios.default.create().post as any;
-
         mockPost.mockResolvedValue({
-          status: 200,
           data: {
             data: {
               jobBoard: {
@@ -611,11 +540,7 @@ describe('Ashby Adapter', () => {
       });
 
       it('should filter remote jobs', async () => {
-        const axios = await import('axios');
-        const mockPost = axios.default.create().post as any;
-
         mockPost.mockResolvedValue({
-          status: 200,
           data: {
             data: {
               jobBoard: {
@@ -648,11 +573,7 @@ describe('Ashby Adapter', () => {
       });
 
       it('should respect limit parameter', async () => {
-        const axios = await import('axios');
-        const mockPost = axios.default.create().post as any;
-
         mockPost.mockResolvedValue({
-          status: 200,
           data: {
             data: {
               jobBoard: {
@@ -692,11 +613,7 @@ describe('Ashby Adapter', () => {
 
     describe('healthCheck', () => {
       it('should return healthy when API is reachable', async () => {
-        const axios = await import('axios');
-        const mockPost = axios.default.create().post as any;
-
         mockPost.mockResolvedValue({
-          status: 200,
           data: {
             data: {
               jobBoard: {
@@ -714,9 +631,6 @@ describe('Ashby Adapter', () => {
       });
 
       it('should return unhealthy when API fails', async () => {
-        const axios = await import('axios');
-        const mockPost = axios.default.create().post as any;
-
         mockPost.mockRejectedValue(new Error('Network error'));
 
         const health = await adapter.healthCheck();

@@ -1,6 +1,5 @@
-import axios, { AxiosInstance, AxiosError } from 'axios';
 import { BoardAdapter, Job, Source, AdapterResult, JobSearchQuery, AdapterHealth } from '@job-aggregator/shared';
-import { randomUUID } from 'crypto';
+import { safeHttp } from '../utils/safe-http.js';
 import logger from '../utils/logger.js';
 
 // ============================================================================
@@ -29,47 +28,13 @@ interface AshbyGraphQLResponse {
 // ============================================================================
 
 const API_URL = 'https://jobs.ashbyhq.com/api/non-user-graphql';
-const CONCURRENCY = 5; // Ashby has the tightest rate limits
-const DELAY_MS = 500;
-const JITTER_MS = 1500;
-const MAX_RETRIES = 2;
-
-const USER_AGENTS = [
-  'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36',
-  'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36',
-  'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36',
-  'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:147.0) Gecko/20100101 Firefox/147.0',
-  'Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:147.0) Gecko/20100101 Firefox/147.0',
-  'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.0 Safari/605.1.15',
-  'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36 Edg/144.0.0.0',
-];
-
-const GRAPHQL_QUERY = `
-query ApiJobBoardWithTeams($organizationHostedJobsPageName: String!) {
-  jobBoard: jobBoardWithTeams(organizationHostedJobsPageName: $organizationHostedJobsPageName) {
-    jobPostings {
-      id
-      title
-      locationName
-      isArchived
-      employmentType
-      createdAt
-    }
-  }
-}
-`;
+const CONCURRENCY = 3; // Reduced from 5 to 3
+const DELAY_MS = 1000; // Increased from 500ms to 1000ms
+const JITTER_MS = 2000; // Increased from 1500ms to 2000ms
 
 // ============================================================================
 // Pure transform functions
 // ============================================================================
-
-export function randomUA(): string {
-  return USER_AGENTS[Math.floor(Math.random() * USER_AGENTS.length)];
-}
-
-export function randomJitter(): number {
-  return Math.floor(JITTER_MS * (0.5 + Math.random()));
-}
 
 export function parseLocation(locationName: string): Job['location'] {
   const raw = locationName.trim();
@@ -181,14 +146,47 @@ export function transformAshbyJob(
 }
 
 // ============================================================================
+// Helper functions
+// ============================================================================
+
+function sleep(ms: number): Promise<void> {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+// ============================================================================
 // Adapter class
 // ============================================================================
+
+const GRAPHQL_QUERY = `
+query ApiJobBoardWithTeams($organizationHostedJobsPageName: String!) {
+  jobBoard: jobBoardWithTeams(organizationHostedJobsPageName: $organizationHostedJobsPageName) {
+    jobPostings {
+      id
+      title
+      locationName
+      isArchived
+      employmentType
+      createdAt
+    }
+  }
+}
+`;
+
+// Jitter helper for rate limiting
+export const randomJitter = () => Math.floor(Math.random() * 1000);
+
+// User agent rotation
+const userAgents = [
+  'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+  'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36',
+  'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36',
+];
+export const randomUA = () => userAgents[Math.floor(Math.random() * userAgents.length)];
 
 export class AshbyAdapter implements BoardAdapter {
   readonly boardId = 'ashby';
   readonly boardName = 'Ashby';
 
-  private readonly client: AxiosInstance;
   private readonly orgs: Set<string>;
 
   constructor() {
@@ -198,15 +196,6 @@ export class AshbyAdapter implements BoardAdapter {
       'together', 'mistral', 'stability-ai', 'weights-biases',
       'modal', 'replit', 'cursor', 'sourcegraph',
     ]);
-
-    this.client = axios.create({
-      baseURL: API_URL,
-      timeout: 30000,
-      headers: {
-        'Content-Type': 'application/json',
-        Accept: 'application/json',
-      },
-    });
   }
 
   addOrgs(orgs: string[]): void {
@@ -322,7 +311,7 @@ export class AshbyAdapter implements BoardAdapter {
       const testOrg = Array.from(this.orgs)[0];
       if (!testOrg) return { healthy: false, message: 'No orgs configured', errorCount: 1 };
 
-      const result = await this.fetchOrgJobs(testOrg);
+      await this.fetchOrgJobs(testOrg);
       return {
         healthy: true,
         message: `Ashby API reachable, ${this.orgs.size} orgs configured`,
@@ -339,7 +328,7 @@ export class AshbyAdapter implements BoardAdapter {
   }
 
   private async fetchOrgJobs(org: string): Promise<{ jobs: Job[]; sources: Source[] }> {
-    // Jitter before request (Feashliaa pattern)
+    // Jitter before request (rate limiting)
     await sleep(randomJitter());
 
     const payload = {
@@ -348,56 +337,27 @@ export class AshbyAdapter implements BoardAdapter {
       query: GRAPHQL_QUERY,
     };
 
-    let lastError: Error | null = null;
+    // safeHttp handles retries and rate limiting
+    const resp = await safeHttp.post<AshbyGraphQLResponse>(API_URL, payload, {
+      domain: `ashby-${org}`,
+    });
 
-    for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+    const postings = resp.data?.data?.jobBoard?.jobPostings || [];
+    const jobs: Job[] = [];
+    const sources: Source[] = [];
+
+    for (const posting of postings) {
+      if (posting.isArchived) continue;
       try {
-        const resp = await this.client.post<AshbyGraphQLResponse>('', payload, {
-          headers: { 'User-Agent': randomUA() },
-        });
-
-        if (resp.status === 200) {
-          const postings = resp.data?.data?.jobBoard?.jobPostings || [];
-          const jobs: Job[] = [];
-          const sources: Source[] = [];
-
-          for (const posting of postings) {
-            if (posting.isArchived) continue;
-            try {
-              const { job, source } = transformAshbyJob(posting, org);
-              jobs.push(job);
-              sources.push(source);
-            } catch (err) {
-              logger.warn(`[ashby] failed to transform posting ${posting.id}`, { err });
-            }
-          }
-
-          logger.debug(`[ashby] fetched ${jobs.length} jobs from ${org}`);
-          return { jobs, sources };
-        }
-
-        // Retryable status codes
-        if ([429, 503, 502].includes(resp.status) && attempt < MAX_RETRIES) {
-          const backoff = Math.pow(2, attempt) + Math.random() * 1.5;
-          logger.warn(`[ashby] ${org}: ${resp.status}, retrying in ${backoff.toFixed(1)}s`);
-          await sleep(backoff * 1000);
-          continue;
-        }
-
-        throw new Error(`Ashby returned status ${resp.status} for org ${org}`);
+        const { job, source } = transformAshbyJob(posting, org);
+        jobs.push(job);
+        sources.push(source);
       } catch (err) {
-        lastError = err instanceof Error ? err : new Error(String(err));
-        if (attempt < MAX_RETRIES) {
-          await sleep(Math.pow(2, attempt) * 1000);
-          continue;
-        }
+        logger.warn(`[ashby] failed to transform posting ${posting.id}`, { err });
       }
     }
 
-    throw lastError || new Error(`Failed to fetch Ashby jobs for ${org}`);
+    logger.debug(`[ashby] fetched ${jobs.length} jobs from ${org}`);
+    return { jobs, sources };
   }
-}
-
-function sleep(ms: number): Promise<void> {
-  return new Promise(resolve => setTimeout(resolve, ms));
 }

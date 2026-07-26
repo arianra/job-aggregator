@@ -8,18 +8,17 @@ import {
   randomUA,
   transformWorkdayJob,
 } from '../workday-adapter.js';
+import { safeHttp } from '../../utils/safe-http.js';
 
-// Create mock post function
-const mockPost = vi.fn();
-
-// Mock axios
-vi.mock('axios', () => ({
-  default: {
-    create: vi.fn(() => ({
-      post: mockPost,
-    })),
+// Mock safeHttp
+vi.mock('../../utils/safe-http.js', () => ({
+  safeHttp: {
+    post: vi.fn(),
   },
 }));
+
+// Get the mocked post function
+const mockPost = vi.mocked(safeHttp.post);
 
 describe('WorkdayAdapter', () => {
   describe('Helper Functions', () => {
@@ -630,48 +629,20 @@ describe('WorkdayAdapter', () => {
         expect(mockPost).toHaveBeenCalledTimes(2);
       });
 
-      it('should retry on non-200 status', async () => {
-        mockPost
-          .mockResolvedValueOnce({
-            status: 500,
-            data: null,
-          })
-          .mockResolvedValueOnce({
-            status: 200,
-            data: {
-              total: 1,
-              jobPostings: [
-                {
-                  title: 'Job 1',
-                  locationsText: 'Remote',
-                  jobId: '1',
-                  externalPath: '/job/1',
-                },
-              ],
-            },
-          });
-
-        const tenant = (adapter as any).tenants.get('test');
-        const result = await (adapter as any).fetchTenantJobs('test', tenant);
-        
-        expect(result.jobs.length).toBe(1);
-        expect(mockPost).toHaveBeenCalledTimes(2);
-      });
-
-      it('should throw after max retries', async () => {
+      it('should throw on non-200 status (safeHttp handles retries)', async () => {
         mockPost.mockResolvedValue({
           status: 500,
           data: null,
         });
 
         const tenant = (adapter as any).tenants.get('test');
-        
+
         await expect(
           (adapter as any).fetchTenantJobs('test', tenant)
         ).rejects.toThrow('Workday returned status 500');
-        
-        expect(mockPost).toHaveBeenCalledTimes(3);
-      }, 10000);
+
+        expect(mockPost).toHaveBeenCalledTimes(1);
+      });
 
       it('should send correct headers', async () => {
         mockPost.mockResolvedValue({
@@ -698,7 +669,7 @@ describe('WorkdayAdapter', () => {
         expect(headers['Content-Type']).toBe('application/json');
         expect(headers['Origin']).toBe('https://testcompany.myworkdayjobs.com');
         expect(headers['Referer']).toBe('https://testcompany.myworkdayjobs.com/testsite');
-        expect(headers['User-Agent']).toContain('Mozilla');
+        // User-Agent is now set by safeHttp, not the adapter
       });
 
       it('should send correct payload', async () => {
