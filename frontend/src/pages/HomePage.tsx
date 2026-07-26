@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { FilterPanel } from '../components/jobs/FilterPanel'
 import { JobList } from '../components/jobs/JobList'
-import { Pagination } from '../components/ui/Pagination'
+import { Pagination } from '../components/ui/pagination'
 import { useHealth, useJobs } from '../hooks/useJobs'
 
 export function HomePage() {
