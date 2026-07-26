@@ -1,10 +1,19 @@
 import { Storage, JobFilter, ApplicationFilter, BoardCompanyFilter } from '@job-aggregator/shared'
-import { Job, Source, Company, Profile, Match, Application, ApplicationCount, BoardCompany } from '@job-aggregator/shared'
+import {
+  Job,
+  Source,
+  Company,
+  Profile,
+  Match,
+  Application,
+  ApplicationCount,
+  BoardCompany,
+} from '@job-aggregator/shared'
 import logger from '../utils/logger.js'
 
 /**
  * In-memory storage implementation for testing and development
- * 
+ *
  * This allows us to build and test the full system without a database.
  * When PostgreSQL is ready, we'll implement PostgresStorage with the same interface.
  */
@@ -52,47 +61,42 @@ export class MockStorage implements Storage {
 
     if (filters) {
       if (filters.company) {
-        results = results.filter(j => 
+        results = results.filter((j) =>
           j.company.name.toLowerCase().includes(filters.company!.toLowerCase())
         )
       }
 
       if (filters.location) {
-        results = results.filter(j =>
-          j.location.city?.toLowerCase().includes(filters.location!.toLowerCase()) ||
-          j.location.state?.toLowerCase().includes(filters.location!.toLowerCase()) ||
-          j.location.country.toLowerCase().includes(filters.location!.toLowerCase())
+        results = results.filter(
+          (j) =>
+            j.location.city?.toLowerCase().includes(filters.location!.toLowerCase()) ||
+            j.location.state?.toLowerCase().includes(filters.location!.toLowerCase()) ||
+            j.location.country.toLowerCase().includes(filters.location!.toLowerCase())
         )
       }
 
       if (filters.remote !== undefined) {
-        results = results.filter(j => j.is_remote === filters.remote)
+        results = results.filter((j) => j.is_remote === filters.remote)
       }
 
       if (filters.salaryMin !== undefined) {
-        results = results.filter(j =>
-          j.salary_range && j.salary_range.max >= filters.salaryMin!
-        )
+        results = results.filter((j) => j.salary_range && j.salary_range.max >= filters.salaryMin!)
       }
 
       if (filters.salaryMax !== undefined) {
-        results = results.filter(j =>
-          j.salary_range && j.salary_range.min <= filters.salaryMax!
-        )
+        results = results.filter((j) => j.salary_range && j.salary_range.min <= filters.salaryMax!)
       }
 
       if (filters.tags && filters.tags.length > 0) {
-        results = results.filter(j =>
-          filters.tags!.some(tag => j.tags.includes(tag))
-        )
+        results = results.filter((j) => filters.tags!.some((tag) => j.tags.includes(tag)))
       }
 
       if (filters.postedAfter) {
-        results = results.filter(j => j.posted_date && j.posted_date >= filters.postedAfter!)
+        results = results.filter((j) => j.posted_date && j.posted_date >= filters.postedAfter!)
       }
 
       if (filters.postedBefore) {
-        results = results.filter(j => j.posted_date && j.posted_date <= filters.postedBefore!)
+        results = results.filter((j) => j.posted_date && j.posted_date <= filters.postedBefore!)
       }
 
       // Pagination
@@ -143,7 +147,7 @@ export class MockStorage implements Storage {
   }
 
   async getJobSourcesByJobId(jobId: string): Promise<Source[]> {
-    return Array.from(this.sources.values()).filter(s => s.job_id === jobId)
+    return Array.from(this.sources.values()).filter((s) => s.job_id === jobId)
   }
 
   async deleteJobSource(id: string): Promise<boolean> {
@@ -162,9 +166,11 @@ export class MockStorage implements Storage {
   }
 
   async getCompanyByName(name: string): Promise<Company | null> {
-    return Array.from(this.companies.values()).find(
-      c => c.name.toLowerCase() === name.toLowerCase()
-    ) || null
+    return (
+      Array.from(this.companies.values()).find(
+        (c) => c.name.toLowerCase() === name.toLowerCase()
+      ) || null
+    )
   }
 
   async listCompanies(): Promise<Company[]> {
@@ -221,11 +227,11 @@ export class MockStorage implements Storage {
   }
 
   async getMatchesByJobId(jobId: string): Promise<Match[]> {
-    return Array.from(this.matches.values()).filter(m => m.job_id === jobId)
+    return Array.from(this.matches.values()).filter((m) => m.job_id === jobId)
   }
 
   async getMatchesByProfileId(profileId: string): Promise<Match[]> {
-    return Array.from(this.matches.values()).filter(m => m.profile_id === profileId)
+    return Array.from(this.matches.values()).filter((m) => m.profile_id === profileId)
   }
 
   async deleteMatch(id: string): Promise<boolean> {
@@ -244,16 +250,18 @@ export class MockStorage implements Storage {
   }
 
   async getApplicationByJob(jobId: string, profileId: string): Promise<Application | null> {
-    return Array.from(this.applications.values()).find(
-      a => a.job_id === jobId && a.profile_id === profileId
-    ) || null
+    return (
+      Array.from(this.applications.values()).find(
+        (a) => a.job_id === jobId && a.profile_id === profileId
+      ) || null
+    )
   }
 
   async listApplications(profileId: string, filters?: ApplicationFilter): Promise<Application[]> {
-    let results = Array.from(this.applications.values()).filter(a => a.profile_id === profileId)
+    let results = Array.from(this.applications.values()).filter((a) => a.profile_id === profileId)
 
     if (filters?.status) {
-      results = results.filter(a => a.status === filters.status)
+      results = results.filter((a) => a.status === filters.status)
     }
 
     if (filters?.offset !== undefined) {
@@ -282,16 +290,23 @@ export class MockStorage implements Storage {
   }
 
   async getApplicationCounts(profileId: string): Promise<ApplicationCount> {
-    const apps = Array.from(this.applications.values()).filter(a => a.profile_id === profileId)
+    const apps = Array.from(this.applications.values()).filter((a) => a.profile_id === profileId)
     const counts: ApplicationCount = {
       total: apps.length,
-      saved: 0, applied: 0, screening: 0, interview: 0,
-      offer: 0, accepted: 0, rejected: 0, withdrawn: 0, archived: 0,
+      saved: 0,
+      applied: 0,
+      screening: 0,
+      interview: 0,
+      offer: 0,
+      accepted: 0,
+      rejected: 0,
+      withdrawn: 0,
+      archived: 0,
     }
     for (const a of apps) {
       const key = a.status as keyof ApplicationCount
       if (key in counts) {
-        (counts as unknown as Record<string, number>)[key]++
+        ;(counts as unknown as Record<string, number>)[key]++
       }
     }
     return counts
@@ -300,7 +315,11 @@ export class MockStorage implements Storage {
   // Board Companies
   async saveBoardCompany(company: BoardCompany): Promise<BoardCompany> {
     this.boardCompanies.set(company.id, company)
-    logger.debug('Saved board company', { id: company.id, board: company.board, companyId: company.company_id })
+    logger.debug('Saved board company', {
+      id: company.id,
+      board: company.board,
+      companyId: company.company_id,
+    })
     return company
   }
 
@@ -316,10 +335,10 @@ export class MockStorage implements Storage {
 
     if (filters) {
       if (filters.board) {
-        results = results.filter(bc => bc.board === filters.board)
+        results = results.filter((bc) => bc.board === filters.board)
       }
       if (filters.enabled !== undefined) {
-        results = results.filter(bc => bc.enabled === filters.enabled)
+        results = results.filter((bc) => bc.enabled === filters.enabled)
       }
       if (filters.offset !== undefined) {
         results = results.slice(filters.offset)
@@ -336,7 +355,10 @@ export class MockStorage implements Storage {
     return this.boardCompanies.get(id) || null
   }
 
-  async getBoardCompanyByBoardAndId(board: string, companyId: string): Promise<BoardCompany | null> {
+  async getBoardCompanyByBoardAndId(
+    board: string,
+    companyId: string
+  ): Promise<BoardCompany | null> {
     for (const company of this.boardCompanies.values()) {
       if (company.board === board && company.company_id === companyId) {
         return company
@@ -345,7 +367,10 @@ export class MockStorage implements Storage {
     return null
   }
 
-  async updateBoardCompany(id: string, updates: Partial<BoardCompany>): Promise<BoardCompany | null> {
+  async updateBoardCompany(
+    id: string,
+    updates: Partial<BoardCompany>
+  ): Promise<BoardCompany | null> {
     const existing = this.boardCompanies.get(id)
     if (!existing) return null
 
@@ -355,7 +380,10 @@ export class MockStorage implements Storage {
     return updated
   }
 
-  async updateBoardCompaniesByBoard(board: string, updates: Partial<BoardCompany>): Promise<number> {
+  async updateBoardCompaniesByBoard(
+    board: string,
+    updates: Partial<BoardCompany>
+  ): Promise<number> {
     let count = 0
     for (const [id, company] of this.boardCompanies.entries()) {
       if (company.board === board) {
@@ -382,18 +410,23 @@ export class MockStorage implements Storage {
     return count
   }
 
-  async getBoardCompanyCounts(board: string): Promise<{ enabled: number; disabled: number; total: number }> {
-    const companies = Array.from(this.boardCompanies.values()).filter(bc => bc.board === board)
-    const enabled = companies.filter(bc => bc.enabled).length
-    const disabled = companies.filter(bc => !bc.enabled).length
+  async getBoardCompanyCounts(
+    board: string
+  ): Promise<{ enabled: number; disabled: number; total: number }> {
+    const companies = Array.from(this.boardCompanies.values()).filter((bc) => bc.board === board)
+    const enabled = companies.filter((bc) => bc.enabled).length
+    const disabled = companies.filter((bc) => !bc.enabled).length
     return { enabled, disabled, total: companies.length }
   }
 
-  async bulkUpsertBoardCompanies(board: string, companies: Array<{
-    company_id: string
-    company_name?: string
-    metadata?: Record<string, unknown>
-  }>): Promise<{ added: number; updated: number }> {
+  async bulkUpsertBoardCompanies(
+    board: string,
+    companies: Array<{
+      company_id: string
+      company_name?: string
+      metadata?: Record<string, unknown>
+    }>
+  ): Promise<{ added: number; updated: number }> {
     let added = 0
     let updated = 0
 
@@ -417,7 +450,7 @@ export class MockStorage implements Storage {
           failure_count: 0,
           enabled: true,
           created_at: new Date(),
-          updated_at: new Date()
+          updated_at: new Date(),
         }
         this.boardCompanies.set(newCompany.id, newCompany)
         added++

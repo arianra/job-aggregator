@@ -7,6 +7,7 @@ Implement a `LeverAdapter` that scrapes job listings from Lever-powered company 
 Lever is used by ~2,100 companies (Palantir, Veeva, Shield AI, Carta, etc.). Each company has an `org` slug that maps to `https://api.lever.co/v0/postings/{org}?mode=json`.
 
 **Reference implementations:**
+
 - `Feashliaa/job-board-aggregator` (Python) — uses Lever REST API with 30 concurrent workers
 - `strelov1/freehire` (Go) — 56,453 open jobs from 2,126 companies via Lever API
 - `amikai/openings-mcp` (Go) — supports Lever among 18 ATS platforms
@@ -16,11 +17,13 @@ Lever is used by ~2,100 companies (Palantir, Veeva, Shield AI, Carta, etc.). Eac
 ## API Reference
 
 ### List Postings (JSON mode)
+
 ```
 GET https://api.lever.co/v0/postings/{org}?mode=json&limit=100&offset=0
 ```
 
 **Response:**
+
 ```json
 [
   {
@@ -52,23 +55,29 @@ GET https://api.lever.co/v0/postings/{org}?mode=json&limit=100&offset=0
 ```
 
 **Query Parameters:**
+
 - `mode=json` — returns JSON (required for structured parsing)
 - `limit` — max items per page (default 25, max 100)
 - `offset` — pagination offset
 
 ### List Organizations (discover companies)
+
 Lever doesn't have a public "list all orgs" endpoint. Company discovery must come from:
+
 1. Common Crawl index data
 2. Manual curation
 3. Third-party sources (like Feashliaa's company lists)
 
 ### Get Single Posting
+
 ```
 GET https://api.lever.co/v0/postings/{org}/{postingId}
 ```
+
 Returns full posting details.
 
 ### Rate Limits
+
 - No formal rate limit documented
 - Feashliaa uses 30 concurrent workers for Lever
 - Recommendation: 10 concurrent requests, 500ms delay between batches
@@ -148,7 +157,7 @@ function parseLocation(categories: LeverPosting['categories']): Location {
   const remote = /remote/i.test(primary)
 
   // Try to split "City, State" pattern
-  const parts = primary.split(',').map(p => p.trim())
+  const parts = primary.split(',').map((p) => p.trim())
 
   if (parts.length === 0 || !parts[0]) {
     return { remote, country: 'USA' }
@@ -174,9 +183,7 @@ function parseSalary(salaryStr?: string): SalaryRange | undefined {
   if (!salaryStr) return undefined
 
   // Try to match "$120,000 - $180,000" or "$120k - $180k"
-  const match = salaryStr.match(
-    /\$?([\d,]+(?:\.\d+)?k?)\s*[-–—]\s*\$?([\d,]+(?:\.\d+)?k?)/i
-  )
+  const match = salaryStr.match(/\$?([\d,]+(?:\.\d+)?k?)\s*[-–—]\s*\$?([\d,]+(?:\.\d+)?k?)/i)
   if (!match) return undefined
 
   const parseAmount = (s: string): number => {
@@ -215,7 +222,8 @@ function parseSeniority(title: string): Job['seniority_level'] {
   if (lower.includes('entry') || lower.includes('junior') || lower.includes('jr')) return 'entry'
   if (lower.includes('mid') || lower.includes('2-5')) return 'mid'
   if (lower.includes('senior') || lower.includes('sr')) return 'senior'
-  if (lower.includes('lead') || lower.includes('staff') || lower.includes('principal')) return 'lead'
+  if (lower.includes('lead') || lower.includes('staff') || lower.includes('principal'))
+    return 'lead'
   if (lower.includes('manager') || lower.includes('mgr')) return 'manager'
   if (lower.includes('director')) return 'director'
   return undefined
@@ -226,32 +234,63 @@ function parseSeniority(title: string): Job['seniority_level'] {
  */
 function extractTags(description: string): string[] {
   const keywords = [
-    'react', 'node', 'typescript', 'javascript', 'python',
-    'aws', 'docker', 'kubernetes', 'sql', 'postgresql',
-    'mongodb', 'graphql', 'rest', 'api', 'java', 'golang',
-    'ruby', 'rails', 'vue', 'angular', 'next', 'nuxt',
-    'rust', 'go', 'elixir', 'terraform', 'linux', 'git',
-    'redis', 'elasticsearch', 'kafka', 'cicd', 'agile',
-    'scrum', 'tdd', 'microservices', 'serverless', 'sre',
+    'react',
+    'node',
+    'typescript',
+    'javascript',
+    'python',
+    'aws',
+    'docker',
+    'kubernetes',
+    'sql',
+    'postgresql',
+    'mongodb',
+    'graphql',
+    'rest',
+    'api',
+    'java',
+    'golang',
+    'ruby',
+    'rails',
+    'vue',
+    'angular',
+    'next',
+    'nuxt',
+    'rust',
+    'go',
+    'elixir',
+    'terraform',
+    'linux',
+    'git',
+    'redis',
+    'elasticsearch',
+    'kafka',
+    'cicd',
+    'agile',
+    'scrum',
+    'tdd',
+    'microservices',
+    'serverless',
+    'sre',
   ]
 
   const lower = description.toLowerCase()
-  return keywords.filter(kw => lower.includes(kw))
+  return keywords.filter((kw) => lower.includes(kw))
 }
 
 /**
  * Extract requirements from Lever lists.
  */
 function extractRequirements(lists: LeverPosting['lists']): string[] {
-  const reqList = lists.find(l => /requirement|qualification/i.test(l.text))
+  const reqList = lists.find((l) => /requirement|qualification/i.test(l.text))
   if (!reqList) return []
 
   // Strip HTML and split into lines
   return reqList.content
     .replace(/<[^>]+>/g, ' ')
     .split(/\n|<br>/)
-    .map(s => s.trim())
-    .filter(s => s.length > 0)
+    .map((s) => s.trim())
+    .filter((s) => s.length > 0)
 }
 
 /**
@@ -259,7 +298,7 @@ function extractRequirements(lists: LeverPosting['lists']): string[] {
  */
 function transformLeverPosting(
   posting: LeverPosting,
-  org: string,
+  org: string
 ): { job: Partial<Job>; source: Partial<Source> } {
   const location = parseLocation(posting.categories)
   const salaryRange = parseSalary(posting.salaryRange)
@@ -337,9 +376,20 @@ export class LeverAdapter implements BoardAdapter {
   private loadDefaultOrgs(): void {
     // Curated list of top tech companies on Lever
     const defaultOrgs = [
-      'palantir', 'veeva', 'shieldai', 'carta', 'rippling',
-      'mercury', 'ramp', 'brex', 'scaleai', 'cohere',
-      'huggingface', 'anthropic', 'openai', 'databricks',
+      'palantir',
+      'veeva',
+      'shieldai',
+      'carta',
+      'rippling',
+      'mercury',
+      'ramp',
+      'brex',
+      'scaleai',
+      'cohere',
+      'huggingface',
+      'anthropic',
+      'openai',
+      'databricks',
     ]
 
     for (const org of defaultOrgs) {
@@ -371,9 +421,7 @@ export class LeverAdapter implements BoardAdapter {
     for (let i = 0; i < orgList.length; i += CONCURRENCY) {
       const batch = orgList.slice(i, i + CONCURRENCY)
 
-      const results = await Promise.allSettled(
-        batch.map(org => this.fetchOrgPostings(org)),
-      )
+      const results = await Promise.allSettled(batch.map((org) => this.fetchOrgPostings(org)))
 
       for (const result of results) {
         if (result.status === 'fulfilled') {
@@ -451,9 +499,7 @@ export class LeverAdapter implements BoardAdapter {
     for (let i = 0; i < orgList.length; i += CONCURRENCY) {
       const batch = orgList.slice(i, i + CONCURRENCY)
 
-      const results = await Promise.allSettled(
-        batch.map(org => this.fetchOrgPostings(org)),
-      )
+      const results = await Promise.allSettled(batch.map((org) => this.fetchOrgPostings(org)))
 
       for (const result of results) {
         if (result.status === 'fulfilled') {
@@ -478,36 +524,32 @@ export class LeverAdapter implements BoardAdapter {
 
     if (query.title) {
       const lower = query.title.toLowerCase()
-      filtered = filtered.filter(j =>
-        j.title.toLowerCase().includes(lower) ||
-        j.description.toLowerCase().includes(lower)
+      filtered = filtered.filter(
+        (j) => j.title.toLowerCase().includes(lower) || j.description.toLowerCase().includes(lower)
       )
     }
 
     if (query.location) {
       const lower = query.location.toLowerCase()
-      filtered = filtered.filter(j =>
-        (j.location.city?.toLowerCase() || '').includes(lower) ||
-        (j.location.state?.toLowerCase() || '').includes(lower) ||
-        (j.location.country.toLowerCase() || '').includes(lower) ||
-        (query.remote && j.location.remote)
+      filtered = filtered.filter(
+        (j) =>
+          (j.location.city?.toLowerCase() || '').includes(lower) ||
+          (j.location.state?.toLowerCase() || '').includes(lower) ||
+          (j.location.country.toLowerCase() || '').includes(lower) ||
+          (query.remote && j.location.remote)
       )
     }
 
     if (query.remote !== undefined) {
-      filtered = filtered.filter(j => j.is_remote === query.remote)
+      filtered = filtered.filter((j) => j.is_remote === query.remote)
     }
 
     if (query.salaryMin !== undefined) {
-      filtered = filtered.filter(j =>
-        j.salary_range && j.salary_range.max >= query.salaryMin!
-      )
+      filtered = filtered.filter((j) => j.salary_range && j.salary_range.max >= query.salaryMin!)
     }
 
     if (query.salaryMax !== undefined) {
-      filtered = filtered.filter(j =>
-        j.salary_range && j.salary_range.min <= query.salaryMax!
-      )
+      filtered = filtered.filter((j) => j.salary_range && j.salary_range.min <= query.salaryMax!)
     }
 
     if (query.limit) {
@@ -515,7 +557,7 @@ export class LeverAdapter implements BoardAdapter {
     }
 
     const sources = filtered
-      .map(j => allSources.find(s => s.job_id === j.id))
+      .map((j) => allSources.find((s) => s.job_id === j.id))
       .filter((s): s is Source => s !== undefined)
 
     return {
@@ -621,7 +663,7 @@ export class LeverAdapter implements BoardAdapter {
 // ============================================================================
 
 function sleep(ms: number): Promise<void> {
-  return new Promise(resolve => setTimeout(resolve, ms))
+  return new Promise((resolve) => setTimeout(resolve, ms))
 }
 ```
 
@@ -689,6 +731,7 @@ LEVER_ORGS=palantir,veeva,carta
 ```
 
 Parse in constructor:
+
 ```typescript
 constructor() {
   const orgs = process.env.LEVER_ORGS?.split(',').map(s => s.trim())

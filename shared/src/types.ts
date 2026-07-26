@@ -2,9 +2,11 @@
 // Core Enums
 // ============================================================================
 
-export type JobType = 'full-time' | 'part-time' | 'contract' | 'freelance' | 'internship' | 'temporary'
+export type JobType =
+  'full-time' | 'part-time' | 'contract' | 'freelance' | 'internship' | 'temporary'
 
-export type SeniorityLevel = 'intern' | 'entry' | 'mid' | 'senior' | 'lead' | 'manager' | 'director' | 'vp' | 'executive'
+export type SeniorityLevel =
+  'intern' | 'entry' | 'mid' | 'senior' | 'lead' | 'manager' | 'director' | 'vp' | 'executive'
 
 export type ScoreTier = 'excellent' | 'good' | 'fair' | 'poor'
 // excellent: 80–100, good: 60–79, fair: 40–59, poor: 0–39
@@ -13,7 +15,16 @@ export type Proficiency = 'beginner' | 'intermediate' | 'advanced' | 'expert'
 
 export type JobStatus = 'active' | 'expired' | 'removed' | 'applied' | 'saved' | 'rejected'
 
-export type ApplicationStatus = 'saved' | 'applied' | 'screening' | 'interview' | 'offer' | 'accepted' | 'rejected' | 'withdrawn' | 'archived'
+export type ApplicationStatus =
+  | 'saved'
+  | 'applied'
+  | 'screening'
+  | 'interview'
+  | 'offer'
+  | 'accepted'
+  | 'rejected'
+  | 'withdrawn'
+  | 'archived'
 
 export type SourceStatus = 'active' | 'expired' | 'removed' | 'error'
 

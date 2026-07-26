@@ -42,7 +42,7 @@ describe('MockStorage', () => {
     })
 
     it('should list all companies', async () => {
-      await Promise.all(sampleCompanies.map(c => storage.saveCompany(c)))
+      await Promise.all(sampleCompanies.map((c) => storage.saveCompany(c)))
 
       const companies = await storage.listCompanies()
 
@@ -53,7 +53,7 @@ describe('MockStorage', () => {
 
   describe('Job operations', () => {
     beforeEach(async () => {
-      await Promise.all(sampleCompanies.map(c => storage.saveCompany(c)))
+      await Promise.all(sampleCompanies.map((c) => storage.saveCompany(c)))
     })
 
     it('should save a job', async () => {
@@ -79,7 +79,7 @@ describe('MockStorage', () => {
     })
 
     it('should list all jobs', async () => {
-      await Promise.all(sampleJobs.map(j => storage.saveJob(j)))
+      await Promise.all(sampleJobs.map((j) => storage.saveJob(j)))
 
       const jobs = await storage.listJobs()
 
@@ -88,7 +88,7 @@ describe('MockStorage', () => {
     })
 
     it('should filter jobs by company', async () => {
-      await Promise.all(sampleJobs.map(j => storage.saveJob(j)))
+      await Promise.all(sampleJobs.map((j) => storage.saveJob(j)))
 
       const jobs = await storage.listJobs({ company: 'TechCorp' })
 
@@ -97,7 +97,7 @@ describe('MockStorage', () => {
     })
 
     it('should filter jobs by location', async () => {
-      await Promise.all(sampleJobs.map(j => storage.saveJob(j)))
+      await Promise.all(sampleJobs.map((j) => storage.saveJob(j)))
 
       const jobs = await storage.listJobs({ location: 'San Francisco' })
 
@@ -106,37 +106,37 @@ describe('MockStorage', () => {
     })
 
     it('should filter jobs by remote status', async () => {
-      await Promise.all(sampleJobs.map(j => storage.saveJob(j)))
+      await Promise.all(sampleJobs.map((j) => storage.saveJob(j)))
 
       const remoteJobs = await storage.listJobs({ remote: true })
 
       expect(remoteJobs).toHaveLength(2)
-      remoteJobs.forEach(job => {
+      remoteJobs.forEach((job) => {
         expect(job.is_remote).toBe(true)
       })
     })
 
     it('should filter jobs by salary range', async () => {
-      await Promise.all(sampleJobs.map(j => storage.saveJob(j)))
+      await Promise.all(sampleJobs.map((j) => storage.saveJob(j)))
 
       // Filter for jobs overlapping with 140k-160k range
       // job-1: 150k-200k (overlaps)
       // job-2: 120k-160k (overlaps)
       // job-3: 130k-170k (overlaps)
-      const jobs = await storage.listJobs({ 
-        salaryMin: 140000, 
-        salaryMax: 160000 
+      const jobs = await storage.listJobs({
+        salaryMin: 140000,
+        salaryMax: 160000,
       })
 
       expect(jobs).toHaveLength(3)
-      jobs.forEach(job => {
+      jobs.forEach((job) => {
         expect(job.salary_range?.max).toBeGreaterThanOrEqual(140000)
         expect(job.salary_range?.min).toBeLessThanOrEqual(160000)
       })
     })
 
     it('should filter jobs by tags', async () => {
-      await Promise.all(sampleJobs.map(j => storage.saveJob(j)))
+      await Promise.all(sampleJobs.map((j) => storage.saveJob(j)))
 
       const jobs = await storage.listJobs({ tags: ['typescript'] })
 
@@ -145,7 +145,7 @@ describe('MockStorage', () => {
     })
 
     it('should apply pagination', async () => {
-      await Promise.all(sampleJobs.map(j => storage.saveJob(j)))
+      await Promise.all(sampleJobs.map((j) => storage.saveJob(j)))
 
       const jobs = await storage.listJobs({ limit: 2, offset: 1 })
 
@@ -183,8 +183,8 @@ describe('MockStorage', () => {
 
   describe('Source operations', () => {
     beforeEach(async () => {
-      await Promise.all(sampleCompanies.map(c => storage.saveCompany(c)))
-      await Promise.all(sampleJobs.map(j => storage.saveJob(j)))
+      await Promise.all(sampleCompanies.map((c) => storage.saveCompany(c)))
+      await Promise.all(sampleJobs.map((j) => storage.saveJob(j)))
     })
 
     it('should save a source', async () => {
@@ -195,12 +195,12 @@ describe('MockStorage', () => {
     })
 
     it('should get sources by job id', async () => {
-      await Promise.all(sampleSources.map(s => storage.saveJobSource(s)))
+      await Promise.all(sampleSources.map((s) => storage.saveJobSource(s)))
 
       const sources = await storage.getJobSourcesByJobId('job-1')
 
       expect(sources).toHaveLength(2)
-      sources.forEach(source => {
+      sources.forEach((source) => {
         expect(source.job_id).toBe('job-1')
       })
     })

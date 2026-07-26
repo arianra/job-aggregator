@@ -61,10 +61,10 @@ interface JobBoardAdapter {
   // Core operations
   search(query: SearchQuery): Promise<RawListing[]>
   normalize(raw: RawListing): Partial<Job>
-  
+
   // Health
   healthCheck(): Promise<BoardHealth>
-  
+
   // Optional: direct company page extraction
   extractCompanyPage?(url: string): Promise<CompanyPageData | null>
 }
@@ -78,7 +78,7 @@ interface RawListing {
   url: string
   posted_date?: string
   salary?: string
-  raw_payload: Record<string, unknown>  // board-specific fields
+  raw_payload: Record<string, unknown> // board-specific fields
 }
 ```
 
@@ -88,12 +88,12 @@ interface RawListing {
 // adapters/linkedin.ts
 export class LinkedInAdapter implements JobBoardAdapter {
   readonly name = 'linkedin'
-  
+
   async search(query: SearchQuery): Promise<RawListing[]> {
     // LinkedIn-specific scraping logic
     // Handles pagination, rate limits, anti-bot measures
   }
-  
+
   normalize(raw: RawListing): Partial<Job> {
     // Map LinkedIn's schema to our canonical Job schema
     return {
@@ -101,16 +101,18 @@ export class LinkedInAdapter implements JobBoardAdapter {
       company: { name: raw.company },
       location: parseLocation(raw.location),
       description: raw.description,
-      sources: [{
-        board: this.name,
-        board_job_id: raw.board_job_id,
-        url: raw.url,
-        scraped_at: new Date(),
-        raw_payload: raw.raw_payload
-      }]
+      sources: [
+        {
+          board: this.name,
+          board_job_id: raw.board_job_id,
+          url: raw.url,
+          scraped_at: new Date(),
+          raw_payload: raw.raw_payload,
+        },
+      ],
     }
   }
-  
+
   async healthCheck(): Promise<BoardHealth> {
     // Test connection, measure latency, check for errors
   }
@@ -132,7 +134,7 @@ export function getAdapter(name: string): JobBoardAdapter | undefined {
 }
 
 export function getEnabledAdapters(): JobBoardAdapter[] {
-  return Array.from(adapters.values()).filter(a => a.config.enabled)
+  return Array.from(adapters.values()).filter((a) => a.config.enabled)
 }
 ```
 
@@ -154,45 +156,43 @@ Coordinates all enabled adapters, handles scheduling, concurrency, and aggregati
 class ScraperOrchestrator {
   async runScrape(query: SearchQuery): Promise<ScrapeResult> {
     const adapters = getEnabledAdapters()
-    
+
     // Run all adapters in parallel with per-adapter timeout
     const results = await Promise.allSettled(
       adapters.map(async (adapter) => {
-        const rawListings = await withTimeout(
-          adapter.search(query),
-          adapter.config.timeout_ms
-        )
+        const rawListings = await withTimeout(adapter.search(query), adapter.config.timeout_ms)
         return { adapter: adapter.name, listings: rawListings }
       })
     )
-    
+
     // Aggregate results, track failures
     const allRaw: RawListing[] = []
     const failures: AdapterFailure[] = []
-    
+
     results.forEach((result, idx) => {
       if (result.status === 'fulfilled') {
         allRaw.push(...result.value.listings)
       } else {
         failures.push({
           adapter: adapters[idx].name,
-          error: result.reason.message
+          error: result.reason.message,
         })
       }
     })
-    
+
     // Normalize all raw listings into partial Jobs
-    const normalized = allRaw.map(raw => {
+    const normalized = allRaw.map((raw) => {
       const adapter = getAdapter(raw.board)
       return adapter!.normalize(raw)
     })
-    
+
     return { normalized, failures }
   }
 }
 ```
 
 **Scheduling:**
+
 - Cron-based: run every N hours for active SearchQueries
 - On-demand: user triggers manual scrape
 - Rate limit aware: respect per-adapter RPM limits
@@ -212,13 +212,14 @@ function generateFingerprint(job: Partial<Job>): string {
   const normalized = {
     company: job.company.name.toLowerCase().trim(),
     title: job.title.toLowerCase().trim(),
-    location: normalizeLocation(job.location)
+    location: normalizeLocation(job.location),
   }
   return hash(normalized)
 }
 ```
 
 **Normalization rules:**
+
 - Company: lowercase, trim, remove "Inc.", "LLC", "Corp."
 - Title: lowercase, trim, expand abbreviations ("SWE" → "software engineer")
 - Location: extract city + country, ignore remote/hybrid (those are flags)
@@ -229,16 +230,10 @@ Fuzzy matching for near-duplicates.
 
 ```typescript
 function computeSimilarity(a: Job, b: Partial<Job>): number {
-  const titleSim = cosineSimilarity(
-    tokenize(a.title),
-    tokenize(b.title)
-  )
-  
-  const descSim = cosineSimilarity(
-    tokenize(a.description),
-    tokenize(b.description)
-  )
-  
+  const titleSim = cosineSimilarity(tokenize(a.title), tokenize(b.title))
+
+  const descSim = cosineSimilarity(tokenize(a.description), tokenize(b.description))
+
   // Weighted combination
   return 0.4 * titleSim + 0.6 * descSim
 }
@@ -254,22 +249,23 @@ When N sources map to one Job:
 function mergeJobs(canonical: Job, incoming: Partial<Job>): Job {
   return {
     ...canonical,
-    
+
     // Pick richest data for each field
     description: longer(canonical.description, incoming.description),
     requirements: mergeArrays(canonical.requirements, incoming.requirements),
     salary_range: canonical.salary_range || incoming.salary_range,
-    
+
     // Always append sources
     sources: [...canonical.sources, ...incoming.sources],
-    
+
     // Update timestamp
-    updated_at: new Date()
+    updated_at: new Date(),
   }
 }
 ```
 
 **Conflict resolution:**
+
 - Salary differs → keep both, flag for review (could be useful signal)
 - Location differs → prefer more specific (city > state > country)
 - Description differs → keep longest
@@ -351,6 +347,7 @@ ${resumeText}
 #### Fallback Parsing
 
 If Qwen fails or returns malformed JSON:
+
 1. Retry once with simplified prompt
 2. Fall back to regex-based extraction (basic: name, email, phone)
 3. Mark profile as "incomplete" and prompt user to fill in manually
@@ -365,32 +362,44 @@ Computes relevance scores for Job × Profile pairs.
 
 ```typescript
 interface ScoringWeights {
-  skills: number        // default: 0.35
-  experience: number    // default: 0.25
-  location: number      // default: 0.15
-  salary: number        // default: 0.15
-  preferences: number   // default: 0.10
+  skills: number // default: 0.35
+  experience: number // default: 0.25
+  location: number // default: 0.15
+  salary: number // default: 0.15
+  preferences: number // default: 0.10
 }
 
 function computeMatch(profile: Profile, job: Job): Match {
   const weights: ScoringWeights = config.scoring_weights
-  
+
   const skillsScore = scoreSkills(profile.skills, job.tags)
   const experienceScore = scoreExperience(profile.experience, job.seniority_level)
   const locationScore = scoreLocation(profile.preferences, job.location)
   const salaryScore = scoreSalary(profile.preferences, job.salary_range)
   const preferencesScore = scorePreferences(profile.preferences, job)
-  
+
   const dimensions = {
     skills: { score: skillsScore, weight: weights.skills, weighted: skillsScore * weights.skills },
-    experience: { score: experienceScore, weight: weights.experience, weighted: experienceScore * weights.experience },
-    location: { score: locationScore, weight: weights.location, weighted: locationScore * weights.location },
+    experience: {
+      score: experienceScore,
+      weight: weights.experience,
+      weighted: experienceScore * weights.experience,
+    },
+    location: {
+      score: locationScore,
+      weight: weights.location,
+      weighted: locationScore * weights.location,
+    },
     salary: { score: salaryScore, weight: weights.salary, weighted: salaryScore * weights.salary },
-    preferences: { score: preferencesScore, weight: weights.preferences, weighted: preferencesScore * weights.preferences }
+    preferences: {
+      score: preferencesScore,
+      weight: weights.preferences,
+      weighted: preferencesScore * weights.preferences,
+    },
   }
-  
+
   const totalScore = Object.values(dimensions).reduce((sum, d) => sum + d.weighted, 0)
-  
+
   return {
     id: uuid(),
     profile_id: profile.id,
@@ -398,7 +407,7 @@ function computeMatch(profile: Profile, job: Job): Match {
     score: totalScore,
     dimensions,
     reasons: generateReasons(dimensions),
-    flags: generateFlags(job, totalScore)
+    flags: generateFlags(job, totalScore),
   }
 }
 ```
@@ -407,24 +416,24 @@ function computeMatch(profile: Profile, job: Job): Match {
 
 ```typescript
 function scoreSkills(profileSkills: Skill[], jobTags: string[]): number {
-  const profileSkillNames = profileSkills.map(s => s.name.toLowerCase())
-  const jobTagNames = jobTags.map(t => t.toLowerCase())
-  
+  const profileSkillNames = profileSkills.map((s) => s.name.toLowerCase())
+  const jobTagNames = jobTags.map((t) => t.toLowerCase())
+
   // Exact matches
-  const exactMatches = jobTagNames.filter(tag => profileSkillNames.includes(tag))
-  
+  const exactMatches = jobTagNames.filter((tag) => profileSkillNames.includes(tag))
+
   // Fuzzy matches (e.g., "JS" ↔ "JavaScript", "React.js" ↔ "React")
-  const fuzzyMatches = jobTagNames.filter(tag => 
-    profileSkillNames.some(skill => fuzzyMatch(skill, tag) > 0.8)
+  const fuzzyMatches = jobTagNames.filter((tag) =>
+    profileSkillNames.some((skill) => fuzzyMatch(skill, tag) > 0.8)
   )
-  
+
   const matchRatio = (exactMatches.length + fuzzyMatches.length * 0.8) / jobTagNames.length
-  
+
   // Bonus for senior skills in senior roles
-  const seniorSkillBonus = jobTags.some(t => ['senior', 'lead', 'architect'].includes(t))
-    ? profileSkills.filter(s => s.proficiency === 'expert').length * 0.05
+  const seniorSkillBonus = jobTags.some((t) => ['senior', 'lead', 'architect'].includes(t))
+    ? profileSkills.filter((s) => s.proficiency === 'expert').length * 0.05
     : 0
-  
+
   return Math.min(100, matchRatio * 100 + seniorSkillBonus)
 }
 ```
@@ -433,10 +442,10 @@ function scoreSkills(profileSkills: Skill[], jobTags: string[]): number {
 
 ```typescript
 function scoreExperience(experience: Experience[], requiredLevel?: SeniorityLevel): number {
-  if (!requiredLevel) return 75  // neutral if not specified
-  
+  if (!requiredLevel) return 75 // neutral if not specified
+
   const yearsOfExperience = calculateTotalYears(experience)
-  
+
   const levelRanges: Record<SeniorityLevel, [number, number]> = {
     intern: [0, 1],
     entry: [0, 3],
@@ -446,17 +455,17 @@ function scoreExperience(experience: Experience[], requiredLevel?: SeniorityLeve
     manager: [8, 20],
     director: [10, 25],
     vp: [12, 30],
-    executive: [15, 40]
+    executive: [15, 40],
   }
-  
+
   const [min, max] = levelRanges[requiredLevel]
-  
+
   if (yearsOfExperience >= min && yearsOfExperience <= max) {
     return 100
   } else if (yearsOfExperience < min) {
     return Math.max(0, 100 - (min - yearsOfExperience) * 20)
   } else {
-    return Math.max(50, 100 - (yearsOfExperience - max) * 5)  // overqualified is less penalized
+    return Math.max(50, 100 - (yearsOfExperience - max) * 5) // overqualified is less penalized
   }
 }
 ```
@@ -478,34 +487,38 @@ export async function extractSkillsFromText(
   jobTexts: string[],
   options: { apiKey: string; batchSize?: number } = { apiKey: '', batchSize: 10 }
 ): Promise<Set<string>> {
-  const batchSize = options.batchSize ?? 10;
-  const allSkills = new Set<string>();
-  
+  const batchSize = options.batchSize ?? 10
+  const allSkills = new Set<string>()
+
   // Process in batches for cost efficiency
   for (let i = 0; i < jobTexts.length; i += batchSize) {
-    const batch = jobTexts.slice(i, i + batchSize);
-    
+    const batch = jobTexts.slice(i, i + batchSize)
+
     const response = await qwenClient.chat.completions.create({
       model: 'qwen-max',
-      messages: [{
-        role: 'system',
-        content: SKILL_EXTRACTION_PROMPT
-      }, {
-        role: 'user', 
-        content: batch.join('\n\n---\n\n')
-      }],
-      response_format: { type: 'json_object' }
-    });
-    
-    const skills = parseSkillsResponse(response);
-    skills.forEach(skill => allSkills.add(normalizeSkill(skill)));
+      messages: [
+        {
+          role: 'system',
+          content: SKILL_EXTRACTION_PROMPT,
+        },
+        {
+          role: 'user',
+          content: batch.join('\n\n---\n\n'),
+        },
+      ],
+      response_format: { type: 'json_object' },
+    })
+
+    const skills = parseSkillsResponse(response)
+    skills.forEach((skill) => allSkills.add(normalizeSkill(skill)))
   }
-  
-  return allSkills;
+
+  return allSkills
 }
 ```
 
 **Key features:**
+
 - **Batch processing**: Handles 10 jobs per API call for cost efficiency
 - **Normalization**: Standardizes skill names across variations (React.js → react, NodeJS → nodejs)
 - **Structured output**: Uses Qwen's JSON response format for reliable parsing
@@ -519,39 +532,35 @@ Combines AI extraction with profile matching to ensure only relevant skills are 
 
 ```typescript
 export async function extractFallbackTags(
-  job: Job, 
+  job: Job,
   profileSkillNames: Set<string>
 ): Promise<string[]> {
-  const jobText = [
-    job.title,
-    job.description,
-    job.requirements.join(' ')
-  ].join('\n').toLowerCase();
-  
+  const jobText = [job.title, job.description, job.requirements.join(' ')].join('\n').toLowerCase()
+
   // Try multiple pattern variations for each skill
-  return Array.from(profileSkillNames).filter(skill => {
-    const baseName = skill.replace(/\.?js$/i, '');
+  return Array.from(profileSkillNames).filter((skill) => {
+    const baseName = skill.replace(/\.?js$/i, '')
     const patterns = [
-      `\\b${baseName}\\b`,           // word boundary
-      `\\b${baseName}\\.js\\b`,       // with .js
-      `\\b${baseName}js\\b`,          // without dot
-      `\\b${skill}\\b`                // original
-    ];
-    
-    return patterns.some(pattern => 
-      new RegExp(pattern, 'i').test(jobText)
-    );
-  });
+      `\\b${baseName}\\b`, // word boundary
+      `\\b${baseName}\\.js\\b`, // with .js
+      `\\b${baseName}js\\b`, // without dot
+      `\\b${skill}\\b`, // original
+    ]
+
+    return patterns.some((pattern) => new RegExp(pattern, 'i').test(jobText))
+  })
 }
 ```
 
 **Workflow:**
+
 1. **Extract skills**: Use AI to get comprehensive skill list from job text
 2. **Normalize**: Convert to standard format (react, nodejs, python)
 3. **Match profile**: Filter to only skills that appear in user's profile
 4. **Fallback**: If AI unavailable, use keyword matching with profile skills
 
 **Benefits:**
+
 - **Relevance**: Only tags skills the user actually has, improving match accuracy
 - **Efficiency**: Keyword fallback works offline and is instant
 - **Flexibility**: Users can add skills to profile to expand matching
@@ -563,25 +572,19 @@ Tags are used in the scoring engine's skill dimension (Section 5):
 
 ```typescript
 function scoreSkills(profileSkills: Skill[], jobTags: string[]): DimensionScore {
-  const profileSkillNames = new Set(
-    profileSkills.map(s => normalizeSkill(s.name))
-  );
-  const jobSkillNames = new Set(
-    jobTags.map(tag => normalizeSkill(tag))
-  );
-  
+  const profileSkillNames = new Set(profileSkills.map((s) => normalizeSkill(s.name)))
+  const jobSkillNames = new Set(jobTags.map((tag) => normalizeSkill(tag)))
+
   // Calculate overlap
-  const matches = [...jobSkillNames].filter(skill => 
-    profileSkillNames.has(skill)
-  );
-  
-  const coverage = matches.length / Math.max(jobSkillNames.size, 1);
-  
+  const matches = [...jobSkillNames].filter((skill) => profileSkillNames.has(skill))
+
+  const coverage = matches.length / Math.max(jobSkillNames.size, 1)
+
   return {
     score: Math.round(coverage * 100),
     weight: DEFAULT_WEIGHTS.skills,
-    weighted: 0 // calculated by scorer
-  };
+    weighted: 0, // calculated by scorer
+  }
 }
 ```
 
@@ -593,7 +596,6 @@ The tag extraction services ensure that the skill matching dimension (35% of tot
 
 Finds the company's own career page for a job, enabling direct application.
 
-
 #### Strategy
 
 ```typescript
@@ -604,7 +606,7 @@ async function findDirectSource(job: Job): Promise<string | null> {
     const match = await crawlCareerPage(company.careers_url, job.title)
     if (match) return match
   }
-  
+
   // Step 2: Extract website from job listing
   const website = job.company.website || extractWebsiteFromDescription(job.description)
   if (website) {
@@ -618,11 +620,11 @@ async function findDirectSource(job: Job): Promise<string | null> {
       }
     }
   }
-  
+
   // Step 3: Web search fallback
   const searchQuery = `"${job.company.name}" careers "${job.title}"`
   const results = await webSearch(searchQuery)
-  
+
   for (const result of results) {
     if (looksLikeCareerPage(result.url)) {
       const match = await crawlCareerPage(result.url, job.title)
@@ -632,7 +634,7 @@ async function findDirectSource(job: Job): Promise<string | null> {
       }
     }
   }
-  
+
   return null
 }
 ```
@@ -643,23 +645,21 @@ async function findDirectSource(job: Job): Promise<string | null> {
 async function crawlCareerPage(url: string, targetTitle: string): Promise<string | null> {
   const pageContent = await fetch(url)
   const jobListings = extractJobListings(pageContent)
-  
+
   for (const listing of jobListings) {
-    const similarity = cosineSimilarity(
-      tokenize(listing.title),
-      tokenize(targetTitle)
-    )
-    
+    const similarity = cosineSimilarity(tokenize(listing.title), tokenize(targetTitle))
+
     if (similarity > 0.9) {
       return listing.url
     }
   }
-  
+
   return null
 }
 ```
 
 **Confidence levels:**
+
 - `verified`: Found on company's official career page, title matches exactly
 - `probable`: Found on career page, title is similar (>0.85)
 - `speculative**: Found via web search, not verified
@@ -881,7 +881,7 @@ DELETE /api/search-queries/:id      // Delete search query
 </JobCard>
 
 // Source badge
-<Badge 
+<Badge
   color={getSourceColor(source.board)}
   icon={getSourceIcon(source.board)}
 >
@@ -902,6 +902,7 @@ DELETE /api/search-queries/:id      // Delete search query
 ## Implementation Phases
 
 ### Phase 0: Foundation
+
 **Goal:** Project setup, database, types
 
 - [ ] Initialize monorepo (backend + frontend)
@@ -917,6 +918,7 @@ DELETE /api/search-queries/:id      // Delete search query
 ---
 
 ### Phase 1: Core Scraping
+
 **Goal:** Get jobs from 1-2 boards into the database
 
 - [ ] Implement adapter interface
@@ -933,6 +935,7 @@ DELETE /api/search-queries/:id      // Delete search query
 ---
 
 ### Phase 2: Profile System
+
 **Goal:** Upload resume, extract structured profile
 
 - [ ] Resume upload endpoint (PDF/DOCX)
@@ -948,6 +951,7 @@ DELETE /api/search-queries/:id      // Delete search query
 ---
 
 ### Phase 3: Matching & Scoring
+
 **Goal:** Score jobs against profile
 
 - [ ] Implement scoring engine
@@ -964,6 +968,7 @@ DELETE /api/search-queries/:id      // Delete search query
 ---
 
 ### Phase 4: Intelligence
+
 **Goal:** Deduplication and direct source finder
 
 - [ ] Implement deduplication engine (fingerprint + similarity)
@@ -979,6 +984,7 @@ DELETE /api/search-queries/:id      // Delete search query
 ---
 
 ### Phase 5: Expansion
+
 **Goal:** More boards, notifications, tracking
 
 - [ ] Add Glassdoor adapter
@@ -994,6 +1000,7 @@ DELETE /api/search-queries/:id      // Delete search query
 ---
 
 ### Phase 6: Advanced Features
+
 **Goal:** ML refinement, insights, automation
 
 - [ ] ML-based scoring refinement (learn from applied/rejected jobs)

@@ -10,15 +10,15 @@
 
 ## Quick Reference
 
-| Phase | Status | Notes |
-|-------|--------|-------|
-| Phase 0: Foundation | ✅ Complete | Monorepo, DB, types, routing, Tailwind |
-| Phase 1: Core Scraping | ✅ Complete | 4 ATS adapters (Greenhouse, Lever, Ashby, Workday) |
-| Phase 2: Profile System | ✅ Complete | Resume upload, Qwen AI parsing, profile storage |
-| Phase 3: Matching & Scoring | ✅ Complete | 6-dimension scoring, application tracking, dashboard |
-| Phase 4: Intelligence | ⏳ Partial | Dedup works; direct source finder not built |
-| Phase 5: Expansion | 🔴 Not Started | Notifications, advanced filters, export |
-| Phase 6: Advanced Features | 🔴 Not Started | ML scoring, market insights, interview prep |
+| Phase                       | Status         | Notes                                                |
+| --------------------------- | -------------- | ---------------------------------------------------- |
+| Phase 0: Foundation         | ✅ Complete    | Monorepo, DB, types, routing, Tailwind               |
+| Phase 1: Core Scraping      | ✅ Complete    | 4 ATS adapters (Greenhouse, Lever, Ashby, Workday)   |
+| Phase 2: Profile System     | ✅ Complete    | Resume upload, Qwen AI parsing, profile storage      |
+| Phase 3: Matching & Scoring | ✅ Complete    | 6-dimension scoring, application tracking, dashboard |
+| Phase 4: Intelligence       | ⏳ Partial     | Dedup works; direct source finder not built          |
+| Phase 5: Expansion          | 🔴 Not Started | Notifications, advanced filters, export              |
+| Phase 6: Advanced Features  | 🔴 Not Started | ML scoring, market insights, interview prep          |
 
 ---
 
@@ -98,6 +98,7 @@ Long-term aspirations. Not blocking current usage.
 ## ✅ Completed — Reference
 
 ### Phase 0: Foundation ✅
+
 - [x] Initialize monorepo structure (shared, backend, frontend)
 - [x] Set up TypeScript config, workspaces
 - [x] Create PostgreSQL schema with Prisma
@@ -108,6 +109,7 @@ Long-term aspirations. Not blocking current usage.
 - [x] Error handling and logging (winston)
 
 ### Phase 1: Core Scraping ✅
+
 - [x] Implement `BoardAdapter` interface
 - [x] Build adapter registry
 - [x] Implement Greenhouse adapter — 18 tests
@@ -121,6 +123,7 @@ Long-term aspirations. Not blocking current usage.
 - [x] Basic UI showing job list with filters
 
 ### Phase 2: Profile System ✅
+
 - [x] Resume upload endpoint (PDF, DOCX, TXT, max 10MB)
 - [x] Text extraction (pdf-parse v2)
 - [x] Qwen API integration — structured extraction prompt
@@ -129,6 +132,7 @@ Long-term aspirations. Not blocking current usage.
 - [x] Profile UI — upload form, view structured profile
 
 ### Phase 3: Matching & Scoring ✅
+
 - [x] Implement scoring engine — multi-dimensional, configurable weights
 - [x] Skill matching — exact + fuzzy, proficiency weighting
 - [x] Experience matching — years calculation, seniority alignment
@@ -145,13 +149,13 @@ Long-term aspirations. Not blocking current usage.
 
 ## Adapter Coverage
 
-| ATS Platform | Companies | Est. Jobs | Adapter | Tests |
-|-------------|-----------|-----------|---------|-------|
-| Greenhouse | ~6,800 | ~178K | ✅ | 18 |
-| Lever | ~2,100 | ~56K | ✅ | 38 |
-| Ashby | ~3,500 | ~55K | ✅ | 45 |
-| Workday | ~4,000 | ~831K | ✅ | 47 |
-| **Total** | **~16,400** | **~1.1M** | **4/4** | **148** |
+| ATS Platform | Companies   | Est. Jobs | Adapter | Tests   |
+| ------------ | ----------- | --------- | ------- | ------- |
+| Greenhouse   | ~6,800      | ~178K     | ✅      | 18      |
+| Lever        | ~2,100      | ~56K      | ✅      | 38      |
+| Ashby        | ~3,500      | ~55K      | ✅      | 45      |
+| Workday      | ~4,000      | ~831K     | ✅      | 47      |
+| **Total**    | **~16,400** | **~1.1M** | **4/4** | **148** |
 
 Reference implementations: [Feashliaa/job-board-aggregator](https://github.com/Feashliaa/job-board-aggregator), [strelov1/freehire](https://github.com/strelov1/freehire), [amikai/openings-mcp](https://github.com/amikai/openings-mcp)
 

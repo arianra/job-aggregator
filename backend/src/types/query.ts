@@ -3,29 +3,29 @@
  */
 export interface JobQuery {
   /** Keywords to search for (e.g., "software engineer", "react") */
-  keywords?: string;
+  keywords?: string
 
   /** Location filter (e.g., "San Francisco, CA", "Remote") */
-  location?: string;
+  location?: string
 
   /** Maximum number of results to return */
-  limit?: number;
+  limit?: number
 
   /** How far back to search (e.g., "1d", "7d", "30d") */
-  dateSincePosted?: string;
+  dateSincePosted?: string
 
   /** Job type filter (e.g., "full-time", "part-time", "contract") */
-  jobType?: string;
+  jobType?: string
 
   /** Experience level (e.g., "entry", "mid", "senior") */
-  experienceLevel?: string;
+  experienceLevel?: string
 
   /** Salary minimum */
-  salaryMin?: number;
+  salaryMin?: number
 
   /** Salary maximum */
-  salaryMax?: number;
+  salaryMax?: number
 
   /** Remote only */
-  remote?: boolean;
+  remote?: boolean
 }

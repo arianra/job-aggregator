@@ -1,6 +1,6 @@
-import { describe, it, expect } from 'vitest';
-import { scoreJob, scoreJobs } from '../scorer.js';
-import type { Job, Profile } from '@job-aggregator/shared';
+import { describe, it, expect } from 'vitest'
+import { scoreJob, scoreJobs } from '../scorer.js'
+import type { Job, Profile } from '@job-aggregator/shared'
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -23,12 +23,14 @@ function makeProfile(overrides: Partial<Profile> = {}): Profile {
         skills_used: ['TypeScript', 'Node.js', 'React'],
       },
     ],
-    education: [
-      { institution: 'University', degree: 'BS', field: 'CS', graduation_year: 2018 },
-    ],
+    education: [{ institution: 'University', degree: 'BS', field: 'CS', graduation_year: 2018 }],
     certifications: [],
     search_queries: [],
-    resume: { filename: 'resume.pdf', mime_type: 'application/pdf', stored_path: '/tmp/resume.pdf' },
+    resume: {
+      filename: 'resume.pdf',
+      mime_type: 'application/pdf',
+      stored_path: '/tmp/resume.pdf',
+    },
     ...overrides,
     // Ensure nested objects merge properly
     skills: (overrides.skills || [
@@ -36,8 +38,16 @@ function makeProfile(overrides: Partial<Profile> = {}): Profile {
       { name: 'React', proficiency: 'advanced', years: 3, category: 'framework' },
       { name: 'Node.js', proficiency: 'expert', years: 5, category: 'framework' },
     ]) as Profile['skills'],
-    preferences: { ...(overrides.preferences || {}), remote_ok: overrides.preferences?.remote_ok ?? true, hybrid_ok: overrides.preferences?.hybrid_ok ?? true, onsite_ok: overrides.preferences?.onsite_ok ?? true, job_types: overrides.preferences?.job_types || ['full-time'], seniority_levels: overrides.preferences?.seniority_levels || ['mid', 'senior'], locations: overrides.preferences?.locations || [] } as Profile['preferences'],
-  } as Profile;
+    preferences: {
+      ...(overrides.preferences || {}),
+      remote_ok: overrides.preferences?.remote_ok ?? true,
+      hybrid_ok: overrides.preferences?.hybrid_ok ?? true,
+      onsite_ok: overrides.preferences?.onsite_ok ?? true,
+      job_types: overrides.preferences?.job_types || ['full-time'],
+      seniority_levels: overrides.preferences?.seniority_levels || ['mid', 'senior'],
+      locations: overrides.preferences?.locations || [],
+    } as Profile['preferences'],
+  } as Profile
 }
 
 function makeJob(overrides: Partial<Job> = {}): Job {
@@ -59,7 +69,7 @@ function makeJob(overrides: Partial<Job> = {}): Job {
     status: 'active',
     salary_range: { min: 140000, max: 180000, currency: 'USD', period: 'annual' },
     ...overrides,
-  } as Job;
+  } as Job
 }
 
 // ---------------------------------------------------------------------------
@@ -68,22 +78,22 @@ function makeJob(overrides: Partial<Job> = {}): Job {
 
 describe('scoreJob', () => {
   it('returns a match with dimensions and overall score', () => {
-    const profile = makeProfile();
-    const job = makeJob();
+    const profile = makeProfile()
+    const job = makeJob()
 
-    const match = scoreJob(profile, job);
+    const match = scoreJob(profile, job)
 
-    expect(match.score).toBeGreaterThan(0);
-    expect(match.score).toBeLessThanOrEqual(100);
-    expect(match.dimensions.skills).toBeDefined();
-    expect(match.dimensions.experience).toBeDefined();
-    expect(match.dimensions.location).toBeDefined();
-    expect(match.dimensions.salary).toBeDefined();
-    expect(match.dimensions.preferences).toBeDefined();
-    expect(match.dimensions.recency).toBeDefined();
-    expect(match.reasons.length).toBeGreaterThan(0);
-    expect(match.flags.length).toBeGreaterThan(0);
-  });
+    expect(match.score).toBeGreaterThan(0)
+    expect(match.score).toBeLessThanOrEqual(100)
+    expect(match.dimensions.skills).toBeDefined()
+    expect(match.dimensions.experience).toBeDefined()
+    expect(match.dimensions.location).toBeDefined()
+    expect(match.dimensions.salary).toBeDefined()
+    expect(match.dimensions.preferences).toBeDefined()
+    expect(match.dimensions.recency).toBeDefined()
+    expect(match.reasons.length).toBeGreaterThan(0)
+    expect(match.flags.length).toBeGreaterThan(0)
+  })
 
   it('scores high for a perfect match', () => {
     const profile = makeProfile({
@@ -102,7 +112,7 @@ describe('scoreJob', () => {
         salary_min: 130000,
         keywords: ['typescript', 'node'],
       },
-    });
+    })
 
     const job = makeJob({
       title: 'Senior TypeScript Engineer',
@@ -111,11 +121,11 @@ describe('scoreJob', () => {
       location: { city: 'San Francisco', state: 'CA', country: 'US', remote: false },
       salary_range: { min: 150000, max: 200000, currency: 'USD', period: 'annual' },
       posted_date: new Date(),
-    });
+    })
 
-    const match = scoreJob(profile, job);
-    expect(match.score).toBeGreaterThanOrEqual(75);
-  });
+    const match = scoreJob(profile, job)
+    expect(match.score).toBeGreaterThanOrEqual(75)
+  })
 
   it('scores low for a poor match', () => {
     const profile = makeProfile({
@@ -128,7 +138,7 @@ describe('scoreJob', () => {
         seniority_levels: ['senior'],
         salary_min: 200000,
       },
-    });
+    })
 
     const job = makeJob({
       title: 'Junior Python Dev',
@@ -137,91 +147,112 @@ describe('scoreJob', () => {
       salary_range: { min: 50000, max: 70000, currency: 'USD', period: 'annual' },
       posted_date: new Date(Date.now() - 60 * 24 * 60 * 60 * 1000), // 60 days ago
       seniority_level: 'entry',
-    });
+    })
 
-    const match = scoreJob(profile, job);
-    expect(match.score).toBeLessThan(50);
-  });
+    const match = scoreJob(profile, job)
+    expect(match.score).toBeLessThan(50)
+  })
 
   it('scores skills dimension correctly', () => {
     const profile = makeProfile({
-      skills: [
-        { name: 'React', proficiency: 'expert', years: 4, category: 'framework' },
-      ],
-    });
+      skills: [{ name: 'React', proficiency: 'expert', years: 4, category: 'framework' }],
+    })
 
     const job = makeJob({
       tags: ['react', 'javascript'],
-    });
+    })
 
-    const match = scoreJob(profile, job);
-    expect(match.dimensions.skills.score).toBeGreaterThan(0);
-  });
+    const match = scoreJob(profile, job)
+    expect(match.dimensions.skills.score).toBeGreaterThan(0)
+  })
 
   it('scores salary above minimum correctly', () => {
     const profile = makeProfile({
-      preferences: { locations: [], remote_ok: true, hybrid_ok: true, onsite_ok: true, job_types: ['full-time'], seniority_levels: ['senior'], salary_min: 100000 },
-    });
+      preferences: {
+        locations: [],
+        remote_ok: true,
+        hybrid_ok: true,
+        onsite_ok: true,
+        job_types: ['full-time'],
+        seniority_levels: ['senior'],
+        salary_min: 100000,
+      },
+    })
 
     const job = makeJob({
       salary_range: { min: 150000, max: 200000, currency: 'USD', period: 'annual' },
-    });
+    })
 
-    const match = scoreJob(profile, job);
-    expect(match.dimensions.salary.score).toBeGreaterThanOrEqual(70);
-    expect(match.flags).toContain('salary_above_min');
-  });
+    const match = scoreJob(profile, job)
+    expect(match.dimensions.salary.score).toBeGreaterThanOrEqual(70)
+    expect(match.flags).toContain('salary_above_min')
+  })
 
   it('scores salary below minimum poorly', () => {
     const profile = makeProfile({
-      preferences: { locations: [], remote_ok: true, hybrid_ok: true, onsite_ok: true, job_types: ['full-time'], seniority_levels: ['senior'], salary_min: 200000 },
-    });
+      preferences: {
+        locations: [],
+        remote_ok: true,
+        hybrid_ok: true,
+        onsite_ok: true,
+        job_types: ['full-time'],
+        seniority_levels: ['senior'],
+        salary_min: 200000,
+      },
+    })
 
     const job = makeJob({
       salary_range: { min: 80000, max: 100000, currency: 'USD', period: 'annual' },
-    });
+    })
 
-    const match = scoreJob(profile, job);
-    expect(match.dimensions.salary.score).toBeLessThan(50);
-  });
+    const match = scoreJob(profile, job)
+    expect(match.dimensions.salary.score).toBeLessThan(50)
+  })
 
   it('scores remote jobs highly when remote_ok', () => {
     const profile = makeProfile({
-      preferences: { locations: [], remote_ok: true, hybrid_ok: true, onsite_ok: false, job_types: ['full-time'], seniority_levels: ['senior'] },
-    });
+      preferences: {
+        locations: [],
+        remote_ok: true,
+        hybrid_ok: true,
+        onsite_ok: false,
+        job_types: ['full-time'],
+        seniority_levels: ['senior'],
+      },
+    })
 
     const job = makeJob({
       location: { city: 'Remote', state: '', country: 'US', remote: true },
-    });
+    })
 
-    const match = scoreJob(profile, job);
-    expect(match.dimensions.location.score).toBe(100);
-  });
+    const match = scoreJob(profile, job)
+    expect(match.dimensions.location.score).toBe(100)
+  })
 
   it('scores recent jobs higher', () => {
-    const profile = makeProfile();
+    const profile = makeProfile()
 
-    const recent = makeJob({ posted_date: new Date() });
-    const old = makeJob({ posted_date: new Date(Date.now() - 60 * 24 * 60 * 60 * 1000) });
+    const recent = makeJob({ posted_date: new Date() })
+    const old = makeJob({ posted_date: new Date(Date.now() - 60 * 24 * 60 * 60 * 1000) })
 
-    const recentMatch = scoreJob(profile, recent);
-    const oldMatch = scoreJob(profile, old);
+    const recentMatch = scoreJob(profile, recent)
+    const oldMatch = scoreJob(profile, old)
 
-    expect(recentMatch.dimensions.recency.score).toBeGreaterThan(oldMatch.dimensions.recency.score);
-  });
+    expect(recentMatch.dimensions.recency.score).toBeGreaterThan(oldMatch.dimensions.recency.score)
+  })
 
   it('flags direct_apply when available', () => {
-    const profile = makeProfile();
-    const job = makeJob({ direct_apply_url: 'https://careers.example.com/job' });
+    const profile = makeProfile()
+    const job = makeJob({ direct_apply_url: 'https://careers.example.com/job' })
 
-    const match = scoreJob(profile, job);
-    expect(match.flags).toContain('direct_apply_available');
-  });
-});
+    const match = scoreJob(profile, job)
+    expect(match.flags).toContain('direct_apply_available')
+  })
+})
 
 describe('scoreJobs', () => {
   it('sorts jobs by score descending', () => {
-    const profile = makeProfile();
+    const profile = makeProfile()
 
     const goodJob = makeJob({
       id: 'good',
@@ -230,7 +261,7 @@ describe('scoreJobs', () => {
       location: { city: 'San Francisco', state: 'CA', country: 'US', remote: false },
       salary_range: { min: 150000, max: 200000, currency: 'USD', period: 'annual' },
       posted_date: new Date(),
-    });
+    })
 
     const badJob = makeJob({
       id: 'bad',
@@ -240,11 +271,11 @@ describe('scoreJobs', () => {
       salary_range: { min: 30000, max: 40000, currency: 'USD', period: 'annual' },
       posted_date: new Date(Date.now() - 90 * 24 * 60 * 60 * 1000),
       seniority_level: 'intern',
-    });
+    })
 
-    const matches = scoreJobs(profile, [badJob, goodJob]);
-    expect(matches).toHaveLength(2);
-    expect(matches[0].job_id).toBe('good');
-    expect(matches[1].job_id).toBe('bad');
-  });
-});
+    const matches = scoreJobs(profile, [badJob, goodJob])
+    expect(matches).toHaveLength(2)
+    expect(matches[0].job_id).toBe('good')
+    expect(matches[1].job_id).toBe('bad')
+  })
+})

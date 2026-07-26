@@ -1,21 +1,21 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { fetchJobs, fetchJobById, triggerSearch, fetchHealth } from '../api/client';
-import { useFilterStore } from '../stores/filterStore';
-import type { JobFilters } from '../types';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { fetchJobs, fetchJobById, triggerSearch, fetchHealth } from '../api/client'
+import { useFilterStore } from '../stores/filterStore'
+import type { JobFilters } from '../types'
 
 // ---------------------------------------------------------------------------
 // Job list — paginated, filter-driven
 // ---------------------------------------------------------------------------
 
 export function useJobs(page = 1, pageSize = 20) {
-  const filters = useFilterStore((s) => s.filters);
+  const filters = useFilterStore((s) => s.filters)
 
   return useQuery({
     queryKey: ['jobs', { ...filters, page, pageSize, scored: true }],
     queryFn: () => fetchJobs({ ...filters, page, pageSize, scored: true }),
     staleTime: 60_000, // 1 minute before refetch
     placeholderData: (prev) => prev, // keep previous data while refetching
-  });
+  })
 }
 
 // ---------------------------------------------------------------------------
@@ -28,7 +28,7 @@ export function useJob(id: string | undefined) {
     queryFn: () => fetchJobById(id!),
     enabled: !!id,
     staleTime: 120_000,
-  });
+  })
 }
 
 // ---------------------------------------------------------------------------
@@ -36,7 +36,7 @@ export function useJob(id: string | undefined) {
 // ---------------------------------------------------------------------------
 
 export function useSearch() {
-  const queryClient = useQueryClient();
+  const queryClient = useQueryClient()
 
   return useMutation({
     mutationFn: (query: JobFilters) =>
@@ -50,9 +50,9 @@ export function useSearch() {
       }),
     onSuccess: () => {
       // Invalidate job list so it refetches after scrape
-      queryClient.invalidateQueries({ queryKey: ['jobs'] });
+      queryClient.invalidateQueries({ queryKey: ['jobs'] })
     },
-  });
+  })
 }
 
 // ---------------------------------------------------------------------------
@@ -64,5 +64,5 @@ export function useHealth() {
     queryKey: ['health'],
     queryFn: fetchHealth,
     refetchInterval: 30_000, // poll every 30s
-  });
+  })
 }

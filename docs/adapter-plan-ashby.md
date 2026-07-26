@@ -7,6 +7,7 @@ Implement an `AshbyAdapter` that scrapes job listings from Ashby-powered company
 Ashby is used by ~3,500 AI-native companies (OpenAI, Anthropic, Cohere, Scale AI, HuggingFace, etc.). Each company has an `org` slug used in GraphQL queries.
 
 **Reference implementations:**
+
 - `Feashliaa/job-board-aggregator` (Python) — uses Ashby GraphQL API with 5 concurrent workers
 - `strelov1/freehire` (Go) — 55,136 open jobs from 3,580 companies via Ashby API
 - `amikai/openings-mcp` (Go) — supports Ashby among 18 ATS platforms
@@ -16,11 +17,13 @@ Ashby is used by ~3,500 AI-native companies (OpenAI, Anthropic, Cohere, Scale AI
 ## API Reference
 
 ### GraphQL Endpoint
+
 ```
 POST https://jobs.ashbyhq.com/api/non-user-graphql?op=ApiJobBoardWithTeams
 ```
 
 **Headers:**
+
 ```
 Content-Type: application/json
 Accept: application/json
@@ -28,6 +31,7 @@ User-Agent: <rotate browser UA>
 ```
 
 **Request Body:**
+
 ```json
 {
   "operationName": "ApiJobBoardWithTeams",
@@ -39,6 +43,7 @@ User-Agent: <rotate browser UA>
 ```
 
 **Response:**
+
 ```json
 {
   "data": {
@@ -56,12 +61,15 @@ User-Agent: <rotate browser UA>
 ```
 
 ### Extended Job Details (via different query)
+
 For richer job data, use `ApiJobBoardInfo` query:
+
 ```
 POST https://jobs.ashbyhq.com/api/non-user-graphql?op=ApiJobBoardInfo
 ```
 
 ### Rate Limits
+
 - No formal rate limit, but they track concurrent connections
 - Feashliaa uses 5 concurrent workers (tightest limiter)
 - Uses jitter (0.5-2.0s sleep before each request)
@@ -165,7 +173,7 @@ function parseLocation(locationName: string): Location {
   }
 
   const remote = /remote/i.test(raw)
-  const parts = raw.split(',').map(p => p.trim())
+  const parts = raw.split(',').map((p) => p.trim())
 
   if (parts.length === 1) {
     return { city: parts[0], remote, country: 'USA' }
@@ -194,7 +202,8 @@ function parseSeniority(title: string): Job['seniority_level'] {
   if (lower.includes('entry') || lower.includes('junior') || lower.includes('jr')) return 'entry'
   if (lower.includes('mid') || lower.includes('2-5')) return 'mid'
   if (lower.includes('senior') || lower.includes('sr')) return 'senior'
-  if (lower.includes('lead') || lower.includes('staff') || lower.includes('principal')) return 'lead'
+  if (lower.includes('lead') || lower.includes('staff') || lower.includes('principal'))
+    return 'lead'
   if (lower.includes('manager') || lower.includes('mgr')) return 'manager'
   if (lower.includes('director')) return 'director'
   return undefined
@@ -202,21 +211,52 @@ function parseSeniority(title: string): Job['seniority_level'] {
 
 function extractTags(title: string): string[] {
   const keywords = [
-    'react', 'node', 'typescript', 'javascript', 'python',
-    'aws', 'docker', 'kubernetes', 'sql', 'postgresql',
-    'mongodb', 'graphql', 'rest', 'api', 'java', 'golang',
-    'ruby', 'rails', 'vue', 'angular', 'next', 'nuxt',
-    'rust', 'go', 'elixir', 'terraform', 'linux', 'git',
-    'redis', 'elasticsearch', 'kafka', 'cicd', 'agile',
-    'scrum', 'tdd', 'microservices', 'serverless', 'sre',
+    'react',
+    'node',
+    'typescript',
+    'javascript',
+    'python',
+    'aws',
+    'docker',
+    'kubernetes',
+    'sql',
+    'postgresql',
+    'mongodb',
+    'graphql',
+    'rest',
+    'api',
+    'java',
+    'golang',
+    'ruby',
+    'rails',
+    'vue',
+    'angular',
+    'next',
+    'nuxt',
+    'rust',
+    'go',
+    'elixir',
+    'terraform',
+    'linux',
+    'git',
+    'redis',
+    'elasticsearch',
+    'kafka',
+    'cicd',
+    'agile',
+    'scrum',
+    'tdd',
+    'microservices',
+    'serverless',
+    'sre',
   ]
   const lower = title.toLowerCase()
-  return keywords.filter(kw => lower.includes(kw))
+  return keywords.filter((kw) => lower.includes(kw))
 }
 
 function transformAshbyJob(
   posting: AshbyJobPosting,
-  org: string,
+  org: string
 ): { job: Partial<Job>; source: Partial<Source> } {
   const location = parseLocation(posting.locationName)
   const jobType = parseJobType(posting.employmentType)
@@ -271,10 +311,23 @@ export class AshbyAdapter implements BoardAdapter {
 
   constructor() {
     this.orgs = new Set([
-      'openai', 'anthropic', 'cohere', 'scaleai', 'huggingface',
-      'databricks', 'perplexity', 'cognition', 'character-ai',
-      'together', 'mistral', 'stability-ai', 'weights-biases',
-      'modal', 'replit', 'cursor', 'sourcegraph',
+      'openai',
+      'anthropic',
+      'cohere',
+      'scaleai',
+      'huggingface',
+      'databricks',
+      'perplexity',
+      'cognition',
+      'character-ai',
+      'together',
+      'mistral',
+      'stability-ai',
+      'weights-biases',
+      'modal',
+      'replit',
+      'cursor',
+      'sourcegraph',
     ])
 
     this.client = axios.create({
@@ -304,9 +357,7 @@ export class AshbyAdapter implements BoardAdapter {
     for (let i = 0; i < orgList.length; i += CONCURRENCY) {
       const batch = orgList.slice(i, i + CONCURRENCY)
 
-      const results = await Promise.allSettled(
-        batch.map(org => this.fetchOrgJobs(org)),
-      )
+      const results = await Promise.allSettled(batch.map((org) => this.fetchOrgJobs(org)))
 
       for (const result of results) {
         if (result.status === 'fulfilled') {
@@ -339,9 +390,9 @@ export class AshbyAdapter implements BoardAdapter {
     for (const org of this.orgs) {
       try {
         const result = await this.fetchOrgJobs(org)
-        const job = result.jobs.find(j => j.id === boardJobId)
+        const job = result.jobs.find((j) => j.id === boardJobId)
         if (job) {
-          const source = result.sources.find(s => s.job_id === job.id)
+          const source = result.sources.find((s) => s.job_id === job.id)
           return {
             jobs: [job],
             sources: source ? [source] : [],
@@ -361,26 +412,25 @@ export class AshbyAdapter implements BoardAdapter {
 
     if (query.title) {
       const lower = query.title.toLowerCase()
-      filtered = filtered.filter(j =>
-        j.title.toLowerCase().includes(lower)
-      )
+      filtered = filtered.filter((j) => j.title.toLowerCase().includes(lower))
     }
     if (query.location) {
       const lower = query.location.toLowerCase()
-      filtered = filtered.filter(j =>
-        (j.location.city?.toLowerCase() || '').includes(lower) ||
-        (j.location.state?.toLowerCase() || '').includes(lower) ||
-        (query.remote && j.location.remote)
+      filtered = filtered.filter(
+        (j) =>
+          (j.location.city?.toLowerCase() || '').includes(lower) ||
+          (j.location.state?.toLowerCase() || '').includes(lower) ||
+          (query.remote && j.location.remote)
       )
     }
     if (query.remote !== undefined) {
-      filtered = filtered.filter(j => j.is_remote === query.remote)
+      filtered = filtered.filter((j) => j.is_remote === query.remote)
     }
     if (query.salaryMin !== undefined) {
-      filtered = filtered.filter(j => j.salary_range && j.salary_range.max >= query.salaryMin!)
+      filtered = filtered.filter((j) => j.salary_range && j.salary_range.max >= query.salaryMin!)
     }
     if (query.salaryMax !== undefined) {
-      filtered = filtered.filter(j => j.salary_range && j.salary_range.min <= query.salaryMax!)
+      filtered = filtered.filter((j) => j.salary_range && j.salary_range.min <= query.salaryMax!)
     }
     if (query.limit) {
       filtered = filtered.slice(0, query.limit)
@@ -388,7 +438,9 @@ export class AshbyAdapter implements BoardAdapter {
 
     return {
       jobs: filtered,
-      sources: filtered.map(j => all.sources.find(s => s.job_id === j.id)).filter((s): s is Source => s !== undefined),
+      sources: filtered
+        .map((j) => all.sources.find((s) => s.job_id === j.id))
+        .filter((s): s is Source => s !== undefined),
       metadata: { totalAvailable: filtered.length, fetchedAt: new Date(), durationMs: 0 },
     }
   }
@@ -475,7 +527,7 @@ export class AshbyAdapter implements BoardAdapter {
 }
 
 function sleep(ms: number): Promise<void> {
-  return new Promise(resolve => setTimeout(resolve, ms))
+  return new Promise((resolve) => setTimeout(resolve, ms))
 }
 ```
 
@@ -496,6 +548,7 @@ Tests covering:
 9. **`healthCheck`** — mock success/failure
 
 Mock pattern:
+
 ```typescript
 vi.mock('axios', () => ({
   default: {
@@ -509,6 +562,7 @@ vi.mock('axios', () => ({
 ### Task 3: Register adapter
 
 In `backend/src/index.ts`:
+
 ```typescript
 import { AshbyAdapter } from './adapters/ashby-adapter.js'
 

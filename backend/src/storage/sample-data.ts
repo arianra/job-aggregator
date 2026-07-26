@@ -62,7 +62,7 @@ export const sampleJobs: Job[] = [
       min: 150000,
       max: 200000,
       currency: 'USD',
-      period: 'annual'
+      period: 'annual',
     },
     job_type: 'full-time',
     seniority_level: 'senior',
@@ -89,7 +89,7 @@ export const sampleJobs: Job[] = [
       min: 120000,
       max: 160000,
       currency: 'USD',
-      period: 'annual'
+      period: 'annual',
     },
     job_type: 'full-time',
     seniority_level: 'mid',
@@ -116,7 +116,7 @@ export const sampleJobs: Job[] = [
       min: 130000,
       max: 170000,
       currency: 'USD',
-      period: 'annual'
+      period: 'annual',
     },
     job_type: 'full-time',
     seniority_level: 'mid',
@@ -204,7 +204,7 @@ export const sampleProfile: Profile = {
   preferences: {
     locations: [
       { city: 'San Francisco', state: 'CA', country: 'USA', remote: false },
-      { country: 'USA', remote: true }
+      { country: 'USA', remote: true },
     ],
     remote_ok: true,
     hybrid_ok: true,
@@ -213,13 +213,13 @@ export const sampleProfile: Profile = {
     seniority_levels: ['mid', 'senior'],
     salary_min: 140000,
     currency: 'USD',
-    keywords: ['backend', 'fullstack', 'typescript']
+    keywords: ['backend', 'fullstack', 'typescript'],
   },
   search_queries: [],
   resume: {
     filename: 'resume.pdf',
     mime_type: 'application/pdf',
-    stored_path: '/tmp/resume.pdf'
+    stored_path: '/tmp/resume.pdf',
   },
   created_at: new Date('2024-06-01'),
   updated_at: new Date('2024-06-01'),

@@ -1,4 +1,9 @@
-import type { BoardAdapter, AdapterResult, JobSearchQuery, AdapterHealth } from '@job-aggregator/shared'
+import type {
+  BoardAdapter,
+  AdapterResult,
+  JobSearchQuery,
+  AdapterHealth,
+} from '@job-aggregator/shared'
 import logger from '../utils/logger.js'
 
 export class AdapterRegistrationError extends Error {
@@ -23,7 +28,9 @@ export class AdapterRegistry {
    */
   register(adapter: BoardAdapter): void {
     if (this.adapters.has(adapter.boardId)) {
-      throw new AdapterRegistrationError(`Adapter with id '${adapter.boardId}' is already registered`)
+      throw new AdapterRegistrationError(
+        `Adapter with id '${adapter.boardId}' is already registered`
+      )
     }
     this.adapters.set(adapter.boardId, adapter)
     logger.info(`Registered adapter: ${adapter.boardName} (${adapter.boardId})`)
@@ -73,7 +80,7 @@ export class AdapterRegistry {
    */
   async fetchAllJobs(limit?: number): Promise<Map<string, AdapterResult>> {
     const results = new Map<string, AdapterResult>()
-    
+
     for (const [boardId, adapter] of this.adapters) {
       try {
         logger.info(`Fetching jobs from ${adapter.boardName}`)
@@ -85,7 +92,7 @@ export class AdapterRegistry {
         // Continue with other adapters (isolation)
       }
     }
-    
+
     return results
   }
 
@@ -94,7 +101,7 @@ export class AdapterRegistry {
    */
   async searchAllJobs(query: JobSearchQuery): Promise<Map<string, AdapterResult>> {
     const results = new Map<string, AdapterResult>()
-    
+
     for (const [boardId, adapter] of this.adapters) {
       try {
         logger.info(`Searching jobs on ${adapter.boardName}`, { query })
@@ -106,7 +113,7 @@ export class AdapterRegistry {
         // Continue with other adapters (isolation)
       }
     }
-    
+
     return results
   }
 
@@ -115,7 +122,7 @@ export class AdapterRegistry {
    */
   async healthCheckAll(): Promise<Map<string, AdapterHealth>> {
     const results = new Map<string, AdapterHealth>()
-    
+
     for (const [boardId, adapter] of this.adapters) {
       try {
         const health = await adapter.healthCheck()
@@ -124,11 +131,11 @@ export class AdapterRegistry {
         logger.error(`Health check failed for ${adapter.boardName}`, { error })
         results.set(boardId, {
           healthy: false,
-          message: error instanceof Error ? error.message : 'Unknown error'
+          message: error instanceof Error ? error.message : 'Unknown error',
         })
       }
     }
-    
+
     return results
   }
 

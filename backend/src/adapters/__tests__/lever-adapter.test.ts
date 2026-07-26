@@ -18,7 +18,7 @@ describe('LeverAdapter', () => {
 
   beforeEach(() => {
     adapter = new LeverAdapter()
-    getMock = (safeHttp.get as ReturnType<typeof vi.fn>)
+    getMock = safeHttp.get as ReturnType<typeof vi.fn>
     getMock.mockReset()
   })
 
@@ -143,8 +143,8 @@ describe('LeverAdapter', () => {
       const lists = [
         {
           text: 'Requirements',
-          content: '<ul><li>5+ years experience</li><li>Strong communication skills</li></ul>'
-        }
+          content: '<ul><li>5+ years experience</li><li>Strong communication skills</li></ul>',
+        },
       ]
       const requirements = leverAdapterModule['extractRequirements'](lists)
       expect(requirements).toHaveLength(2)
@@ -156,17 +156,15 @@ describe('LeverAdapter', () => {
       const lists = [
         {
           text: 'Qualifications',
-          content: '<p>Must have:</p><ul><li>Bachelor\'s degree</li><li>Team leadership</li></ul>'
-        }
+          content: "<p>Must have:</p><ul><li>Bachelor's degree</li><li>Team leadership</li></ul>",
+        },
       ]
       const requirements = leverAdapterModule['extractRequirements'](lists)
       expect(requirements.length).toBeGreaterThan(0)
     })
 
     it('should return empty array if no requirements found', () => {
-      const lists = [
-        { text: 'Benefits', content: 'Health insurance, 401k' }
-      ]
+      const lists = [{ text: 'Benefits', content: 'Health insurance, 401k' }]
       const requirements = leverAdapterModule['extractRequirements'](lists)
       expect(requirements).toEqual([])
     })
@@ -213,18 +211,20 @@ describe('LeverAdapter', () => {
         text: 'Senior Software Engineer',
         categories: {
           team: 'Engineering',
-          location: 'San Francisco, CA'
+          location: 'San Francisco, CA',
         },
-        description: 'We are looking for a senior engineer with React and Node.js experience. Salary: $120k - $180k.',
-        descriptionPlain: 'We are looking for a senior engineer with React and Node.js experience. Salary: $120k - $180k.',
+        description:
+          'We are looking for a senior engineer with React and Node.js experience. Salary: $120k - $180k.',
+        descriptionPlain:
+          'We are looking for a senior engineer with React and Node.js experience. Salary: $120k - $180k.',
         lists: [
           {
             text: 'Requirements',
-            content: '<ul><li>5+ years experience</li><li>React expertise</li></ul>'
-          }
+            content: '<ul><li>5+ years experience</li><li>React expertise</li></ul>',
+          },
         ],
         hostedUrl: 'https://jobs.lever.co/company/job-123',
-        createdAt: Date.now()
+        createdAt: Date.now(),
       }
 
       const { job, source } = transformLeverJob(rawJob, 'company')
@@ -255,13 +255,13 @@ describe('LeverAdapter', () => {
         text: 'Software Engineer',
         categories: {
           team: 'Engineering',
-          location: 'Remote'
+          location: 'Remote',
         },
         description: 'Join our remote team',
         descriptionPlain: 'Join our remote team',
         lists: [],
         hostedUrl: 'https://jobs.lever.co/company/job-remote',
-        createdAt: Date.now()
+        createdAt: Date.now(),
       }
 
       const { job } = transformLeverJob(rawJob, 'company')
@@ -275,13 +275,13 @@ describe('LeverAdapter', () => {
         text: 'Developer',
         categories: {
           team: 'Tech',
-          location: ''
+          location: '',
         },
         description: '',
         descriptionPlain: '',
         lists: [],
         hostedUrl: 'https://jobs.lever.co/company/job-minimal',
-        createdAt: Date.now()
+        createdAt: Date.now(),
       }
 
       const { job } = transformLeverJob(rawJob, 'company')
@@ -309,8 +309,8 @@ describe('LeverAdapter', () => {
           descriptionPlain: 'Build software',
           lists: [],
           hostedUrl: 'https://jobs.lever.co/test-company/job-1',
-          createdAt: Date.now()
-        }
+          createdAt: Date.now(),
+        },
       ]
 
       getMock.mockResolvedValueOnce({ status: 200, data: mockJobs })
@@ -332,7 +332,7 @@ describe('LeverAdapter', () => {
           descriptionPlain: 'Build software',
           lists: [],
           hostedUrl: 'https://jobs.lever.co/test-company/job-1',
-          createdAt: Date.now()
+          createdAt: Date.now(),
         },
         {
           id: 'job-2',
@@ -342,8 +342,8 @@ describe('LeverAdapter', () => {
           descriptionPlain: 'Manage products',
           lists: [],
           hostedUrl: 'https://jobs.lever.co/test-company/job-2',
-          createdAt: Date.now()
-        }
+          createdAt: Date.now(),
+        },
       ]
 
       getMock.mockResolvedValueOnce({ status: 200, data: mockJobs })
@@ -364,7 +364,7 @@ describe('LeverAdapter', () => {
           descriptionPlain: 'Build software',
           lists: [],
           hostedUrl: 'https://jobs.lever.co/test-company/job-1',
-          createdAt: Date.now()
+          createdAt: Date.now(),
         },
         {
           id: 'job-2',
@@ -374,8 +374,8 @@ describe('LeverAdapter', () => {
           descriptionPlain: 'Build software',
           lists: [],
           hostedUrl: 'https://jobs.lever.co/test-company/job-2',
-          createdAt: Date.now()
-        }
+          createdAt: Date.now(),
+        },
       ]
 
       getMock.mockResolvedValueOnce({ status: 200, data: mockJobs })
@@ -396,7 +396,7 @@ describe('LeverAdapter', () => {
           descriptionPlain: 'Build software',
           lists: [],
           hostedUrl: 'https://jobs.lever.co/test-company/job-1',
-          createdAt: Date.now()
+          createdAt: Date.now(),
         },
         {
           id: 'job-2',
@@ -406,8 +406,8 @@ describe('LeverAdapter', () => {
           descriptionPlain: 'Build software',
           lists: [],
           hostedUrl: 'https://jobs.lever.co/test-company/job-2',
-          createdAt: Date.now()
-        }
+          createdAt: Date.now(),
+        },
       ]
 
       getMock.mockResolvedValueOnce({ status: 200, data: mockJobs })
@@ -428,7 +428,7 @@ describe('LeverAdapter', () => {
           descriptionPlain: 'Salary: $150k - $200k',
           lists: [],
           hostedUrl: 'https://jobs.lever.co/test-company/job-1',
-          createdAt: Date.now()
+          createdAt: Date.now(),
         },
         {
           id: 'job-2',
@@ -438,8 +438,8 @@ describe('LeverAdapter', () => {
           descriptionPlain: 'Salary: $80k - $95k',
           lists: [],
           hostedUrl: 'https://jobs.lever.co/test-company/job-2',
-          createdAt: Date.now()
-        }
+          createdAt: Date.now(),
+        },
       ]
 
       getMock.mockResolvedValueOnce({ status: 200, data: mockJobs })
@@ -459,7 +459,7 @@ describe('LeverAdapter', () => {
         descriptionPlain: 'Build software',
         lists: [],
         hostedUrl: `https://jobs.lever.co/test-company/job-${i}`,
-        createdAt: Date.now()
+        createdAt: Date.now(),
       }))
 
       getMock.mockResolvedValueOnce({ status: 200, data: mockJobs })

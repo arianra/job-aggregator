@@ -1,9 +1,9 @@
-import { Router, Request, Response } from 'express';
-import { z } from 'zod';
-import { Orchestrator } from '../services/orchestrator.js';
-import type { Storage, JobFilter } from '@job-aggregator/shared';
-import { scoreJob, scoreJobs } from '../services/scorer.js';
-import logger from '../utils/logger.js';
+import { Router, Request, Response } from 'express'
+import { z } from 'zod'
+import { Orchestrator } from '../services/orchestrator.js'
+import type { Storage, JobFilter } from '@job-aggregator/shared'
+import { scoreJob, scoreJobs } from '../services/scorer.js'
+import logger from '../utils/logger.js'
 
 // ---------------------------------------------------------------------------
 // Validation schemas
@@ -16,7 +16,7 @@ const searchBodySchema = z.object({
   salaryMin: z.number().positive().optional(),
   salaryMax: z.number().positive().optional(),
   limit: z.number().int().min(1).max(200).default(50),
-});
+})
 
 const listQuerySchema = z.object({
   page: z.coerce.number().int().min(1).default(1),
@@ -29,24 +29,21 @@ const listQuerySchema = z.object({
   tags: z.string().optional(), // comma-separated
   postedAfter: z.string().optional(), // ISO date
   scored: z.coerce.boolean().optional(), // attach scores to results
-});
+})
 
 // ---------------------------------------------------------------------------
 // Route factory
 // ---------------------------------------------------------------------------
 
-export function createJobsRouter(
-  orchestrator: Orchestrator,
-  storage: Storage,
-): Router {
-  const router = Router();
+export function createJobsRouter(orchestrator: Orchestrator, storage: Storage): Router {
+  const router = Router()
 
   // POST /api/jobs/search — trigger a multi-board scrape
   router.post('/search', async (req: Request, res: Response) => {
     try {
-      const body = searchBodySchema.parse(req.body);
+      const body = searchBodySchema.parse(req.body)
 
-      logger.info('POST /api/jobs/search', { body });
+      logger.info('POST /api/jobs/search', { body })
 
       const result = await orchestrator.searchAll({
         title: body.keywords,
@@ -55,7 +52,7 @@ export function createJobsRouter(
         salaryMin: body.salaryMin,
         salaryMax: body.salaryMax,
         limit: body.limit,
-      });
+      })
 
       res.json({
         success: true,
@@ -64,44 +61,44 @@ export function createJobsRouter(
         duplicatesFound: result.duplicatesFound,
         duplicatesMerged: result.duplicatesMerged,
         errors: result.errors,
-      });
+      })
     } catch (err) {
       if (err instanceof z.ZodError) {
-        res.status(400).json({ error: 'Validation failed', details: err.errors });
-        return;
+        res.status(400).json({ error: 'Validation failed', details: err.errors })
+        return
       }
-      logger.error('POST /api/jobs/search failed', { err });
-      res.status(500).json({ error: 'Internal server error' });
+      logger.error('POST /api/jobs/search failed', { err })
+      res.status(500).json({ error: 'Internal server error' })
     }
-  });
+  })
 
   // GET /api/jobs — list persisted jobs with optional filters & pagination
   router.get('/', async (req: Request, res: Response) => {
     try {
-      const query = listQuerySchema.parse(req.query);
+      const query = listQuerySchema.parse(req.query)
 
       const filter: JobFilter = {
         limit: query.pageSize,
         offset: (query.page - 1) * query.pageSize,
-      };
+      }
 
-      if (query.company) filter.company = query.company;
-      if (query.location) filter.location = query.location;
-      if (query.remote !== undefined) filter.remote = query.remote;
-      if (query.salaryMin) filter.salaryMin = query.salaryMin;
-      if (query.salaryMax) filter.salaryMax = query.salaryMax;
-      if (query.tags) filter.tags = query.tags.split(',').map(t => t.trim());
-      if (query.postedAfter) filter.postedAfter = new Date(query.postedAfter);
+      if (query.company) filter.company = query.company
+      if (query.location) filter.location = query.location
+      if (query.remote !== undefined) filter.remote = query.remote
+      if (query.salaryMin) filter.salaryMin = query.salaryMin
+      if (query.salaryMax) filter.salaryMax = query.salaryMax
+      if (query.tags) filter.tags = query.tags.split(',').map((t) => t.trim())
+      if (query.postedAfter) filter.postedAfter = new Date(query.postedAfter)
 
-      const jobs = await storage.listJobs(filter);
+      const jobs = await storage.listJobs(filter)
 
       // Optionally score jobs against the current profile
-      let scores: Record<string, number> | undefined;
+      let scores: Record<string, number> | undefined
       if (query.scored) {
-        const profiles = await storage.listProfiles();
+        const profiles = await storage.listProfiles()
         if (profiles.length > 0) {
-          const matches = scoreJobs(profiles[0], jobs);
-          scores = Object.fromEntries(matches.map((m) => [m.job_id, m.score]));
+          const matches = scoreJobs(profiles[0], jobs)
+          scores = Object.fromEntries(matches.map((m) => [m.job_id, m.score]))
         }
       }
 
@@ -112,35 +109,35 @@ export function createJobsRouter(
         total: jobs.length,
         data: jobs,
         scores,
-      });
+      })
     } catch (err) {
       if (err instanceof z.ZodError) {
-        res.status(400).json({ error: 'Validation failed', details: err.errors });
-        return;
+        res.status(400).json({ error: 'Validation failed', details: err.errors })
+        return
       }
-      logger.error('GET /api/jobs failed', { err });
-      res.status(500).json({ error: 'Internal server error' });
+      logger.error('GET /api/jobs failed', { err })
+      res.status(500).json({ error: 'Internal server error' })
     }
-  });
+  })
 
   // GET /api/jobs/:id — single job with sources, optional scoring
   router.get('/:id', async (req: Request, res: Response) => {
     try {
-      const job = await storage.getJob(req.params.id);
+      const job = await storage.getJob(req.params.id)
       if (!job) {
-        res.status(404).json({ error: 'Job not found' });
-        return;
+        res.status(404).json({ error: 'Job not found' })
+        return
       }
 
-      const sources = await storage.getJobSourcesByJobId(job.id);
-      const enriched = { ...job, sources };
+      const sources = await storage.getJobSourcesByJobId(job.id)
+      const enriched = { ...job, sources }
 
       // Optionally score against profile
-      let match = undefined;
+      let match = undefined
       if (req.query.scored === 'true') {
-        const profiles = await storage.listProfiles();
+        const profiles = await storage.listProfiles()
         if (profiles.length > 0) {
-          match = scoreJob(profiles[0], enriched);
+          match = scoreJob(profiles[0], enriched)
         }
       }
 
@@ -148,12 +145,12 @@ export function createJobsRouter(
         success: true,
         data: enriched,
         match,
-      });
+      })
     } catch (err) {
-      logger.error('GET /api/jobs/:id failed', { err });
-      res.status(500).json({ error: 'Internal server error' });
+      logger.error('GET /api/jobs/:id failed', { err })
+      res.status(500).json({ error: 'Internal server error' })
     }
-  });
+  })
 
-  return router;
+  return router
 }

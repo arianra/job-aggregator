@@ -1,55 +1,51 @@
 /**
  * Adapter Configuration Types
- * 
+ *
  * Each adapter has its own configuration schema based on its parameters
  */
 
 // Greenhouse: company board tokens
 export interface GreenhouseConfig {
-  type: 'greenhouse';
+  type: 'greenhouse'
   boards: Array<{
-    token: string;      // e.g., "stripe"
-    name: string;       // e.g., "Stripe"
-    enabled: boolean;
-  }>;
+    token: string // e.g., "stripe"
+    name: string // e.g., "Stripe"
+    enabled: boolean
+  }>
 }
 
 // Workday: tenant identifiers
 export interface WorkdayConfig {
-  type: 'workday';
+  type: 'workday'
   tenants: Array<{
-    slug: string;       // e.g., "amazon"
-    wd: string;         // e.g., "wd1"
-    siteId: string;     // e.g., "amazonjobs"
-    enabled: boolean;
-  }>;
+    slug: string // e.g., "amazon"
+    wd: string // e.g., "wd1"
+    siteId: string // e.g., "amazonjobs"
+    enabled: boolean
+  }>
 }
 
 // Ashby: organization names
 export interface AshbyConfig {
-  type: 'ashby';
+  type: 'ashby'
   orgs: Array<{
-    name: string;       // e.g., "openai"
-    enabled: boolean;
-  }>;
+    name: string // e.g., "openai"
+    enabled: boolean
+  }>
 }
 
 // Lever: company slugs
 export interface LeverConfig {
-  type: 'lever';
+  type: 'lever'
   companies: Array<{
-    slug: string;       // e.g., "stripe"
-    name: string;       // e.g., "Stripe"
-    enabled: boolean;
-  }>;
+    slug: string // e.g., "stripe"
+    name: string // e.g., "Stripe"
+    enabled: boolean
+  }>
 }
 
 // Union type for all adapter configs
-export type AdapterConfig = 
-  | GreenhouseConfig 
-  | WorkdayConfig 
-  | AshbyConfig 
-  | LeverConfig;
+export type AdapterConfig = GreenhouseConfig | WorkdayConfig | AshbyConfig | LeverConfig
 
 // Default configurations
 export const DEFAULT_CONFIGS: Record<string, AdapterConfig> = {
@@ -101,4 +97,4 @@ export const DEFAULT_CONFIGS: Record<string, AdapterConfig> = {
       { slug: 'notion', name: 'Notion', enabled: true },
     ],
   },
-};
+}

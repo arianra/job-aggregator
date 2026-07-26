@@ -11,12 +11,14 @@ This guide walks you through setting up the complete development environment for
 ## Prerequisites
 
 ### Required Software
+
 1. **Node.js 20+** (LTS recommended)
 2. **Docker & Docker Compose** (for PostgreSQL)
 3. **Git** (version control)
 4. **Code Editor** (VS Code recommended)
 
 ### Optional but Recommended
+
 - **Postman** or **Insomnia** (API testing)
 - **DBeaver** or **TablePlus** (database GUI)
 - **Chrome DevTools** (frontend debugging)
@@ -35,6 +37,7 @@ cd job-aggregator
 ## Step 2: Install Node.js Dependencies
 
 The project uses npm workspaces to manage three packages:
+
 - `shared/` — TypeScript interfaces (shared between frontend and backend)
 - `backend/` — Express API server with Prisma ORM
 - `frontend/` — React app with Vite and Tailwind CSS
@@ -48,6 +51,7 @@ npm install
 This installs dependencies for all three workspaces.
 
 **Key Backend Dependencies:**
+
 - `express` — Web framework
 - `prisma` — Database ORM
 - `axios` — HTTP client (ATS APIs)
@@ -55,6 +59,7 @@ This installs dependencies for all three workspaces.
 - `vitest` — Testing framework
 
 **Key Frontend Dependencies:**
+
 - `react` — UI library
 - `zustand` — State management
 - `@tanstack/react-query` — Data fetching
@@ -73,6 +78,7 @@ docker compose up -d
 ```
 
 This starts a PostgreSQL 15 container with:
+
 - Container name: `job-aggregator-db`
 - Port: 5432
 - User: `job_aggregator`
@@ -86,6 +92,7 @@ docker compose ps
 ```
 
 Expected output:
+
 ```
 NAME                STATUS
 job-aggregator-db   Up (healthy)
@@ -122,6 +129,7 @@ LOG_LEVEL=info
 ```
 
 **Qwen API Key (Optional):**
+
 - The system works without it, but resume parsing won't be as good
 - To get a key: https://dashscope.aliyuncs.com/
 - Sign up for Alibaba Cloud, get API key for Qwen model
@@ -155,6 +163,7 @@ npx prisma studio
 ```
 
 **What This Does:**
+
 - Creates tables: `Job`, `Source`, `Company`, `Profile`, `Match`, `Application`, `Board`
 - Sets up relationships and indexes
 - Generates TypeScript types from schema
@@ -193,6 +202,7 @@ npm run dev
 ```
 
 **Expected Output:**
+
 ```
 Server running on http://localhost:3000
 Database connected
@@ -211,6 +221,7 @@ npm run dev
 ```
 
 **Expected Output:**
+
 ```
 VITE v5.4.21  ready in 500 ms
 ➜  Local:   http://localhost:5173/
@@ -234,6 +245,7 @@ curl http://localhost:3000/health
 ```
 
 **Expected Response:**
+
 ```json
 {
   "status": "ok",
@@ -288,6 +300,7 @@ npm run test:coverage
 ```
 
 **Expected Output:**
+
 ```
 ✓ src/adapters/__tests__/greenhouse-adapter.test.ts (18 tests)
 ✓ src/adapters/__tests__/lever-adapter.test.ts (38 tests)
@@ -315,6 +328,7 @@ Frontend tests don't exist yet. This is a known gap.
 **Error:** `Error: listen EADDRINUSE: address already in use :::3000`
 
 **Solution:**
+
 ```bash
 # Find process using port 3000
 lsof -i :3000
@@ -328,6 +342,7 @@ kill -9 <PID>
 **Error:** `permission denied while trying to connect to the Docker daemon socket`
 
 **Solution:**
+
 ```bash
 # Add user to docker group
 sudo usermod -aG docker $USER
@@ -341,6 +356,7 @@ newgrp docker
 **Error:** `Error: Can't reach database server at localhost:5432`
 
 **Solution:**
+
 ```bash
 # Check if PostgreSQL is running
 docker compose ps
@@ -357,6 +373,7 @@ docker compose logs postgres
 **Warning:** `[profile] Qwen API key not configured — skipping AI parsing`
 
 **Solution:**
+
 - This is fine for testing — resume upload still works
 - To enable AI parsing, get a Qwen API key from https://dashscope.aliyuncs.com/
 - Add it to `backend/.env`: `QWEN_API_KEY=your-key-here`
@@ -366,6 +383,7 @@ docker compose logs postgres
 **Error:** `Cannot find module 'express'`
 
 **Solution:**
+
 ```bash
 # Reinstall dependencies from root
 rm -rf node_modules
@@ -378,6 +396,7 @@ npm install
 
 **Solution:**
 This is a known bug — the `Board` table needs to be populated. Workaround:
+
 ```bash
 cd backend
 # Insert board rows manually (or fix index.ts to do this on startup)
@@ -392,17 +411,20 @@ npx prisma studio
 ### Daily Development
 
 1. **Start database:**
+
    ```bash
    docker compose up -d
    ```
 
 2. **Start backend:**
+
    ```bash
    cd backend
    npm run dev
    ```
 
 3. **Start frontend:**
+
    ```bash
    cd frontend
    npm run dev
@@ -411,12 +433,14 @@ npx prisma studio
 4. **Make changes and test**
 
 5. **Run tests before committing:**
+
    ```bash
    cd backend
    npm test
    ```
 
 6. **Commit changes:**
+
    ```bash
    git add .
    git commit -m "feat: add new feature"
@@ -426,7 +450,7 @@ npx prisma studio
 7. **Stop services when done:**
    ```bash
    # Stop backend and frontend (Ctrl+C in terminals)
-   
+
    # Stop database
    docker compose down
    ```

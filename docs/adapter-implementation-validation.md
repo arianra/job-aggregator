@@ -22,14 +22,15 @@ All 4 adapters correctly implement the `BoardAdapter` interface:
 
 ```typescript
 interface BoardAdapter {
-  readonly boardId: string;
-  readonly boardName: string;
-  searchJobs(query: SearchQuery): Promise<Job[]>;
-  healthCheck(): Promise<boolean>;
+  readonly boardId: string
+  readonly boardName: string
+  searchJobs(query: SearchQuery): Promise<Job[]>
+  healthCheck(): Promise<boolean>
 }
 ```
 
 **Status:**
+
 - ✅ Greenhouse: Implements all required methods
 - ✅ Lever: Implements all required methods
 - ✅ Ashby: Implements all required methods
@@ -40,12 +41,14 @@ interface BoardAdapter {
 All adapters follow the functional programming paradigm:
 
 **Pure Transform Functions:**
+
 - ✅ Greenhouse: `parseLocation`, `parseSalary`, `parseJobType`, `parseSeniority`, `extractTags`, `transformGreenhouseJob`
 - ✅ Lever: `parseLocation`, `parseSalary`, `parseJobType`, `parseSeniority`, `extractTags`, `extractRequirements`, `transformLeverJob`
 - ✅ Ashby: `parseLocation`, `parseJobType`, `parseSeniority`, `extractTags`, `transformAshbyJob`
 - ✅ Workday: `parseLocation`, `parseJobType`, `parseSeniority`, `extractTags`, `parsePostedOn`, `transformWorkdayJob`
 
 **Separation of Concerns:**
+
 - ✅ Transform functions have no side effects
 - ✅ I/O operations are isolated in class methods
 - ✅ Data transformation is testable independently
@@ -55,6 +58,7 @@ All adapters follow the functional programming paradigm:
 All adapters use proper TypeScript types:
 
 **Imported Types:**
+
 ```typescript
 import type {
   BoardAdapter,
@@ -64,10 +68,11 @@ import type {
   Location,
   Company,
   SalaryRange,
-} from '../types/index.js';
+} from '../types/index.js'
 ```
 
 **Status:**
+
 - ✅ All type imports are correct
 - ✅ Return types are properly defined
 - ✅ No `any` types used
@@ -80,11 +85,13 @@ import type {
 ### 🟢 Greenhouse Adapter
 
 **API Endpoint:**
+
 ```
 GET https://boards-api.greenhouse.io/v1/boards/{company}/jobs
 ```
 
 **Validation:**
+
 - ✅ REST API structure correct
 - ✅ Pagination handled via cursor in response
 - ✅ Rate limiting implemented (10 concurrent, 500ms delay)
@@ -92,12 +99,14 @@ GET https://boards-api.greenhouse.io/v1/boards/{company}/jobs
 - ✅ Error handling with retry logic
 
 **Transform Functions:**
+
 - ✅ `parseLocation` handles Greenhouse format (city, state, country)
 - ✅ `parseSalary` extracts from description text
 - ✅ `parseJobType` and `parseSeniority` from metadata
 - ✅ `extractTags` from description
 
 **Test Coverage:**
+
 - ✅ 8 test specifications defined
 - ✅ Mock patterns provided
 - ✅ Edge cases covered (missing fields, malformed data)
@@ -109,17 +118,20 @@ GET https://boards-api.greenhouse.io/v1/boards/{company}/jobs
 ### 🟢 Lever Adapter
 
 **API Endpoint:**
+
 ```
 GET https://api.lever.co/v0/postings/{org}?mode=json
 ```
 
 **Validation:**
+
 - ✅ REST API with JSON mode
 - ✅ Pagination handled via offset/limit
 - ✅ Rate limiting implemented (10 concurrent, 500ms delay)
 - ✅ Error handling with retry logic
 
 **Transform Functions:**
+
 - ✅ `parseLocation` handles Lever format (allLocations array)
 - ✅ `parseSalary` from salaryRange string
 - ✅ `parseJobType` from commitment field
@@ -127,6 +139,7 @@ GET https://api.lever.co/v0/postings/{org}?mode=json
 - ✅ `extractRequirements` from lists array
 
 **Test Coverage:**
+
 - ✅ 8 test specifications defined
 - ✅ Mock patterns provided
 - ✅ Pagination tests included
@@ -138,11 +151,13 @@ GET https://api.lever.co/v0/postings/{org}?mode=json
 ### 🟢 Ashby Adapter
 
 **API Endpoint:**
+
 ```
 POST https://api.ashbyhq.com/posting-api/graphql
 ```
 
 **Validation:**
+
 - ✅ GraphQL API structure correct
 - ✅ Query: `organizationBoard` with `jobPostings`
 - ✅ Rate limiting (5 concurrent, 500ms delay)
@@ -151,6 +166,7 @@ POST https://api.ashbyhq.com/posting-api/graphql
 - ✅ Retry logic with exponential backoff
 
 **Transform Functions:**
+
 - ✅ `parseLocation` from locationName string
 - ✅ `parseJobType` from employmentType
 - ✅ `parseSeniority` from title
@@ -158,6 +174,7 @@ POST https://api.ashbyhq.com/posting-api/graphql
 - ⚠️ **Note:** Basic query doesn't include descriptions (documented)
 
 **Test Coverage:**
+
 - ✅ 7 test specifications defined
 - ✅ Mock patterns for GraphQL responses
 - ✅ Retry logic tests
@@ -169,11 +186,13 @@ POST https://api.ashbyhq.com/posting-api/graphql
 ### 🟢 Workday Adapter
 
 **API Endpoint:**
+
 ```
 POST https://{tenant}.myworkdayjobs.com/wday/cxs/{tenant}/{siteId}/jobs
 ```
 
 **Validation:**
+
 - ✅ POST API with pagination (offset/limit)
 - ✅ Tenant URL pattern correct
 - ✅ Rate limiting (50 concurrent, 500ms delay)
@@ -182,6 +201,7 @@ POST https://{tenant}.myworkdayjobs.com/wday/cxs/{tenant}/{siteId}/jobs
 - ✅ Retry logic with backoff
 
 **Transform Functions:**
+
 - ✅ `parseLocation` from locationsText
 - ✅ `parseJobType` defaults to 'full-time' (not in basic API)
 - ✅ `parseSeniority` from title
@@ -190,6 +210,7 @@ POST https://{tenant}.myworkdayjobs.com/wday/cxs/{tenant}/{siteId}/jobs
 - ⚠️ **Note:** Basic API doesn't include descriptions (documented)
 
 **Test Coverage:**
+
 - ✅ 8 test specifications defined
 - ✅ Silent blocking detection tests
 - ✅ Pagination tests
@@ -212,7 +233,7 @@ const adapters = new Map<string, BoardAdapter>([
   ['lever', new LeverAdapter()],
   ['ashby', new AshbyAdapter()],
   ['workday', new WorkdayAdapter()],
-]);
+])
 ```
 
 **Status:** ✅ No changes needed to orchestrator
@@ -223,19 +244,19 @@ All adapters return properly typed `Job` and `Source` objects:
 
 ```typescript
 interface Job {
-  id: string;
-  title: string;
-  company: Partial<Company>;
-  location: Location;
-  description: string;
+  id: string
+  title: string
+  company: Partial<Company>
+  location: Location
+  description: string
   // ... other fields
 }
 
 interface Source {
-  id: string;
-  jobId: string;
-  board: string;
-  url: string;
+  id: string
+  jobId: string
+  board: string
+  url: string
   // ... other fields
 }
 ```
@@ -248,7 +269,7 @@ All adapters work with existing API routes:
 
 ```typescript
 // POST /api/jobs/search
-const jobs = await orchestrator.searchJobs(query);
+const jobs = await orchestrator.searchJobs(query)
 ```
 
 **Status:** ✅ No changes needed to API routes
@@ -260,10 +281,10 @@ The returned Job objects are compatible with existing frontend components:
 ```typescript
 // frontend/src/types/job.ts
 interface Job {
-  id: string;
-  title: string;
-  company: { name: string };
-  location: { city?: string; state?: string; country: string };
+  id: string
+  title: string
+  company: { name: string }
+  location: { city?: string; state?: string; country: string }
   // ... other fields
 }
 ```
@@ -283,13 +304,13 @@ interface Job {
 ```typescript
 function transformGreenhouseJob(
   rawJob: GreenhouseJob,
-  company: string,
+  company: string
 ): { job: Partial<Job>; source: Partial<Source> } {
   // Validate required fields
   if (!rawJob.id || !rawJob.title) {
-    throw new Error('Missing required fields in job data');
+    throw new Error('Missing required fields in job data')
   }
-  
+
   // ... rest of transform
 }
 ```
@@ -312,7 +333,7 @@ const job: Partial<Job> = {
     name: companyName,
     // ... other fields optional
   },
-};
+}
 ```
 
 **Status:** Already handled correctly with `Partial<Job>` type
@@ -326,6 +347,7 @@ const job: Partial<Job> = {
 **Problem:** Basic Ashby and Workday APIs don't include job descriptions.
 
 **Current Implementation:**
+
 ```typescript
 // Ashby
 description: '', // Empty string
@@ -335,10 +357,12 @@ description: '', // Empty string
 ```
 
 **Impact:**
+
 - Scoring engine will have lower accuracy
 - Search functionality limited to title/tags
 
 **Solution Options:**
+
 1. Accept empty descriptions (current approach) ✅
 2. Fetch full job details via separate API call (expensive)
 3. Document limitation in README
@@ -368,7 +392,7 @@ const mockGreenhouseJob = {
   ],
   description: 'Build amazing software...',
   postedAt: '2026-07-20T00:00:00Z',
-};
+}
 ```
 
 **Priority:** Medium (will help implementation)
@@ -382,6 +406,7 @@ const mockGreenhouseJob = {
 All adapters specify comprehensive test coverage:
 
 **Common Tests:**
+
 - ✅ Transform functions (location, salary, job type, seniority)
 - ✅ Tag extraction
 - ✅ Full job transformation
@@ -389,6 +414,7 @@ All adapters specify comprehensive test coverage:
 - ✅ Health checks
 
 **Adapter-Specific Tests:**
+
 - ✅ Greenhouse: Company discovery, cursor pagination
 - ✅ Lever: Offset pagination, requirements extraction
 - ✅ Ashby: GraphQL queries, retry logic, User-Agent rotation
@@ -404,12 +430,12 @@ All adapters specify comprehensive test coverage:
 
 All adapters implement appropriate rate limiting:
 
-| Adapter | Concurrent | Delay | Rationale |
-|---------|-----------|-------|-----------|
-| Greenhouse | 10 | 500ms | No formal limit |
-| Lever | 10 | 500ms | No formal limit |
-| Ashby | 5 | 500ms | Tightest limiter |
-| Workday | 50 | 500ms | Handles high volume |
+| Adapter    | Concurrent | Delay | Rationale           |
+| ---------- | ---------- | ----- | ------------------- |
+| Greenhouse | 10         | 500ms | No formal limit     |
+| Lever      | 10         | 500ms | No formal limit     |
+| Ashby      | 5          | 500ms | Tightest limiter    |
+| Workday    | 50         | 500ms | Handles high volume |
 
 **Status:** ✅ Rate limiting is appropriate
 
@@ -420,8 +446,8 @@ All adapters use streaming/chunked processing:
 ```typescript
 // Example from Lever
 for (let offset = 0; offset < total; offset += pageSize) {
-  const jobs = await fetchPage(offset);
-  results.push(...jobs);
+  const jobs = await fetchPage(offset)
+  results.push(...jobs)
 }
 ```
 
@@ -451,10 +477,10 @@ const USER_AGENTS = [
   'Mozilla/5.0 (Windows NT 10.0; Win64; x64) ...',
   'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) ...',
   // ... more agents
-];
+]
 
 function randomUA(): string {
-  return USER_AGENTS[Math.floor(Math.random() * USER_AGENTS.length)];
+  return USER_AGENTS[Math.floor(Math.random() * USER_AGENTS.length)]
 }
 ```
 
@@ -468,10 +494,11 @@ function randomUA(): string {
 
 The following should be added to README.md:
 
-```markdown
+````markdown
 ## Supported Job Boards
 
 ### ATS Platforms
+
 - **Greenhouse** - 6,800+ companies, REST API
 - **Lever** - 2,100+ companies, REST API with JSON mode
 - **Ashby** - 3,500+ companies, GraphQL API
@@ -480,24 +507,30 @@ The following should be added to README.md:
 ### Adding New Companies
 
 #### Greenhouse
+
 ```bash
 GREENHOUSE_COMPANIES=airbnb,stripe,figma
 ```
+````
 
 #### Lever
+
 ```bash
 LEVER_COMPANIES=palantir,veeva,shieldai
 ```
 
 #### Ashby
+
 ```bash
 ASHBY_COMPANIES=openai,anthropic,cohere
 ```
 
 #### Workday
+
 ```bash
 WORKDAY_COMPANIES=amazon|wd1|amazonjobs,microsoft|wd1|mscareers
 ```
+
 ```
 
 **Status:** ✅ Documentation plan complete
@@ -637,3 +670,4 @@ The adapter plans are based on these proven implementations:
    - GraphQL and REST APIs
 
 All reference implementations validate our approach and API endpoint choices.
+```

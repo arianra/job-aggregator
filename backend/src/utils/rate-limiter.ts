@@ -1,4 +1,4 @@
-import logger from './logger.js';
+import logger from './logger.js'
 
 /**
  * Sliding-window rate limiter.
@@ -11,11 +11,11 @@ import logger from './logger.js';
  * 2. Enough time passes that an old timestamp falls outside the window.
  */
 export class RateLimiter {
-  private readonly timestamps: number[] = [];
+  private readonly timestamps: number[] = []
   private readonly queue: Array<{
-    resolve: () => void;
-    reject: (e: Error) => void;
-  }> = [];
+    resolve: () => void
+    reject: (e: Error) => void
+  }> = []
 
   /**
    * @param maxRequests  Maximum requests allowed per window
@@ -23,7 +23,7 @@ export class RateLimiter {
    */
   constructor(
     private readonly maxRequests: number,
-    private readonly windowMs: number,
+    private readonly windowMs: number
   ) {}
 
   // ---------------------------------------------------------------------------
@@ -31,12 +31,12 @@ export class RateLimiter {
   // ---------------------------------------------------------------------------
 
   get pendingCount(): number {
-    return this.queue.length;
+    return this.queue.length
   }
 
   get activeCount(): number {
-    this.prune();
-    return this.timestamps.length;
+    this.prune()
+    return this.timestamps.length
   }
 
   // ---------------------------------------------------------------------------
@@ -48,16 +48,16 @@ export class RateLimiter {
    * If capacity is available, resolves immediately.
    */
   async waitForSlot(): Promise<void> {
-    this.prune();
+    this.prune()
 
     if (this.timestamps.length < this.maxRequests) {
-      this.timestamps.push(Date.now());
-      return;
+      this.timestamps.push(Date.now())
+      return
     }
 
     return new Promise<void>((resolve, reject) => {
-      this.queue.push({ resolve, reject });
-    });
+      this.queue.push({ resolve, reject })
+    })
   }
 
   /**
@@ -65,9 +65,9 @@ export class RateLimiter {
    */
   abort(reason: string): void {
     while (this.queue.length > 0) {
-      this.queue.shift()!.reject(new Error(reason));
+      this.queue.shift()!.reject(new Error(reason))
     }
-    logger.info('RateLimiter aborted', { reason });
+    logger.info('RateLimiter aborted', { reason })
   }
 
   // ---------------------------------------------------------------------------
@@ -76,15 +76,15 @@ export class RateLimiter {
 
   /** Remove expired timestamps and drain the queue */
   private prune(): void {
-    const cutoff = Date.now() - this.windowMs;
+    const cutoff = Date.now() - this.windowMs
     while (this.timestamps.length > 0 && this.timestamps[0] <= cutoff) {
-      this.timestamps.shift();
+      this.timestamps.shift()
     }
 
     while (this.queue.length > 0 && this.timestamps.length < this.maxRequests) {
-      const entry = this.queue.shift()!;
-      this.timestamps.push(Date.now());
-      entry.resolve();
+      const entry = this.queue.shift()!
+      this.timestamps.push(Date.now())
+      entry.resolve()
     }
   }
 }

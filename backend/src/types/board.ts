@@ -3,41 +3,41 @@
  */
 export interface Job {
   /** Internal ID (assigned after deduplication) */
-  id: string;
+  id: string
 
   /** Job title */
-  title: string;
+  title: string
 
   /** Company information */
   company: {
-    name: string;
-    website?: string;
-    logo?: string;
-  };
+    name: string
+    website?: string
+    logo?: string
+  }
 
   /** Job location */
-  location: string;
+  location: string
 
   /** Job description (may contain HTML) */
-  description: string;
+  description: string
 
   /** Minimum salary (annual, USD) */
-  salaryMin?: number;
+  salaryMin?: number
 
   /** Maximum salary (annual, USD) */
-  salaryMax?: number;
+  salaryMax?: number
 
   /** Whether the job is remote */
-  remote: boolean;
+  remote: boolean
 
   /** Tags/skills associated with the job */
-  tags: string[];
+  tags: string[]
 
   /** When the job was posted */
-  postedDate: Date;
+  postedDate: Date
 
   /** Application URL (if available) */
-  applicationUrl?: string;
+  applicationUrl?: string
 }
 
 /**
@@ -45,23 +45,23 @@ export interface Job {
  */
 export interface Source {
   /** Internal ID (assigned by database) */
-  id: string;
+  id: string
 
   /** Foreign key to Job */
-  jobId: string;
+  jobId: string
 
   /** Which board this source is from */
-  board: string;
+  board: string
 
   /** External ID on the board (e.g., Indeed job key, LinkedIn job ID) */
-  externalId: string;
+  externalId: string
 
   /** Direct URL to the job posting on the board */
-  url: string;
+  url: string
 
   /** When we scraped this source */
-  scrapedAt: Date;
+  scrapedAt: Date
 
   /** When we last verified this source is still active */
-  lastVerifiedAt?: Date;
+  lastVerifiedAt?: Date
 }

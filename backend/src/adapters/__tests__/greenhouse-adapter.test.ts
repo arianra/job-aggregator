@@ -1,6 +1,10 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { GreenhouseAdapter } from '../greenhouse-adapter.js'
-import type { GreenhouseJob, GreenhouseJobsResponse, GreenhouseBoardsResponse } from '../../types/greenhouse.js'
+import type {
+  GreenhouseJob,
+  GreenhouseJobsResponse,
+  GreenhouseBoardsResponse,
+} from '../../types/greenhouse.js'
 import { safeHttp } from '../../utils/safe-http.js'
 
 // Helper to access module-level transform function
@@ -21,7 +25,7 @@ describe('GreenhouseAdapter', () => {
     adapter = new GreenhouseAdapter()
     // Clear pre-populated boards for testing
     adapter['boards'].clear()
-    getMock = (safeHttp.get as ReturnType<typeof vi.fn>)
+    getMock = safeHttp.get as ReturnType<typeof vi.fn>
     getMock.mockReset()
   })
 
@@ -90,9 +94,7 @@ describe('GreenhouseAdapter', () => {
         internal_job_id: 458,
         updated_at: '2024-01-15T00:00:00Z',
         content: '<p>Job description</p>',
-        metadata: [
-          { name: 'Salary', value: '$120,000 - $180,000' },
-        ],
+        metadata: [{ name: 'Salary', value: '$120,000 - $180,000' }],
       }
 
       const result = transformGreenhouseJob(rawJob, 'stripe', 'Stripe')
@@ -114,9 +116,7 @@ describe('GreenhouseAdapter', () => {
         internal_job_id: 459,
         updated_at: '2024-01-15T00:00:00Z',
         content: '<p>Job description</p>',
-        metadata: [
-          { name: 'Compensation', value: '$120k - $180k' },
-        ],
+        metadata: [{ name: 'Compensation', value: '$120k - $180k' }],
       }
 
       const result = transformGreenhouseJob(rawJob, 'stripe', 'Stripe')
@@ -137,9 +137,7 @@ describe('GreenhouseAdapter', () => {
         internal_job_id: 460,
         updated_at: '2024-01-15T00:00:00Z',
         content: '<p>Contract position</p>',
-        metadata: [
-          { name: 'Employment Type', value: 'Contract' },
-        ],
+        metadata: [{ name: 'Employment Type', value: 'Contract' }],
       }
 
       const result = transformGreenhouseJob(rawJob, 'stripe', 'Stripe')
@@ -158,9 +156,7 @@ describe('GreenhouseAdapter', () => {
         internal_job_id: 461,
         updated_at: '2024-01-15T00:00:00Z',
         content: '<p>Senior position</p>',
-        metadata: [
-          { name: 'Seniority', value: 'Senior' },
-        ],
+        metadata: [{ name: 'Seniority', value: 'Senior' }],
       }
 
       const result = transformGreenhouseJob(rawJob, 'stripe', 'Stripe')
@@ -394,9 +390,7 @@ describe('GreenhouseAdapter', () => {
             internal_job_id: 205,
             updated_at: '2024-01-15T00:00:00Z',
             content: '<p>Job</p>',
-            metadata: [
-              { name: 'Salary', value: '$150,000 - $200,000' },
-            ],
+            metadata: [{ name: 'Salary', value: '$150,000 - $200,000' }],
           },
           {
             id: 106,
@@ -408,9 +402,7 @@ describe('GreenhouseAdapter', () => {
             internal_job_id: 206,
             updated_at: '2024-01-15T00:00:00Z',
             content: '<p>Job</p>',
-            metadata: [
-              { name: 'Salary', value: '$80,000 - $90,000' },
-            ],
+            metadata: [{ name: 'Salary', value: '$80,000 - $90,000' }],
           },
         ],
       }

@@ -1,4 +1,12 @@
-import type { BoardAdapter, AdapterResult, JobSearchQuery, AdapterHealth, Job, Source, Location } from '@job-aggregator/shared'
+import type {
+  BoardAdapter,
+  AdapterResult,
+  JobSearchQuery,
+  AdapterHealth,
+  Job,
+  Source,
+  Location,
+} from '@job-aggregator/shared'
 import logger from '../utils/logger.js'
 import { safeHttp } from '../utils/safe-http.js'
 
@@ -46,7 +54,7 @@ export function parseLocation(locationStr: string): Location {
   }
 
   const remote = /remote/i.test(locationStr)
-  const parts = locationStr.split(',').map(p => p.trim())
+  const parts = locationStr.split(',').map((p) => p.trim())
 
   if (parts.length === 1) {
     return { city: parts[0], remote, country: 'USA' }
@@ -64,7 +72,7 @@ export function parseSalary(description: string): Job['salary_range'] {
   // Look for salary information in description
   const salaryPattern = /\$(\d+(?:,\d{3})*(?:k|K)?)\s*[-–—]\s*\$(\d+(?:,\d{3})*(?:k|K)?)/i
   const match = description.match(salaryPattern)
-  
+
   if (!match) return undefined
 
   const parseAmount = (s: string): number => {
@@ -94,7 +102,8 @@ export function parseJobType(description: string): Job['job_type'] {
 export function parseSeniority(title: string, description: string): Job['seniority_level'] {
   const text = `${title} ${description}`.toLowerCase()
   if (text.includes('intern')) return 'intern'
-  if (text.includes('entry-level') || text.includes('entry level') || text.includes('junior')) return 'entry'
+  if (text.includes('entry-level') || text.includes('entry level') || text.includes('junior'))
+    return 'entry'
   if (text.includes('mid-level') || text.includes('mid level')) return 'mid'
   if (text.includes('senior') || text.includes('sr')) return 'senior'
   if (text.includes('lead') || text.includes('staff') || text.includes('principal')) return 'lead'
@@ -113,49 +122,82 @@ export function stripHtml(html: string): string {
 }
 
 export function extractRequirements(lists: LeverJob['lists']): string[] {
-  const reqList = lists.find(list => 
-    list.text.toLowerCase().includes('requirement') || 
-    list.text.toLowerCase().includes('qualification')
+  const reqList = lists.find(
+    (list) =>
+      list.text.toLowerCase().includes('requirement') ||
+      list.text.toLowerCase().includes('qualification')
   )
-  
+
   if (!reqList) return []
-  
+
   // Handle HTML lists by splitting on <li> tags first
   const content = reqList.content
   if (content.includes('<li>')) {
     return content
       .split(/<li>/i)
       .slice(1) // Skip first empty split
-      .map(item => stripHtml(item))
-      .filter(s => s.length > 0)
+      .map((item) => stripHtml(item))
+      .filter((s) => s.length > 0)
   }
-  
+
   // Fallback to plain text splitting
   const text = stripHtml(content)
   return text
     .split(/[\n•●]/)
-    .map(s => s.trim())
-    .filter(s => s.length > 0)
+    .map((s) => s.trim())
+    .filter((s) => s.length > 0)
 }
 
 export function extractTags(description: string): string[] {
   const keywords = [
-    'react', 'node', 'typescript', 'javascript', 'python',
-    'aws', 'docker', 'kubernetes', 'sql', 'postgresql',
-    'mongodb', 'graphql', 'rest', 'api', 'java', 'golang',
-    'ruby', 'rails', 'vue', 'angular', 'next', 'nuxt',
-    'rust', 'go', 'elixir', 'terraform', 'linux', 'git',
-    'redis', 'elasticsearch', 'kafka', 'cicd', 'ci/cd', 'agile',
-    'scrum', 'tdd', 'microservices', 'serverless', 'sre',
+    'react',
+    'node',
+    'typescript',
+    'javascript',
+    'python',
+    'aws',
+    'docker',
+    'kubernetes',
+    'sql',
+    'postgresql',
+    'mongodb',
+    'graphql',
+    'rest',
+    'api',
+    'java',
+    'golang',
+    'ruby',
+    'rails',
+    'vue',
+    'angular',
+    'next',
+    'nuxt',
+    'rust',
+    'go',
+    'elixir',
+    'terraform',
+    'linux',
+    'git',
+    'redis',
+    'elasticsearch',
+    'kafka',
+    'cicd',
+    'ci/cd',
+    'agile',
+    'scrum',
+    'tdd',
+    'microservices',
+    'serverless',
+    'sre',
   ]
 
   const lower = description.toLowerCase()
-  return keywords.filter(kw => lower.includes(kw))
+  return keywords.filter((kw) => lower.includes(kw))
 }
 
 export function transformLeverJob(
   raw: LeverJob,
-  companySlug: string,
+  companySlug: string
 ): { job: Job; source: Source } {
   const description = raw.description || ''
   const plainText = raw.descriptionPlain || stripHtml(description)
@@ -240,7 +282,7 @@ export class LeverAdapter implements BoardAdapter {
       const batch = companyList.slice(i, i + CONCURRENCY)
 
       const results = await Promise.allSettled(
-        batch.map(company => this.fetchCompanyJobs(company))
+        batch.map((company) => this.fetchCompanyJobs(company))
       )
 
       for (const result of results) {
@@ -254,7 +296,7 @@ export class LeverAdapter implements BoardAdapter {
 
       if (limit && allJobs.length >= limit) break
       if (i + CONCURRENCY < companyList.length) {
-        await new Promise(resolve => setTimeout(resolve, DELAY_MS))
+        await new Promise((resolve) => setTimeout(resolve, DELAY_MS))
       }
     }
 
@@ -278,8 +320,8 @@ export class LeverAdapter implements BoardAdapter {
       try {
         const response = await safeHttp.get<LeverJobsResponse>(`${BASE_URL}/${company}?mode=json`)
         const data = response.data
-        const rawJob = data.find(job => job.id === boardJobId)
-        
+        const rawJob = data.find((job) => job.id === boardJobId)
+
         if (rawJob) {
           const { job, source } = transformLeverJob(rawJob, company)
           return {
@@ -310,7 +352,7 @@ export class LeverAdapter implements BoardAdapter {
       const batch = companyList.slice(i, i + CONCURRENCY)
 
       const results = await Promise.allSettled(
-        batch.map(company => this.fetchCompanyJobs(company))
+        batch.map((company) => this.fetchCompanyJobs(company))
       )
 
       for (const result of results) {
@@ -324,7 +366,7 @@ export class LeverAdapter implements BoardAdapter {
 
       if (query.limit && allJobs.length >= query.limit * 2) break
       if (i + CONCURRENCY < companyList.length) {
-        await new Promise(resolve => setTimeout(resolve, DELAY_MS))
+        await new Promise((resolve) => setTimeout(resolve, DELAY_MS))
       }
     }
 
@@ -332,36 +374,32 @@ export class LeverAdapter implements BoardAdapter {
 
     if (query.title) {
       const lower = query.title.toLowerCase()
-      filtered = filtered.filter(j =>
-        j.title.toLowerCase().includes(lower) ||
-        j.description.toLowerCase().includes(lower)
+      filtered = filtered.filter(
+        (j) => j.title.toLowerCase().includes(lower) || j.description.toLowerCase().includes(lower)
       )
     }
 
     if (query.location) {
       const lower = query.location.toLowerCase()
-      filtered = filtered.filter(j =>
-        (j.location.city?.toLowerCase() || '').includes(lower) ||
-        (j.location.state?.toLowerCase() || '').includes(lower) ||
-        (j.location.country.toLowerCase() || '').includes(lower) ||
-        (query.remote && j.location.remote)
+      filtered = filtered.filter(
+        (j) =>
+          (j.location.city?.toLowerCase() || '').includes(lower) ||
+          (j.location.state?.toLowerCase() || '').includes(lower) ||
+          (j.location.country.toLowerCase() || '').includes(lower) ||
+          (query.remote && j.location.remote)
       )
     }
 
     if (query.remote !== undefined) {
-      filtered = filtered.filter(j => j.is_remote === query.remote)
+      filtered = filtered.filter((j) => j.is_remote === query.remote)
     }
 
     if (query.salaryMin !== undefined) {
-      filtered = filtered.filter(j =>
-        j.salary_range && j.salary_range.max >= query.salaryMin!
-      )
+      filtered = filtered.filter((j) => j.salary_range && j.salary_range.max >= query.salaryMin!)
     }
 
     if (query.salaryMax !== undefined) {
-      filtered = filtered.filter(j =>
-        j.salary_range && j.salary_range.min <= query.salaryMax!
-      )
+      filtered = filtered.filter((j) => j.salary_range && j.salary_range.min <= query.salaryMax!)
     }
 
     if (query.limit) {
@@ -369,7 +407,7 @@ export class LeverAdapter implements BoardAdapter {
     }
 
     const sources = filtered
-      .map(j => allSources.find(s => s.job_id === j.id))
+      .map((j) => allSources.find((s) => s.job_id === j.id))
       .filter((s): s is Source => s !== undefined)
 
     return {
@@ -387,7 +425,7 @@ export class LeverAdapter implements BoardAdapter {
   async healthCheck(): Promise<AdapterHealth> {
     try {
       await safeHttp.get(`${BASE_URL}/stripe?mode=json`)
-      
+
       return {
         healthy: true,
         message: `Lever API reachable, ${this.companies.size} companies cached`,

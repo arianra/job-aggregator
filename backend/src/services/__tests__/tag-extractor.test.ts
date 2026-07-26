@@ -1,18 +1,18 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import type { Job, Profile } from '@job-aggregator/shared';
+import { describe, it, expect, vi, beforeEach } from 'vitest'
+import type { Job, Profile } from '@job-aggregator/shared'
 
 // Use vi.hoisted to define mock before vi.mock is hoisted
 const { mockExtractSkillsFromText } = vi.hoisted(() => {
-  return { mockExtractSkillsFromText: vi.fn() };
-});
+  return { mockExtractSkillsFromText: vi.fn() }
+})
 
 // Mock the skill extractor before importing tag-extractor
 vi.mock('../skill-extractor.js', () => ({
   extractSkillsFromText: mockExtractSkillsFromText,
-}));
+}))
 
 // Now import tag-extractor (it will use the mocked version)
-import { tagJobsWithSkills } from '../tag-extractor.js';
+import { tagJobsWithSkills } from '../tag-extractor.js'
 
 describe('tagJobsWithSkills', () => {
   const mockProfile: Profile = {
@@ -33,7 +33,7 @@ describe('tagJobsWithSkills', () => {
     preferences: {} as Profile['preferences'],
     search_queries: [],
     resume: {} as Profile['resume'],
-  };
+  }
 
   const mockJobs: Job[] = [
     {
@@ -84,167 +84,167 @@ describe('tagJobsWithSkills', () => {
       sources: [],
       status: 'active' as const,
     },
-  ];
+  ]
 
   beforeEach(() => {
-    vi.clearAllMocks();
-  });
+    vi.clearAllMocks()
+  })
 
   describe('without profile', () => {
     it('should use fallback keywords when profile is null', async () => {
-      const result = await tagJobsWithSkills(mockJobs, null, { useAI: false });
+      const result = await tagJobsWithSkills(mockJobs, null, { useAI: false })
 
-      expect(result).toHaveLength(2);
-      expect(result[0].tags.length).toBeGreaterThan(0);
-      expect(result[1].tags.length).toBeGreaterThan(0);
-    });
+      expect(result).toHaveLength(2)
+      expect(result[0].tags.length).toBeGreaterThan(0)
+      expect(result[1].tags.length).toBeGreaterThan(0)
+    })
 
     it('should use fallback keywords when profile has no skills', async () => {
-      const emptyProfile = { ...mockProfile, skills: [] };
-      const result = await tagJobsWithSkills(mockJobs, emptyProfile, { useAI: false });
+      const emptyProfile = { ...mockProfile, skills: [] }
+      const result = await tagJobsWithSkills(mockJobs, emptyProfile, { useAI: false })
 
-      expect(result).toHaveLength(2);
-      expect(result[0].tags.length).toBeGreaterThan(0);
-    });
-  });
+      expect(result).toHaveLength(2)
+      expect(result[0].tags.length).toBeGreaterThan(0)
+    })
+  })
 
   describe('with profile and no AI', () => {
     it('should extract only profile-matching tags without AI', async () => {
-      const result = await tagJobsWithSkills(mockJobs, mockProfile, { useAI: false });
+      const result = await tagJobsWithSkills(mockJobs, mockProfile, { useAI: false })
 
-      expect(result).toHaveLength(2);
-      
+      expect(result).toHaveLength(2)
+
       // Job 1 should match React, TypeScript, AWS
-      expect(result[0].tags).toContain('react');
-      expect(result[0].tags).toContain('typescript');
-      expect(result[0].tags).toContain('aws');
-      
+      expect(result[0].tags).toContain('react')
+      expect(result[0].tags).toContain('typescript')
+      expect(result[0].tags).toContain('aws')
+
       // Job 2 should match Python
-      expect(result[1].tags).toContain('python');
-    });
+      expect(result[1].tags).toContain('python')
+    })
 
     it('should normalize skill names for matching', async () => {
       const jobWithNode: Job = {
         ...mockJobs[0],
         title: 'Node Developer',
         description: 'Looking for Node.js experts',
-      };
+      }
 
-      const result = await tagJobsWithSkills([jobWithNode], mockProfile, { useAI: false });
-      
+      const result = await tagJobsWithSkills([jobWithNode], mockProfile, { useAI: false })
+
       // Profile has "Node.js" which normalizes to "nodejs"
       // Job text has "Node.js" which should match
-      expect(result[0].tags).toContain('nodejs');
-    });
+      expect(result[0].tags).toContain('nodejs')
+    })
 
     it('should not extract skills not in profile', async () => {
       const jobWithUnknown: Job = {
         ...mockJobs[0],
         description: 'Looking for React and Kubernetes experts',
-      };
+      }
 
-      const result = await tagJobsWithSkills([jobWithUnknown], mockProfile, { useAI: false });
-      
-      expect(result[0].tags).toContain('react');
-      expect(result[0].tags).not.toContain('kubernetes');
-    });
-  });
+      const result = await tagJobsWithSkills([jobWithUnknown], mockProfile, { useAI: false })
+
+      expect(result[0].tags).toContain('react')
+      expect(result[0].tags).not.toContain('kubernetes')
+    })
+  })
 
   describe('with profile and AI', () => {
     it('should use AI extraction when enabled', async () => {
       const mockExtractedSkills = [
         ['React', 'TypeScript', 'AWS'],
-        ['Python', 'Django']
-      ];
+        ['Python', 'Django'],
+      ]
 
-      mockExtractSkillsFromText.mockResolvedValue(mockExtractedSkills);
+      mockExtractSkillsFromText.mockResolvedValue(mockExtractedSkills)
 
       const result = await tagJobsWithSkills(mockJobs, mockProfile, {
         useAI: true,
-        qwenApiKey: 'test-key'
-      });
+        qwenApiKey: 'test-key',
+      })
 
-      expect(mockExtractSkillsFromText).toHaveBeenCalled();
-      expect(result).toHaveLength(2);
-      
+      expect(mockExtractSkillsFromText).toHaveBeenCalled()
+      expect(result).toHaveLength(2)
+
       // Should only include skills that match profile
-      expect(result[0].tags).toContain('react');
-      expect(result[0].tags).toContain('typescript');
-      expect(result[0].tags).toContain('aws');
-      
-      expect(result[1].tags).toContain('python');
-    });
+      expect(result[0].tags).toContain('react')
+      expect(result[0].tags).toContain('typescript')
+      expect(result[0].tags).toContain('aws')
+
+      expect(result[1].tags).toContain('python')
+    })
 
     it('should fallback to keyword matching when AI fails', async () => {
-      mockExtractSkillsFromText.mockRejectedValue(new Error('API Error'));
+      mockExtractSkillsFromText.mockRejectedValue(new Error('API Error'))
 
       const result = await tagJobsWithSkills(mockJobs, mockProfile, {
         useAI: true,
-        qwenApiKey: 'test-key'
-      });
+        qwenApiKey: 'test-key',
+      })
 
-      expect(result).toHaveLength(2);
+      expect(result).toHaveLength(2)
       // Should still have tags from fallback
-      expect(result[0].tags.length).toBeGreaterThan(0);
-      expect(result[1].tags.length).toBeGreaterThan(0);
-    });
+      expect(result[0].tags.length).toBeGreaterThan(0)
+      expect(result[1].tags.length).toBeGreaterThan(0)
+    })
 
     it('should process jobs in batches', async () => {
-      const manyJobs = Array(25).fill(mockJobs[0]);
-      const mockExtractedSkills = manyJobs.map(() => ['React']);
+      const manyJobs = Array(25).fill(mockJobs[0])
+      const mockExtractedSkills = manyJobs.map(() => ['React'])
 
-      mockExtractSkillsFromText.mockResolvedValue(mockExtractedSkills);
+      mockExtractSkillsFromText.mockResolvedValue(mockExtractedSkills)
 
       await tagJobsWithSkills(manyJobs, mockProfile, {
         useAI: true,
         qwenApiKey: 'test-key',
-        batchSize: 10
-      });
+        batchSize: 10,
+      })
 
       // Should be called 3 times: 10, 10, 5
-      expect(mockExtractSkillsFromText).toHaveBeenCalledTimes(3);
-    });
+      expect(mockExtractSkillsFromText).toHaveBeenCalledTimes(3)
+    })
 
     it('should merge AI-extracted tags with existing tags', async () => {
       const jobWithTags: Job = {
         ...mockJobs[0],
         tags: ['existing-tag'],
-      };
+      }
 
-      mockExtractSkillsFromText.mockResolvedValue([['React']]);
+      mockExtractSkillsFromText.mockResolvedValue([['React']])
 
       const result = await tagJobsWithSkills([jobWithTags], mockProfile, {
         useAI: true,
-        qwenApiKey: 'test-key'
-      });
+        qwenApiKey: 'test-key',
+      })
 
-      expect(result[0].tags).toContain('existing-tag');
-      expect(result[0].tags).toContain('react');
-    });
+      expect(result[0].tags).toContain('existing-tag')
+      expect(result[0].tags).toContain('react')
+    })
 
     it('should not duplicate tags', async () => {
       const jobWithReact: Job = {
         ...mockJobs[0],
         tags: ['react'],
-      };
+      }
 
-      mockExtractSkillsFromText.mockResolvedValue([['React']]);
+      mockExtractSkillsFromText.mockResolvedValue([['React']])
 
       const result = await tagJobsWithSkills([jobWithReact], mockProfile, {
         useAI: true,
-        qwenApiKey: 'test-key'
-      });
+        qwenApiKey: 'test-key',
+      })
 
-      const reactCount = result[0].tags.filter(t => t === 'react').length;
-      expect(reactCount).toBe(1);
-    });
-  });
+      const reactCount = result[0].tags.filter((t) => t === 'react').length
+      expect(reactCount).toBe(1)
+    })
+  })
 
   describe('edge cases', () => {
     it('should handle empty jobs array', async () => {
-      const result = await tagJobsWithSkills([], mockProfile, { useAI: false });
-      expect(result).toHaveLength(0);
-    });
+      const result = await tagJobsWithSkills([], mockProfile, { useAI: false })
+      expect(result).toHaveLength(0)
+    })
 
     it('should handle jobs with no text content', async () => {
       const emptyJob: Job = {
@@ -252,26 +252,26 @@ describe('tagJobsWithSkills', () => {
         title: '',
         description: '',
         requirements: [],
-      };
+      }
 
-      const result = await tagJobsWithSkills([emptyJob], mockProfile, { useAI: false });
-      expect(result).toHaveLength(1);
-      expect(result[0].tags).toHaveLength(0);
-    });
+      const result = await tagJobsWithSkills([emptyJob], mockProfile, { useAI: false })
+      expect(result).toHaveLength(1)
+      expect(result[0].tags).toHaveLength(0)
+    })
 
     it('should use default batch size of 10', async () => {
-      const manyJobs = Array(15).fill(mockJobs[0]);
-      const mockExtractedSkills = manyJobs.map(() => ['React']);
+      const manyJobs = Array(15).fill(mockJobs[0])
+      const mockExtractedSkills = manyJobs.map(() => ['React'])
 
-      mockExtractSkillsFromText.mockResolvedValue(mockExtractedSkills);
+      mockExtractSkillsFromText.mockResolvedValue(mockExtractedSkills)
 
       await tagJobsWithSkills(manyJobs, mockProfile, {
         useAI: true,
-        qwenApiKey: 'test-key'
-      });
+        qwenApiKey: 'test-key',
+      })
 
       // Should be called twice: 10, 5
-      expect(mockExtractSkillsFromText).toHaveBeenCalledTimes(2);
-    });
-  });
-});
+      expect(mockExtractSkillsFromText).toHaveBeenCalledTimes(2)
+    })
+  })
+})

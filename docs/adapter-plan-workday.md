@@ -7,6 +7,7 @@ Implement a `WorkdayAdapter` that scrapes job listings from Workday-powered comp
 Workday is used by the largest enterprises (Amazon, Microsoft, Meta, Oracle, SAP, etc.). Each company has a unique tenant URL following the pattern `https://{company}.wd{num}.myworkdayjobs.com/wday/cxs/{company}/{site_id}/jobs`.
 
 **Reference implementations:**
+
 - `Feashliaa/job-board-aggregator` (Python) — uses Workday POST API with 50 concurrent workers
 - `strelov1/freehire` (Go) — 831,217 open jobs from 4,047 companies via Workday API
 - `kbhujbal/go-get-jobs` (Go) — scrapes Workday tenants for 50+ tech companies
@@ -16,11 +17,13 @@ Workday is used by the largest enterprises (Amazon, Microsoft, Meta, Oracle, SAP
 ## API Reference
 
 ### Jobs Endpoint
+
 ```
 POST https://{company}.wd{num}.myworkdayjobs.com/wday/cxs/{company}/{site_id}/jobs
 ```
 
 **Headers:**
+
 ```
 Accept: application/json
 Content-Type: application/json
@@ -30,6 +33,7 @@ User-Agent: <rotate browser UA>
 ```
 
 **Request Body:**
+
 ```json
 {
   "appliedFacets": {},
@@ -40,6 +44,7 @@ User-Agent: <rotate browser UA>
 ```
 
 **Response:**
+
 ```json
 {
   "total": 150,
@@ -57,12 +62,14 @@ User-Agent: <rotate browser UA>
 ```
 
 **Query Parameters (in POST body):**
+
 - `limit` — max items per page (default 20)
 - `offset` — pagination offset (0, 20, 40, ...)
 - `searchText` — optional keyword filter
 - `appliedFacets` — optional filters (location, department, etc.)
 
 ### Rate Limits
+
 - No formal rate limit, but Workday actively blocks high-volume scrapers
 - Feashliaa uses 50 concurrent workers (but with strict error detection)
 - Uses retry with random backoff (2.0-4.0s)
@@ -70,12 +77,15 @@ User-Agent: <rotate browser UA>
 - Origin/Referer headers are required
 
 ### Tenant URL Pattern
+
 Companies are identified by a slug with format: `{company}|wd{num}|{site_id}`
+
 - `company`: lowercase company name (e.g., "amazon", "microsoft")
 - `wd{num}`: Workday tenant number (e.g., "wd1", "wd3", "wd5")
 - `site_id`: career site identifier (e.g., "amazonjobs", "mscareers")
 
 Examples:
+
 - Amazon: `amazon|wd1|amazonjobs`
 - Microsoft: `microsoft|wd1|mscareers`
 - Oracle: `oracle|wd5|oracle`
@@ -157,7 +167,7 @@ function parseLocation(locationsText: string): Location {
   const remote = /remote/i.test(raw)
 
   // Workday format: "City, State, Country" or "City, Country"
-  const parts = raw.split(',').map(p => p.trim())
+  const parts = raw.split(',').map((p) => p.trim())
 
   if (parts.length === 1) {
     return { city: parts[0], remote, country: 'USA' }
@@ -223,7 +233,8 @@ function parseSeniority(title: string): Job['seniority_level'] {
   if (lower.includes('entry') || lower.includes('junior') || lower.includes('jr')) return 'entry'
   if (lower.includes('mid') || lower.includes('2-5')) return 'mid'
   if (lower.includes('senior') || lower.includes('sr')) return 'senior'
-  if (lower.includes('lead') || lower.includes('staff') || lower.includes('principal')) return 'lead'
+  if (lower.includes('lead') || lower.includes('staff') || lower.includes('principal'))
+    return 'lead'
   if (lower.includes('manager') || lower.includes('mgr')) return 'manager'
   if (lower.includes('director')) return 'director'
   return undefined
@@ -231,23 +242,54 @@ function parseSeniority(title: string): Job['seniority_level'] {
 
 function extractTags(title: string): string[] {
   const keywords = [
-    'react', 'node', 'typescript', 'javascript', 'python',
-    'aws', 'docker', 'kubernetes', 'sql', 'postgresql',
-    'mongodb', 'graphql', 'rest', 'api', 'java', 'golang',
-    'ruby', 'rails', 'vue', 'angular', 'next', 'nuxt',
-    'rust', 'go', 'elixir', 'terraform', 'linux', 'git',
-    'redis', 'elasticsearch', 'kafka', 'cicd', 'agile',
-    'scrum', 'tdd', 'microservices', 'serverless', 'sre',
+    'react',
+    'node',
+    'typescript',
+    'javascript',
+    'python',
+    'aws',
+    'docker',
+    'kubernetes',
+    'sql',
+    'postgresql',
+    'mongodb',
+    'graphql',
+    'rest',
+    'api',
+    'java',
+    'golang',
+    'ruby',
+    'rails',
+    'vue',
+    'angular',
+    'next',
+    'nuxt',
+    'rust',
+    'go',
+    'elixir',
+    'terraform',
+    'linux',
+    'git',
+    'redis',
+    'elasticsearch',
+    'kafka',
+    'cicd',
+    'agile',
+    'scrum',
+    'tdd',
+    'microservices',
+    'serverless',
+    'sre',
   ]
   const lower = title.toLowerCase()
-  return keywords.filter(kw => lower.includes(kw))
+  return keywords.filter((kw) => lower.includes(kw))
 }
 
 function transformWorkdayJob(
   posting: WorkdayJobPosting,
   company: string,
   baseUrl: string,
-  siteId: string,
+  siteId: string
 ): { job: Partial<Job>; source: Partial<Source> } {
   const location = parseLocation(posting.locationsText)
   const seniority = parseSeniority(posting.title)
@@ -357,7 +399,7 @@ export class WorkdayAdapter implements BoardAdapter {
       const batch = tenantList.slice(i, i + CONCURRENCY)
 
       const results = await Promise.allSettled(
-        batch.map(([slug, config]) => this.fetchTenantJobs(slug, config)),
+        batch.map(([slug, config]) => this.fetchTenantJobs(slug, config))
       )
 
       for (const result of results) {
@@ -391,7 +433,7 @@ export class WorkdayAdapter implements BoardAdapter {
     for (const [slug, config] of this.tenants) {
       try {
         const result = await this.fetchTenantJobs(slug, config)
-        const job = result.jobs.find(j => j.sources[0]?.board_job_id === boardJobId)
+        const job = result.jobs.find((j) => j.sources[0]?.board_job_id === boardJobId)
         if (job) {
           const source = job.sources[0]
           return {
@@ -413,24 +455,25 @@ export class WorkdayAdapter implements BoardAdapter {
 
     if (query.title) {
       const lower = query.title.toLowerCase()
-      filtered = filtered.filter(j => j.title.toLowerCase().includes(lower))
+      filtered = filtered.filter((j) => j.title.toLowerCase().includes(lower))
     }
     if (query.location) {
       const lower = query.location.toLowerCase()
-      filtered = filtered.filter(j =>
-        (j.location.city?.toLowerCase() || '').includes(lower) ||
-        (j.location.state?.toLowerCase() || '').includes(lower) ||
-        (query.remote && j.location.remote)
+      filtered = filtered.filter(
+        (j) =>
+          (j.location.city?.toLowerCase() || '').includes(lower) ||
+          (j.location.state?.toLowerCase() || '').includes(lower) ||
+          (query.remote && j.location.remote)
       )
     }
     if (query.remote !== undefined) {
-      filtered = filtered.filter(j => j.is_remote === query.remote)
+      filtered = filtered.filter((j) => j.is_remote === query.remote)
     }
     if (query.salaryMin !== undefined) {
-      filtered = filtered.filter(j => j.salary_range && j.salary_range.max >= query.salaryMin!)
+      filtered = filtered.filter((j) => j.salary_range && j.salary_range.max >= query.salaryMin!)
     }
     if (query.salaryMax !== undefined) {
-      filtered = filtered.filter(j => j.salary_range && j.salary_range.min <= query.salaryMax!)
+      filtered = filtered.filter((j) => j.salary_range && j.salary_range.min <= query.salaryMax!)
     }
     if (query.limit) {
       filtered = filtered.slice(0, query.limit)
@@ -438,7 +481,7 @@ export class WorkdayAdapter implements BoardAdapter {
 
     return {
       jobs: filtered,
-      sources: filtered.map(j => j.sources[0]).filter((s): s is Source => s !== undefined),
+      sources: filtered.map((j) => j.sources[0]).filter((s): s is Source => s !== undefined),
       metadata: { totalAvailable: filtered.length, fetchedAt: new Date(), durationMs: 0 },
     }
   }
@@ -467,7 +510,7 @@ export class WorkdayAdapter implements BoardAdapter {
 
   private async fetchTenantJobs(
     slug: string,
-    config: { company: string; wd: string; siteId: string },
+    config: { company: string; wd: string; siteId: string }
   ): Promise<{ jobs: Job[]; sources: Source[] }> {
     const { company, wd, siteId } = config
     const baseUrl = `https://${company}.${wd}.myworkdayjobs.com`
@@ -516,7 +559,9 @@ export class WorkdayAdapter implements BoardAdapter {
         if (observedTotal === null) {
           observedTotal = total
         } else if (total !== observedTotal) {
-          logger.warn(`[workday] ${slug}: total changed from ${observedTotal} to ${total}, breaking`)
+          logger.warn(
+            `[workday] ${slug}: total changed from ${observedTotal} to ${total}, breaking`
+          )
           break
         }
 
@@ -552,7 +597,7 @@ export class WorkdayAdapter implements BoardAdapter {
 }
 
 function sleep(ms: number): Promise<void> {
-  return new Promise(resolve => setTimeout(resolve, ms))
+  return new Promise((resolve) => setTimeout(resolve, ms))
 }
 ```
 
@@ -573,6 +618,7 @@ Tests covering:
 9. **`healthCheck`** — mock success/failure
 
 Mock pattern:
+
 ```typescript
 vi.mock('axios', () => ({
   default: {
@@ -584,6 +630,7 @@ vi.mock('axios', () => ({
 ### Task 3: Register adapter
 
 In `backend/src/index.ts`:
+
 ```typescript
 import { WorkdayAdapter } from './adapters/workday-adapter.js'
 

@@ -1,4 +1,12 @@
-import type { BoardAdapter, AdapterResult, JobSearchQuery, AdapterHealth, Job, Source, Location } from '@job-aggregator/shared'
+import type {
+  BoardAdapter,
+  AdapterResult,
+  JobSearchQuery,
+  AdapterHealth,
+  Job,
+  Source,
+  Location,
+} from '@job-aggregator/shared'
 import logger from '../utils/logger.js'
 import { safeHttp } from '../utils/safe-http.js'
 import { httpResponseCache, discoveryCache } from '../utils/cache.js'
@@ -40,8 +48,8 @@ interface GreenhouseBoardsResponse {
 // ============================================================================
 
 const BASE_URL = 'https://boards-api.greenhouse.io/v1'
-const CONCURRENCY = 5  // Reduced from 10 to prevent API abuse
-const DELAY_MS = 1000  // Increased from 500ms to 1000ms between batches
+const CONCURRENCY = 5 // Reduced from 10 to prevent API abuse
+const DELAY_MS = 1000 // Increased from 500ms to 1000ms between batches
 
 // ============================================================================
 // Pure transform functions
@@ -50,7 +58,7 @@ const DELAY_MS = 1000  // Increased from 500ms to 1000ms between batches
 function parseLocation(loc: { name: string }): Location {
   const raw = loc.name.trim()
   const remote = /remote/i.test(raw)
-  const parts = raw.split(',').map(p => p.trim())
+  const parts = raw.split(',').map((p) => p.trim())
   const country = parts.length >= 3 ? parts[parts.length - 1] : 'USA'
 
   if (parts.length === 1) {
@@ -66,10 +74,12 @@ function parseLocation(loc: { name: string }): Location {
 }
 
 function parseSalary(metadata: Array<{ name: string; value: string }>): Job['salary_range'] {
-  const salaryField = metadata.find(m => /salary|compensation|pay/i.test(m.name))
+  const salaryField = metadata.find((m) => /salary|compensation|pay/i.test(m.name))
   if (!salaryField) return undefined
 
-  const match = salaryField.value.match(/\$?([\d,]+(?:\.\d+)?k?)\s*[-–—]\s*\$?([\d,]+(?:\.\d+)?k?)/i)
+  const match = salaryField.value.match(
+    /\$?([\d,]+(?:\.\d+)?k?)\s*[-–—]\s*\$?([\d,]+(?:\.\d+)?k?)/i
+  )
   if (!match) return undefined
 
   const parseAmount = (s: string): number => {
@@ -89,7 +99,7 @@ function parseSalary(metadata: Array<{ name: string; value: string }>): Job['sal
 }
 
 function parseJobType(metadata: Array<{ name: string; value: string }>): Job['job_type'] {
-  const typeField = metadata.find(m => /employment\s*type|job\s*type/i.test(m.name))
+  const typeField = metadata.find((m) => /employment\s*type|job\s*type/i.test(m.name))
   if (!typeField) return 'full-time'
 
   const val = typeField.value.toLowerCase()
@@ -100,7 +110,7 @@ function parseJobType(metadata: Array<{ name: string; value: string }>): Job['jo
 }
 
 function parseSeniority(metadata: Array<{ name: string; value: string }>): Job['seniority_level'] {
-  const seniorityField = metadata.find(m => /seniority|level|experience/i.test(m.name))
+  const seniorityField = metadata.find((m) => /seniority|level|experience/i.test(m.name))
   if (!seniorityField) return undefined
 
   const val = seniorityField.value.toLowerCase()
@@ -125,23 +135,54 @@ function stripHtml(html: string): string {
 
 function extractTags(description: string): string[] {
   const keywords = [
-    'react', 'node', 'typescript', 'javascript', 'python',
-    'aws', 'docker', 'kubernetes', 'sql', 'postgresql',
-    'mongodb', 'graphql', 'rest', 'api', 'java', 'golang',
-    'ruby', 'rails', 'vue', 'angular', 'next', 'nuxt',
-    'rust', 'go', 'elixir', 'terraform', 'linux', 'git',
-    'redis', 'elasticsearch', 'kafka', 'cicd', 'agile',
-    'scrum', 'tdd', 'microservices', 'serverless', 'sre',
+    'react',
+    'node',
+    'typescript',
+    'javascript',
+    'python',
+    'aws',
+    'docker',
+    'kubernetes',
+    'sql',
+    'postgresql',
+    'mongodb',
+    'graphql',
+    'rest',
+    'api',
+    'java',
+    'golang',
+    'ruby',
+    'rails',
+    'vue',
+    'angular',
+    'next',
+    'nuxt',
+    'rust',
+    'go',
+    'elixir',
+    'terraform',
+    'linux',
+    'git',
+    'redis',
+    'elasticsearch',
+    'kafka',
+    'cicd',
+    'agile',
+    'scrum',
+    'tdd',
+    'microservices',
+    'serverless',
+    'sre',
   ]
 
   const lower = description.toLowerCase()
-  return keywords.filter(kw => lower.includes(kw))
+  return keywords.filter((kw) => lower.includes(kw))
 }
 
 export function transformGreenhouseJob(
   raw: GreenhouseJob,
   boardToken: string,
-  companyName: string,
+  companyName: string
 ): { job: Job; source: Source } {
   const description = raw.content || ''
   const plainText = stripHtml(description)
@@ -217,19 +258,16 @@ export class GreenhouseAdapter implements BoardAdapter {
 
   async discoverBoards(): Promise<Map<string, string>> {
     try {
-      const response = await safeHttp.get<GreenhouseBoardsResponse>(
-        `${BASE_URL}/boards`,
-        {
-          cache: discoveryCache,
-          cacheTtlMs: 60 * 60 * 1000, // 1 hour cache for discovery
-          rateLimitKey: 'greenhouse',
-        }
-      )
+      const response = await safeHttp.get<GreenhouseBoardsResponse>(`${BASE_URL}/boards`, {
+        cache: discoveryCache,
+        cacheTtlMs: 60 * 60 * 1000, // 1 hour cache for discovery
+        rateLimitKey: 'greenhouse',
+      })
 
       for (const board of response.data.boards) {
         this.boards.set(board.board_token, board.company_name)
       }
-      
+
       logger.info(`[greenhouse] discovered ${this.boards.size} boards`)
       return this.boards
     } catch (err) {
@@ -240,7 +278,7 @@ export class GreenhouseAdapter implements BoardAdapter {
 
   async fetchJobs(limit?: number): Promise<AdapterResult> {
     const start = Date.now()
-    
+
     if (this.boards.size === 0) {
       await this.discoverBoards()
     }
@@ -253,9 +291,7 @@ export class GreenhouseAdapter implements BoardAdapter {
     for (let i = 0; i < boardTokens.length; i += CONCURRENCY) {
       const batch = boardTokens.slice(i, i + CONCURRENCY)
 
-      const results = await Promise.allSettled(
-        batch.map(token => this.fetchBoardJobs(token)),
-      )
+      const results = await Promise.allSettled(batch.map((token) => this.fetchBoardJobs(token)))
 
       for (const result of results) {
         if (result.status === 'fulfilled') {
@@ -268,7 +304,7 @@ export class GreenhouseAdapter implements BoardAdapter {
 
       if (limit && allJobs.length >= limit) break
       if (i + CONCURRENCY < boardTokens.length) {
-        await new Promise(resolve => setTimeout(resolve, DELAY_MS))
+        await new Promise((resolve) => setTimeout(resolve, DELAY_MS))
       }
     }
 
@@ -296,9 +332,9 @@ export class GreenhouseAdapter implements BoardAdapter {
             cache: null, // Don't cache single job lookups
           }
         )
-        
+
         if (response.status !== 200) continue
-        
+
         const { job, source } = transformGreenhouseJob(response.data, token, companyName)
 
         return {
@@ -332,7 +368,7 @@ export class GreenhouseAdapter implements BoardAdapter {
       const batch = boardsToScrape.slice(i, i + CONCURRENCY)
 
       const results = await Promise.allSettled(
-        batch.map(([token, name]) => this.fetchBoardJobs(token)),
+        batch.map(([token, name]) => this.fetchBoardJobs(token))
       )
 
       for (const result of results) {
@@ -346,7 +382,7 @@ export class GreenhouseAdapter implements BoardAdapter {
 
       if (query.limit && allJobs.length >= query.limit * 2) break
       if (i + CONCURRENCY < boardsToScrape.length) {
-        await new Promise(resolve => setTimeout(resolve, DELAY_MS))
+        await new Promise((resolve) => setTimeout(resolve, DELAY_MS))
       }
     }
 
@@ -354,36 +390,32 @@ export class GreenhouseAdapter implements BoardAdapter {
 
     if (query.title) {
       const lower = query.title.toLowerCase()
-      filtered = filtered.filter(j =>
-        j.title.toLowerCase().includes(lower) ||
-        j.description.toLowerCase().includes(lower)
+      filtered = filtered.filter(
+        (j) => j.title.toLowerCase().includes(lower) || j.description.toLowerCase().includes(lower)
       )
     }
 
     if (query.location) {
       const lower = query.location.toLowerCase()
-      filtered = filtered.filter(j =>
-        (j.location.city?.toLowerCase() || '').includes(lower) ||
-        (j.location.state?.toLowerCase() || '').includes(lower) ||
-        (j.location.country.toLowerCase() || '').includes(lower) ||
-        (query.remote && j.location.remote)
+      filtered = filtered.filter(
+        (j) =>
+          (j.location.city?.toLowerCase() || '').includes(lower) ||
+          (j.location.state?.toLowerCase() || '').includes(lower) ||
+          (j.location.country.toLowerCase() || '').includes(lower) ||
+          (query.remote && j.location.remote)
       )
     }
 
     if (query.remote !== undefined) {
-      filtered = filtered.filter(j => j.is_remote === query.remote)
+      filtered = filtered.filter((j) => j.is_remote === query.remote)
     }
 
     if (query.salaryMin !== undefined) {
-      filtered = filtered.filter(j =>
-        j.salary_range && j.salary_range.max >= query.salaryMin!
-      )
+      filtered = filtered.filter((j) => j.salary_range && j.salary_range.max >= query.salaryMin!)
     }
 
     if (query.salaryMax !== undefined) {
-      filtered = filtered.filter(j =>
-        j.salary_range && j.salary_range.min <= query.salaryMax!
-      )
+      filtered = filtered.filter((j) => j.salary_range && j.salary_range.min <= query.salaryMax!)
     }
 
     if (query.limit) {
@@ -391,7 +423,7 @@ export class GreenhouseAdapter implements BoardAdapter {
     }
 
     const sources = filtered
-      .map(j => allSources.find(s => s.job_id === j.id))
+      .map((j) => allSources.find((s) => s.job_id === j.id))
       .filter((s): s is Source => s !== undefined)
 
     return {
@@ -408,15 +440,12 @@ export class GreenhouseAdapter implements BoardAdapter {
 
   async healthCheck(): Promise<AdapterHealth> {
     try {
-      const response = await safeHttp.get<GreenhouseBoardsResponse>(
-        `${BASE_URL}/boards`,
-        {
-          rateLimitKey: 'greenhouse',
-          cache: null, // Don't cache health checks
-          timeoutMs: 5000,
-        }
-      )
-      
+      const response = await safeHttp.get<GreenhouseBoardsResponse>(`${BASE_URL}/boards`, {
+        rateLimitKey: 'greenhouse',
+        cache: null, // Don't cache health checks
+        timeoutMs: 5000,
+      })
+
       return {
         healthy: true,
         message: `Greenhouse API reachable, ${this.boards.size} boards cached`,

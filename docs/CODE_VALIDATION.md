@@ -17,9 +17,11 @@ These principles are non-negotiable and apply to all validation roles:
 ## Validation Roles
 
 ### 1. Architect Role
+
 **Focus**: System structure, boundaries, and long-term evolution
 
 **Validation Checklist**:
+
 - [ ] **Separation of concerns**: Each module has one clear responsibility
 - [ ] **Dependency direction**: Dependencies flow inward (infrastructure → domain)
 - [ ] **Interface contracts**: Clear, stable interfaces between modules
@@ -29,12 +31,14 @@ These principles are non-negotiable and apply to all validation roles:
 - [ ] **Technology isolation**: External libraries/frameworks are wrapped behind our interfaces
 
 **Questions to ask**:
+
 - Can I add a new job board without touching existing adapters?
 - If I remove this module, what breaks? (Should be minimal)
 - Are the boundaries between modules explicit and enforced?
 - Would a new team member understand the structure in 10 minutes?
 
 **Red flags**:
+
 - God objects or functions doing multiple things
 - Circular imports between modules
 - Business logic in infrastructure code
@@ -43,9 +47,11 @@ These principles are non-negotiable and apply to all validation roles:
 ---
 
 ### 2. Developer Role
+
 **Focus**: Implementation quality, correctness, and developer experience
 
 **Validation Checklist**:
+
 - [ ] **Type safety**: TypeScript strict mode, no `any` types without justification
 - [ ] **Error handling**: All errors are caught, logged, and handled appropriately
 - [ ] **Edge cases**: Boundary conditions and failure modes are handled
@@ -56,12 +62,14 @@ These principles are non-negotiable and apply to all validation roles:
 - [ ] **Async handling**: Promises are properly awaited, errors are caught
 
 **Questions to ask**:
+
 - Can I understand what this function does without reading the implementation?
 - What happens if this external service fails?
 - Are there any hidden side effects?
 - Is the happy path clear and the error paths explicit?
 
 **Red flags**:
+
 - Functions longer than 50 lines
 - Deep nesting (>3 levels)
 - Magic numbers or strings
@@ -71,9 +79,11 @@ These principles are non-negotiable and apply to all validation roles:
 ---
 
 ### 3. Tester Role
+
 **Focus**: Testability, coverage, and confidence in correctness
 
 **Validation Checklist**:
+
 - [ ] **Unit tests**: All public functions have unit tests
 - [ ] **Integration tests**: Module interactions are tested
 - [ ] **Edge cases**: Tests cover boundary conditions and error paths
@@ -84,12 +94,14 @@ These principles are non-negotiable and apply to all validation roles:
 - [ ] **Test speed**: Unit tests run in <1 second each
 
 **Questions to ask**:
+
 - If I change this code, will the tests catch bugs?
 - Are the tests testing behavior or implementation details?
 - Can I run tests in parallel without conflicts?
 - Do tests fail with clear, actionable messages?
 
 **Red flags**:
+
 - Tests that depend on network, database, or file system without mocks
 - Tests that only test the happy path
 - Tests that are slow or flaky
@@ -98,9 +110,11 @@ These principles are non-negotiable and apply to all validation roles:
 ---
 
 ### 4. Security Specialist Role
+
 **Focus**: Vulnerabilities, data protection, and secure practices
 
 **Validation Checklist**:
+
 - [ ] **Input validation**: All external input is validated and sanitized
 - [ ] **Authentication**: Sensitive operations require proper auth
 - [ ] **Authorization**: Users can only access their own data
@@ -111,12 +125,14 @@ These principles are non-negotiable and apply to all validation roles:
 - [ ] **Rate limiting**: APIs protect against abuse
 
 **Questions to ask**:
+
 - What happens if a malicious user sends unexpected input?
 - Can someone access data they shouldn't?
 - Are secrets properly rotated and stored?
 - Would this code pass a security audit?
 
 **Red flags**:
+
 - SQL injection vulnerabilities
 - Storing passwords in plain text
 - Logging sensitive information
@@ -127,9 +143,11 @@ These principles are non-negotiable and apply to all validation roles:
 ---
 
 ### 5. Performance Engineer Role
+
 **Focus**: Efficiency, scalability, and resource usage
 
 **Validation Checklist**:
+
 - [ ] **Algorithmic complexity**: No O(n²) when O(n log n) is possible
 - [ ] **Database queries**: Queries are indexed, no N+1 problems
 - [ ] **Caching**: Expensive operations are cached where appropriate
@@ -140,12 +158,14 @@ These principles are non-negotiable and apply to all validation roles:
 - [ ] **Monitoring**: Performance-critical paths have metrics
 
 **Questions to ask**:
+
 - How does this perform with 10x the current data?
 - Are there any blocking operations in hot paths?
 - Can this be parallelized?
 - What's the memory footprint?
 
 **Red flags**:
+
 - Synchronous file I/O in request handlers
 - Unbounded queries (no LIMIT)
 - Loading entire datasets into memory
@@ -155,9 +175,11 @@ These principles are non-negotiable and apply to all validation roles:
 ---
 
 ### 6. Maintainer Role
+
 **Focus**: Long-term sustainability and operational concerns
 
 **Validation Checklist**:
+
 - [ ] **Documentation**: README, API docs, and inline comments are current
 - [ ] **Logging**: Operations are logged with appropriate levels
 - [ ] **Monitoring**: Health checks and metrics are exposed
@@ -168,12 +190,14 @@ These principles are non-negotiable and apply to all validation roles:
 - [ ] **Deprecation**: Old code is marked for removal with migration path
 
 **Questions to ask**:
+
 - Can I debug this in production at 3 AM?
 - How do I know if this is working correctly?
 - What happens if this service goes down?
 - How do I migrate data if the schema changes?
 
 **Red flags**:
+
 - No logging in critical paths
 - Missing health checks
 - Hardcoded configuration values
@@ -276,36 +300,42 @@ npm outdated
 Let's apply this framework to our recent adapter work:
 
 ### Architect Validation ✅
+
 - ✅ Clear separation: `BoardAdapter` interface defines contract
 - ✅ Registry pattern allows adding boards without modifying core
 - ✅ Adapters are isolated - failure in one doesn't affect others
 - ✅ Dependencies flow correctly: adapters depend on shared types
 
 ### Developer Validation ✅
+
 - ✅ Type-safe: Full TypeScript with strict mode
 - ✅ Error handling: Adapters can fail independently
 - ✅ Naming: Clear names (`fetchJobs`, `searchJobs`, `healthCheck`)
 - ✅ Small functions: Each method has single responsibility
 
 ### Tester Validation ⚠️
+
 - ✅ MockAdapter allows testing without real boards
 - ⚠️ Need more tests for AdapterRegistry
 - ⚠️ Need integration tests with MockAdapter
 - **Action**: Add tests for registry operations
 
 ### Security Validation ✅
+
 - ✅ No hardcoded credentials
 - ✅ Input validation in search queries
 - ✅ Errors are logged but not leaked
 - **Note**: Real adapters will need API key management
 
 ### Performance Validation ✅
+
 - ✅ Async operations don't block
 - ✅ Can fetch from multiple boards in parallel
 - ⚠️ Need to add rate limiting in real adapters
 - **Action**: Add rate limiting to AdapterConfig
 
 ### Maintainer Validation ⚠️
+
 - ✅ Logging in registry operations
 - ⚠️ Need health check endpoint in API
 - ⚠️ Need metrics for adapter success/failure rates
@@ -316,6 +346,7 @@ Let's apply this framework to our recent adapter work:
 ## Continuous Improvement
 
 This validation framework is a living document. Update it when:
+
 - You discover a new category of issues
 - A validation step is consistently skipped
 - The team grows and needs more guidance

@@ -1,21 +1,32 @@
-import { PrismaClient, Prisma } from '@prisma/client';
-import type { Storage, JobFilter, ApplicationFilter, BoardCompanyFilter } from '@job-aggregator/shared';
+import { PrismaClient, Prisma } from '@prisma/client'
 import type {
-  Job, Source, Company, Profile, Match,
-  Application, ApplicationCount, ApplicationNote,
+  Storage,
+  JobFilter,
+  ApplicationFilter,
+  BoardCompanyFilter,
+} from '@job-aggregator/shared'
+import type {
+  Job,
+  Source,
+  Company,
+  Profile,
+  Match,
+  Application,
+  ApplicationCount,
+  ApplicationNote,
   BoardCompany,
-} from '@job-aggregator/shared';
-import logger from '../utils/logger.js';
+} from '@job-aggregator/shared'
+import logger from '../utils/logger.js'
 
 // ---------------------------------------------------------------------------
 // PrismaStorage — PostgreSQL with native JSON
 // ---------------------------------------------------------------------------
 
 export class PrismaStorage implements Storage {
-  private prisma: PrismaClient;
+  private prisma: PrismaClient
 
   constructor(prisma?: PrismaClient) {
-    this.prisma = prisma ?? new PrismaClient();
+    this.prisma = prisma ?? new PrismaClient()
   }
 
   // -------------------------------------------------------------------------
@@ -23,25 +34,25 @@ export class PrismaStorage implements Storage {
   // -------------------------------------------------------------------------
 
   async connect(): Promise<void> {
-    await this.prisma.$connect();
-    logger.info('PrismaStorage connected (PostgreSQL)');
+    await this.prisma.$connect()
+    logger.info('PrismaStorage connected (PostgreSQL)')
   }
 
   async disconnect(): Promise<void> {
-    await this.prisma.$disconnect();
-    logger.info('PrismaStorage disconnected');
+    await this.prisma.$disconnect()
+    logger.info('PrismaStorage disconnected')
   }
 
   async clear(): Promise<void> {
-    await this.prisma.application.deleteMany();
-    await this.prisma.match.deleteMany();
-    await this.prisma.source.deleteMany();
-    await this.prisma.job.deleteMany();
-    await this.prisma.company.deleteMany();
-    await this.prisma.profile.deleteMany();
-    await this.prisma.boardCompany.deleteMany();
-    await this.prisma.board.deleteMany();
-    logger.info('PrismaStorage cleared all data');
+    await this.prisma.application.deleteMany()
+    await this.prisma.match.deleteMany()
+    await this.prisma.source.deleteMany()
+    await this.prisma.job.deleteMany()
+    await this.prisma.company.deleteMany()
+    await this.prisma.profile.deleteMany()
+    await this.prisma.boardCompany.deleteMany()
+    await this.prisma.board.deleteMany()
+    logger.info('PrismaStorage cleared all data')
   }
 
   // -------------------------------------------------------------------------
@@ -49,8 +60,8 @@ export class PrismaStorage implements Storage {
   // -------------------------------------------------------------------------
 
   async saveJob(job: Job): Promise<Job> {
-    const companyId = job.company.id;
-    
+    const companyId = job.company.id
+
     await this.prisma.$transaction(async (tx) => {
       await tx.company.upsert({
         where: { id: companyId },
@@ -75,7 +86,7 @@ export class PrismaStorage implements Storage {
           location: (job.company.location ?? null) as any,
           description: job.company.description,
         },
-      });
+      })
 
       await tx.job.upsert({
         where: { id: job.id },
@@ -112,36 +123,36 @@ export class PrismaStorage implements Storage {
           direct_apply_confidence: job.direct_apply_confidence,
           status: job.status ?? 'active',
         },
-      });
-    });
+      })
+    })
 
-    return job;
+    return job
   }
 
   async getJob(id: string): Promise<Job | null> {
     const row = await this.prisma.job.findUnique({
       where: { id },
       include: { company: true },
-    });
-    if (!row) return null;
-    return this.hydrateJob(row);
+    })
+    if (!row) return null
+    return this.hydrateJob(row)
   }
 
   async listJobs(filters?: JobFilter): Promise<Job[]> {
-    const where: Prisma.JobWhereInput = {};
+    const where: Prisma.JobWhereInput = {}
 
     if (filters?.company) {
-      where.company = { name: { contains: filters.company, mode: 'insensitive' } };
+      where.company = { name: { contains: filters.company, mode: 'insensitive' } }
     }
     if (filters?.tags && filters.tags.length > 0) {
       // PostgreSQL JSON array contains
-      where.tags = { path: [], array_contains: filters.tags as any };
+      where.tags = { path: [], array_contains: filters.tags as any }
     }
     if (filters?.postedAfter) {
-      where.posted_date = { gte: filters.postedAfter };
+      where.posted_date = { gte: filters.postedAfter }
     }
     if (filters?.postedBefore) {
-      where.posted_date = { ...(where.posted_date as object), lte: filters.postedBefore };
+      where.posted_date = { ...(where.posted_date as object), lte: filters.postedBefore }
     }
 
     const rows = await this.prisma.job.findMany({
@@ -150,69 +161,72 @@ export class PrismaStorage implements Storage {
       orderBy: { posted_date: 'desc' },
       skip: filters?.offset ?? 0,
       take: filters?.limit ?? 50,
-    });
+    })
 
     // Post-filter for location, salary, remote (JSON fields)
-    let results = rows.map((r) => this.hydrateJob(r));
+    let results = rows.map((r) => this.hydrateJob(r))
 
     if (filters?.location) {
-      const loc = filters.location.toLowerCase();
-      results = results.filter((j) =>
-        j.location.city?.toLowerCase().includes(loc) ||
-        j.location.state?.toLowerCase().includes(loc) ||
-        j.location.country.toLowerCase().includes(loc)
-      );
+      const loc = filters.location.toLowerCase()
+      results = results.filter(
+        (j) =>
+          j.location.city?.toLowerCase().includes(loc) ||
+          j.location.state?.toLowerCase().includes(loc) ||
+          j.location.country.toLowerCase().includes(loc)
+      )
     }
 
     if (filters?.remote !== undefined) {
-      results = results.filter((j) => j.is_remote === filters.remote);
+      results = results.filter((j) => j.is_remote === filters.remote)
     }
 
     if (filters?.salaryMin !== undefined) {
-      results = results.filter((j) =>
-        j.salary_range && (j.salary_range as any).max >= filters.salaryMin!
-      );
+      results = results.filter(
+        (j) => j.salary_range && (j.salary_range as any).max >= filters.salaryMin!
+      )
     }
 
     if (filters?.salaryMax !== undefined) {
-      results = results.filter((j) =>
-        j.salary_range && (j.salary_range as any).min <= filters.salaryMax!
-      );
+      results = results.filter(
+        (j) => j.salary_range && (j.salary_range as any).min <= filters.salaryMax!
+      )
     }
 
-    return results;
+    return results
   }
 
   async updateJob(id: string, updates: Partial<Job>): Promise<Job | null> {
-    const data: Prisma.JobUpdateInput = {};
+    const data: Prisma.JobUpdateInput = {}
 
-    if (updates.title !== undefined) data.title = updates.title;
-    if (updates.description !== undefined) data.description = updates.description;
-    if (updates.location !== undefined) data.location = updates.location as any;
-    if (updates.requirements !== undefined) data.requirements = updates.requirements as any;
-    if (updates.salary_range !== undefined) data.salary_range = updates.salary_range as any;
-    if (updates.job_type !== undefined) data.job_type = updates.job_type;
-    if (updates.is_remote !== undefined) data.is_remote = updates.is_remote;
-    if (updates.tags !== undefined) data.tags = updates.tags as any;
-    if (updates.status !== undefined) data.status = updates.status;
-    if (updates.direct_apply_url !== undefined) data.direct_apply_url = updates.direct_apply_url;
+    if (updates.title !== undefined) data.title = updates.title
+    if (updates.description !== undefined) data.description = updates.description
+    if (updates.location !== undefined) data.location = updates.location as any
+    if (updates.requirements !== undefined) data.requirements = updates.requirements as any
+    if (updates.salary_range !== undefined) data.salary_range = updates.salary_range as any
+    if (updates.job_type !== undefined) data.job_type = updates.job_type
+    if (updates.is_remote !== undefined) data.is_remote = updates.is_remote
+    if (updates.tags !== undefined) data.tags = updates.tags as any
+    if (updates.status !== undefined) data.status = updates.status
+    if (updates.direct_apply_url !== undefined) data.direct_apply_url = updates.direct_apply_url
 
-    const row = await this.prisma.job.update({
-      where: { id },
-      data,
-      include: { company: true },
-    }).catch(() => null);
+    const row = await this.prisma.job
+      .update({
+        where: { id },
+        data,
+        include: { company: true },
+      })
+      .catch(() => null)
 
-    if (!row) return null;
-    return this.hydrateJob(row);
+    if (!row) return null
+    return this.hydrateJob(row)
   }
 
   async deleteJob(id: string): Promise<boolean> {
     try {
-      await this.prisma.job.delete({ where: { id } });
-      return true;
+      await this.prisma.job.delete({ where: { id } })
+      return true
     } catch {
-      return false;
+      return false
     }
   }
 
@@ -229,7 +243,7 @@ export class PrismaStorage implements Storage {
         config: { rate_limit_rpm: 60, concurrency: 1, timeout_ms: 10000, retry_attempts: 3 } as any,
       },
       update: {},
-    });
+    })
 
     await this.prisma.source.upsert({
       where: {
@@ -255,24 +269,24 @@ export class PrismaStorage implements Storage {
         raw_payload: (source.raw_payload ?? null) as any,
         status: source.status ?? 'active',
       },
-    });
+    })
 
-    return source;
+    return source
   }
 
   async getJobSourcesByJobId(jobId: string): Promise<Source[]> {
     const rows = await this.prisma.source.findMany({
       where: { job_id: jobId },
-    });
-    return rows.map((r) => this.hydrateSource(r));
+    })
+    return rows.map((r) => this.hydrateSource(r))
   }
 
   async deleteJobSource(id: string): Promise<boolean> {
     try {
-      await this.prisma.source.delete({ where: { id } });
-      return true;
+      await this.prisma.source.delete({ where: { id } })
+      return true
     } catch {
-      return false;
+      return false
     }
   }
 
@@ -304,27 +318,27 @@ export class PrismaStorage implements Storage {
         location: (company.location ?? null) as any,
         description: company.description,
       },
-    });
-    return company;
+    })
+    return company
   }
 
   async getCompany(id: string): Promise<Company | null> {
-    const row = await this.prisma.company.findUnique({ where: { id } });
-    if (!row) return null;
-    return this.hydrateCompany(row);
+    const row = await this.prisma.company.findUnique({ where: { id } })
+    if (!row) return null
+    return this.hydrateCompany(row)
   }
 
   async getCompanyByName(name: string): Promise<Company | null> {
     const row = await this.prisma.company.findFirst({
       where: { name: { equals: name, mode: 'insensitive' } },
-    });
-    if (!row) return null;
-    return this.hydrateCompany(row);
+    })
+    if (!row) return null
+    return this.hydrateCompany(row)
   }
 
   async listCompanies(): Promise<Company[]> {
-    const rows = await this.prisma.company.findMany();
-    return rows.map((r) => this.hydrateCompany(r));
+    const rows = await this.prisma.company.findMany()
+    return rows.map((r) => this.hydrateCompany(r))
   }
 
   // -------------------------------------------------------------------------
@@ -361,50 +375,52 @@ export class PrismaStorage implements Storage {
         search_queries: (profile.search_queries ?? []) as any,
         resume: profile.resume as any,
       },
-    });
-    return profile;
+    })
+    return profile
   }
 
   async getProfile(id: string): Promise<Profile | null> {
-    const row = await this.prisma.profile.findUnique({ where: { id } });
-    if (!row) return null;
-    return this.hydrateProfile(row);
+    const row = await this.prisma.profile.findUnique({ where: { id } })
+    if (!row) return null
+    return this.hydrateProfile(row)
   }
 
   async listProfiles(): Promise<Profile[]> {
-    const rows = await this.prisma.profile.findMany();
-    return rows.map((r) => this.hydrateProfile(r));
+    const rows = await this.prisma.profile.findMany()
+    return rows.map((r) => this.hydrateProfile(r))
   }
 
   async updateProfile(id: string, updates: Partial<Profile>): Promise<Profile | null> {
-    const data: Prisma.ProfileUpdateInput = {};
-    if (updates.name !== undefined) data.name = updates.name;
-    if (updates.email !== undefined) data.email = updates.email;
-    if (updates.phone !== undefined) data.phone = updates.phone;
-    if (updates.location !== undefined) data.location = updates.location as any;
-    if (updates.experience !== undefined) data.experience = updates.experience as any;
-    if (updates.education !== undefined) data.education = updates.education as any;
-    if (updates.certifications !== undefined) data.certifications = updates.certifications as any;
-    if (updates.skills !== undefined) data.skills = updates.skills as any;
-    if (updates.preferences !== undefined) data.preferences = updates.preferences as any;
-    if (updates.search_queries !== undefined) data.search_queries = updates.search_queries as any;
-    if (updates.resume !== undefined) data.resume = updates.resume as any;
+    const data: Prisma.ProfileUpdateInput = {}
+    if (updates.name !== undefined) data.name = updates.name
+    if (updates.email !== undefined) data.email = updates.email
+    if (updates.phone !== undefined) data.phone = updates.phone
+    if (updates.location !== undefined) data.location = updates.location as any
+    if (updates.experience !== undefined) data.experience = updates.experience as any
+    if (updates.education !== undefined) data.education = updates.education as any
+    if (updates.certifications !== undefined) data.certifications = updates.certifications as any
+    if (updates.skills !== undefined) data.skills = updates.skills as any
+    if (updates.preferences !== undefined) data.preferences = updates.preferences as any
+    if (updates.search_queries !== undefined) data.search_queries = updates.search_queries as any
+    if (updates.resume !== undefined) data.resume = updates.resume as any
 
-    const row = await this.prisma.profile.update({
-      where: { id },
-      data,
-    }).catch(() => null);
+    const row = await this.prisma.profile
+      .update({
+        where: { id },
+        data,
+      })
+      .catch(() => null)
 
-    if (!row) return null;
-    return this.hydrateProfile(row);
+    if (!row) return null
+    return this.hydrateProfile(row)
   }
 
   async deleteProfile(id: string): Promise<boolean> {
     try {
-      await this.prisma.profile.delete({ where: { id } });
-      return true;
+      await this.prisma.profile.delete({ where: { id } })
+      return true
     } catch {
-      return false;
+      return false
     }
   }
 
@@ -430,32 +446,32 @@ export class PrismaStorage implements Storage {
         reasons: (match.reasons ?? []) as any,
         flags: (match.flags ?? []) as any,
       },
-    });
-    return match;
+    })
+    return match
   }
 
   async getMatch(id: string): Promise<Match | null> {
-    const row = await this.prisma.match.findUnique({ where: { id } });
-    if (!row) return null;
-    return this.hydrateMatch(row);
+    const row = await this.prisma.match.findUnique({ where: { id } })
+    if (!row) return null
+    return this.hydrateMatch(row)
   }
 
   async getMatchesByJobId(jobId: string): Promise<Match[]> {
-    const rows = await this.prisma.match.findMany({ where: { job_id: jobId } });
-    return rows.map((r) => this.hydrateMatch(r));
+    const rows = await this.prisma.match.findMany({ where: { job_id: jobId } })
+    return rows.map((r) => this.hydrateMatch(r))
   }
 
   async getMatchesByProfileId(profileId: string): Promise<Match[]> {
-    const rows = await this.prisma.match.findMany({ where: { profile_id: profileId } });
-    return rows.map((r) => this.hydrateMatch(r));
+    const rows = await this.prisma.match.findMany({ where: { profile_id: profileId } })
+    return rows.map((r) => this.hydrateMatch(r))
   }
 
   async deleteMatch(id: string): Promise<boolean> {
     try {
-      await this.prisma.match.delete({ where: { id } });
-      return true;
+      await this.prisma.match.delete({ where: { id } })
+      return true
     } catch {
-      return false;
+      return false
     }
   }
 
@@ -483,28 +499,28 @@ export class PrismaStorage implements Storage {
         applied_url: app.applied_url,
         applied_at: app.applied_at ? new Date(app.applied_at) : null,
       },
-    });
-    return app;
+    })
+    return app
   }
 
   async getApplication(id: string): Promise<Application | null> {
-    const row = await this.prisma.application.findUnique({ where: { id } });
-    if (!row) return null;
-    return this.hydrateApplication(row);
+    const row = await this.prisma.application.findUnique({ where: { id } })
+    if (!row) return null
+    return this.hydrateApplication(row)
   }
 
   async getApplicationByJob(jobId: string, profileId: string): Promise<Application | null> {
     const row = await this.prisma.application.findUnique({
       where: { profile_id_job_id: { profile_id: profileId, job_id: jobId } },
-    });
-    if (!row) return null;
-    return this.hydrateApplication(row);
+    })
+    if (!row) return null
+    return this.hydrateApplication(row)
   }
 
   async listApplications(profileId: string, filters?: ApplicationFilter): Promise<Application[]> {
-    const where: Prisma.ApplicationWhereInput = { profile_id: profileId };
+    const where: Prisma.ApplicationWhereInput = { profile_id: profileId }
     if (filters?.status) {
-      where.status = filters.status;
+      where.status = filters.status
     }
 
     const rows = await this.prisma.application.findMany({
@@ -512,36 +528,38 @@ export class PrismaStorage implements Storage {
       orderBy: { updated_at: 'desc' },
       skip: filters?.offset ?? 0,
       take: filters?.limit ?? 50,
-    });
+    })
 
-    return rows.map((r) => this.hydrateApplication(r));
+    return rows.map((r) => this.hydrateApplication(r))
   }
 
   async updateApplication(id: string, updates: Partial<Application>): Promise<Application | null> {
-    const data: Prisma.ApplicationUpdateInput = {};
-    if (updates.status !== undefined) data.status = updates.status;
-    if (updates.notes !== undefined) data.notes = updates.notes as any;
-    if (updates.applied_via !== undefined) data.applied_via = updates.applied_via;
-    if (updates.applied_url !== undefined) data.applied_url = updates.applied_url;
+    const data: Prisma.ApplicationUpdateInput = {}
+    if (updates.status !== undefined) data.status = updates.status
+    if (updates.notes !== undefined) data.notes = updates.notes as any
+    if (updates.applied_via !== undefined) data.applied_via = updates.applied_via
+    if (updates.applied_url !== undefined) data.applied_url = updates.applied_url
     if (updates.applied_at !== undefined) {
-      data.applied_at = updates.applied_at ? new Date(updates.applied_at) : null;
+      data.applied_at = updates.applied_at ? new Date(updates.applied_at) : null
     }
 
-    const row = await this.prisma.application.update({
-      where: { id },
-      data,
-    }).catch(() => null);
+    const row = await this.prisma.application
+      .update({
+        where: { id },
+        data,
+      })
+      .catch(() => null)
 
-    if (!row) return null;
-    return this.hydrateApplication(row);
+    if (!row) return null
+    return this.hydrateApplication(row)
   }
 
   async deleteApplication(id: string): Promise<boolean> {
     try {
-      await this.prisma.application.delete({ where: { id } });
-      return true;
+      await this.prisma.application.delete({ where: { id } })
+      return true
     } catch {
-      return false;
+      return false
     }
   }
 
@@ -549,22 +567,29 @@ export class PrismaStorage implements Storage {
     const apps = await this.prisma.application.findMany({
       where: { profile_id: profileId },
       select: { status: true },
-    });
+    })
 
     const counts: ApplicationCount = {
       total: apps.length,
-      saved: 0, applied: 0, screening: 0, interview: 0,
-      offer: 0, accepted: 0, rejected: 0, withdrawn: 0, archived: 0,
-    };
+      saved: 0,
+      applied: 0,
+      screening: 0,
+      interview: 0,
+      offer: 0,
+      accepted: 0,
+      rejected: 0,
+      withdrawn: 0,
+      archived: 0,
+    }
 
     for (const a of apps) {
-      const key = a.status as keyof ApplicationCount;
+      const key = a.status as keyof ApplicationCount
       if (key in counts) {
-        (counts as unknown as Record<string, number>)[key]++;
+        ;(counts as unknown as Record<string, number>)[key]++
       }
     }
 
-    return counts;
+    return counts
   }
 
   // -------------------------------------------------------------------------
@@ -593,18 +618,18 @@ export class PrismaStorage implements Storage {
         failure_count: company.failure_count,
         enabled: company.enabled,
       },
-    });
-    return company;
+    })
+    return company
   }
 
   async listBoardCompanies(filters?: BoardCompanyFilter): Promise<BoardCompany[]> {
-    const where: Prisma.BoardCompanyWhereInput = {};
+    const where: Prisma.BoardCompanyWhereInput = {}
 
     if (filters?.board) {
-      where.board = filters.board;
+      where.board = filters.board
     }
     if (filters?.enabled !== undefined) {
-      where.enabled = filters.enabled;
+      where.enabled = filters.enabled
     }
 
     const rows = await this.prisma.boardCompany.findMany({
@@ -612,56 +637,61 @@ export class PrismaStorage implements Storage {
       orderBy: { company_name: 'asc' },
       skip: filters?.offset ?? 0,
       take: filters?.limit ?? 100,
-    });
+    })
 
-    return rows.map((r) => this.hydrateBoardCompany(r));
+    return rows.map((r) => this.hydrateBoardCompany(r))
   }
 
   async getBoardCompany(id: string): Promise<BoardCompany | null> {
-    const row = await this.prisma.boardCompany.findUnique({ where: { id } });
-    if (!row) return null;
-    return this.hydrateBoardCompany(row);
+    const row = await this.prisma.boardCompany.findUnique({ where: { id } })
+    if (!row) return null
+    return this.hydrateBoardCompany(row)
   }
 
-  async updateBoardCompany(id: string, updates: Partial<BoardCompany>): Promise<BoardCompany | null> {
-    const data: Prisma.BoardCompanyUpdateInput = {};
-    if (updates.company_name !== undefined) data.company_name = updates.company_name;
-    if (updates.metadata !== undefined) data.metadata = updates.metadata as any;
-    if (updates.last_checked !== undefined) data.last_checked = updates.last_checked;
-    if (updates.success_count !== undefined) data.success_count = updates.success_count;
-    if (updates.failure_count !== undefined) data.failure_count = updates.failure_count;
-    if (updates.enabled !== undefined) data.enabled = updates.enabled;
+  async updateBoardCompany(
+    id: string,
+    updates: Partial<BoardCompany>
+  ): Promise<BoardCompany | null> {
+    const data: Prisma.BoardCompanyUpdateInput = {}
+    if (updates.company_name !== undefined) data.company_name = updates.company_name
+    if (updates.metadata !== undefined) data.metadata = updates.metadata as any
+    if (updates.last_checked !== undefined) data.last_checked = updates.last_checked
+    if (updates.success_count !== undefined) data.success_count = updates.success_count
+    if (updates.failure_count !== undefined) data.failure_count = updates.failure_count
+    if (updates.enabled !== undefined) data.enabled = updates.enabled
 
-    const row = await this.prisma.boardCompany.update({
-      where: { id },
-      data,
-    }).catch(() => null);
+    const row = await this.prisma.boardCompany
+      .update({
+        where: { id },
+        data,
+      })
+      .catch(() => null)
 
-    if (!row) return null;
-    return this.hydrateBoardCompany(row);
+    if (!row) return null
+    return this.hydrateBoardCompany(row)
   }
 
   async deleteBoardCompany(id: string): Promise<boolean> {
     try {
-      await this.prisma.boardCompany.delete({ where: { id } });
-      return true;
+      await this.prisma.boardCompany.delete({ where: { id } })
+      return true
     } catch {
-      return false;
+      return false
     }
   }
 
   async bulkUpsertBoardCompanies(
     board: string,
     companies: Array<{
-      company_id: string;
-      company_name?: string;
-      metadata?: Record<string, unknown>;
+      company_id: string
+      company_name?: string
+      metadata?: Record<string, unknown>
     }>
   ): Promise<{ added: number; updated: number }> {
     // Ensure the Board record exists first
     const existingBoard = await this.prisma.board.findUnique({
       where: { name: board },
-    });
+    })
 
     if (!existingBoard) {
       await this.prisma.board.create({
@@ -670,18 +700,18 @@ export class PrismaStorage implements Storage {
           adapter_class: `${board}-adapter`,
           config: {},
         },
-      });
+      })
     }
 
-    let added = 0;
-    let updated = 0;
+    let added = 0
+    let updated = 0
 
     // Get existing companies for this board
     const existing = await this.prisma.boardCompany.findMany({
       where: { board },
       select: { company_id: true },
-    });
-    const existingIds = new Set(existing.map((e) => e.company_id));
+    })
+    const existingIds = new Set(existing.map((e) => e.company_id))
 
     // Process each company
     for (const company of companies) {
@@ -696,8 +726,8 @@ export class PrismaStorage implements Storage {
             metadata: (company.metadata ?? {}) as any,
             updated_at: new Date(),
           },
-        });
-        updated++;
+        })
+        updated++
       } else {
         // Create new
         await this.prisma.boardCompany.create({
@@ -712,69 +742,77 @@ export class PrismaStorage implements Storage {
             failure_count: 0,
             enabled: true,
           },
-        });
-        added++;
+        })
+        added++
       }
     }
 
-    logger.info('Bulk upserted board companies', { board, added, updated });
-    return { added, updated };
+    logger.info('Bulk upserted board companies', { board, added, updated })
+    return { added, updated }
   }
 
-  async getBoardCompanyCounts(board: string): Promise<{ enabled: number; disabled: number; total: number }> {
+  async getBoardCompanyCounts(
+    board: string
+  ): Promise<{ enabled: number; disabled: number; total: number }> {
     const all = await this.prisma.boardCompany.findMany({
       where: { board },
       select: { enabled: true },
-    });
+    })
 
-    const enabled = all.filter((c) => c.enabled).length;
-    const disabled = all.length - enabled;
+    const enabled = all.filter((c) => c.enabled).length
+    const disabled = all.length - enabled
 
     return {
       enabled,
       disabled,
       total: all.length,
-    };
+    }
   }
 
   async saveBoardCompanies(companies: BoardCompany[]): Promise<BoardCompany[]> {
     for (const company of companies) {
-      await this.saveBoardCompany(company);
+      await this.saveBoardCompany(company)
     }
-    return companies;
+    return companies
   }
 
-  async getBoardCompanyByBoardAndId(board: string, companyId: string): Promise<BoardCompany | null> {
+  async getBoardCompanyByBoardAndId(
+    board: string,
+    companyId: string
+  ): Promise<BoardCompany | null> {
     const row = await this.prisma.boardCompany.findUnique({
       where: { board_company_id: { board, company_id: companyId } },
-    });
-    if (!row) return null;
-    return this.hydrateBoardCompany(row);
+    })
+    if (!row) return null
+    return this.hydrateBoardCompany(row)
   }
 
-  async updateBoardCompaniesByBoard(board: string, updates: Partial<BoardCompany>): Promise<number> {
-    const data: Prisma.BoardCompanyUpdateManyMutationInput = {};
-    if (updates.company_name !== undefined) data.company_name = updates.company_name;
-    if (updates.metadata !== undefined) data.metadata = updates.metadata as any;
-    if (updates.last_checked !== undefined) data.last_checked = updates.last_checked;
-    if (updates.success_count !== undefined) data.success_count = updates.success_count;
-    if (updates.failure_count !== undefined) data.failure_count = updates.failure_count;
-    if (updates.enabled !== undefined) data.enabled = updates.enabled;
+  async updateBoardCompaniesByBoard(
+    board: string,
+    updates: Partial<BoardCompany>
+  ): Promise<number> {
+    const data: Prisma.BoardCompanyUpdateManyMutationInput = {}
+    if (updates.company_name !== undefined) data.company_name = updates.company_name
+    if (updates.metadata !== undefined) data.metadata = updates.metadata as any
+    if (updates.last_checked !== undefined) data.last_checked = updates.last_checked
+    if (updates.success_count !== undefined) data.success_count = updates.success_count
+    if (updates.failure_count !== undefined) data.failure_count = updates.failure_count
+    if (updates.enabled !== undefined) data.enabled = updates.enabled
 
     const result = await this.prisma.boardCompany.updateMany({
       where: { board },
       data,
-    });
+    })
 
-    return result.count;
+    return result.count
   }
 
   async deleteBoardCompaniesByBoard(board: string): Promise<number> {
     const result = await this.prisma.boardCompany.deleteMany({
       where: { board },
-    });
+    })
 
-    return result.count;
+    return result.count
   }
 
   // -------------------------------------------------------------------------
@@ -801,7 +839,7 @@ export class PrismaStorage implements Storage {
       sources: [],
       created_at: row.created_at,
       updated_at: row.updated_at,
-    } as Job;
+    } as Job
   }
 
   private hydrateCompany(row: any): Company {
@@ -817,7 +855,7 @@ export class PrismaStorage implements Storage {
       description: row.description ?? undefined,
       created_at: row.created_at,
       updated_at: row.updated_at,
-    };
+    }
   }
 
   private hydrateSource(row: any): Source {
@@ -830,7 +868,7 @@ export class PrismaStorage implements Storage {
       scraped_at: row.scraped_at,
       raw_payload: (row.raw_payload ?? undefined) as Source['raw_payload'],
       status: row.status,
-    };
+    }
   }
 
   private hydrateProfile(row: any): Profile {
@@ -849,7 +887,7 @@ export class PrismaStorage implements Storage {
       resume: row.resume as Profile['resume'],
       created_at: row.created_at,
       updated_at: row.updated_at,
-    };
+    }
   }
 
   private hydrateMatch(row: any): Match {
@@ -863,7 +901,7 @@ export class PrismaStorage implements Storage {
       flags: (row.flags ?? []) as string[],
       created_at: row.created_at,
       updated_at: row.updated_at,
-    };
+    }
   }
 
   private hydrateApplication(row: any): Application {
@@ -878,7 +916,7 @@ export class PrismaStorage implements Storage {
       applied_at: row.applied_at?.toISOString() ?? undefined,
       created_at: row.created_at.toISOString(),
       updated_at: row.updated_at.toISOString(),
-    };
+    }
   }
 
   private hydrateBoardCompany(row: any): BoardCompany {
@@ -894,6 +932,6 @@ export class PrismaStorage implements Storage {
       enabled: row.enabled,
       created_at: row.created_at,
       updated_at: row.updated_at,
-    };
+    }
   }
 }

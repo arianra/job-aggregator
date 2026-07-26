@@ -7,6 +7,7 @@ This document tracks our development progress, decisions, and context to ensure 
 ## 2026-07-23: Project Kickoff & Infrastructure Setup
 
 ### Session Goals
+
 - Establish project architecture
 - Set up development infrastructure
 - Implement testing and error handling foundations
@@ -14,6 +15,7 @@ This document tracks our development progress, decisions, and context to ensure 
 ### Decisions Made
 
 #### Architecture
+
 - **Monorepo structure**: Using npm workspaces for backend/frontend/shared code
 - **Backend**: Express + TypeScript + Prisma ORM
 - **Frontend**: React + Vite + Tailwind CSS
@@ -21,6 +23,7 @@ This document tracks our development progress, decisions, and context to ensure 
 - **Testing**: Vitest (chosen over Jest for better ESM support)
 
 #### Job Board Strategy (from ontology.md)
+
 - **Job-first ontology**: Jobs are canonical entities, sources (boards) are just observation points
 - **Deduplication**: Same job on multiple boards = one job with multiple sources
 - **Direct sourcing**: Find company career pages to apply directly
@@ -28,6 +31,7 @@ This document tracks our development progress, decisions, and context to ensure 
 - **Future boards**: Glassdoor, Wellfound, niche boards (Phase 5+)
 
 #### Security & Privacy
+
 - **Repository**: Public (GitHub: github.com/arianra/job-aggregator)
 - **Sensitive data**: NEVER committed to git
   - API keys in `.env` (gitignored)
@@ -37,6 +41,7 @@ This document tracks our development progress, decisions, and context to ensure 
 - **Authentication**: SSH keys (not plaintext tokens)
 
 #### Code Quality
+
 - **TypeScript**: Strict mode enabled across all packages
 - **Testing**: TDD approach - tests before implementation
 - **Logging**: Winston logger with file + console output
@@ -45,6 +50,7 @@ This document tracks our development progress, decisions, and context to ensure 
 ### Implementation Progress
 
 #### ✅ Completed
+
 1. **Git Repository Setup**
    - Created public repo on GitHub
    - Configured SSH authentication
@@ -74,6 +80,7 @@ This document tracks our development progress, decisions, and context to ensure 
    - Environment variable configured
 
 #### ⏸️ Blocked
+
 - **Database setup**: Need Docker/Podman installed to run PostgreSQL
   - Docker Compose file ready: `docker-compose.yml`
   - Credentials: user=job_aggregator, password=dev_password, db=job_aggregator
@@ -82,12 +89,14 @@ This document tracks our development progress, decisions, and context to ensure 
 ### Key Files Created
 
 #### Documentation
+
 - `docs/ontology.md` - Domain model and entity definitions
 - `docs/architecture.md` - System design and component interactions
 - `docs/TODO.md` - Implementation roadmap (6 phases)
 - `docs/JOURNAL.md` - This file
 
 #### Backend
+
 - `backend/src/index.ts` - Express server entry point
 - `backend/src/config.ts` - Environment configuration
 - `backend/src/middleware/errorHandler.ts` - Error handling with logging
@@ -97,11 +106,13 @@ This document tracks our development progress, decisions, and context to ensure 
 - `backend/src/**/*.test.ts` - Test files (13 tests)
 
 #### Frontend
+
 - `frontend/src/App.tsx` - React app skeleton
 - `frontend/vite.config.ts` - Vite configuration
 - `frontend/tailwind.config.js` - Tailwind CSS setup
 
 #### Infrastructure
+
 - `package.json` - Root workspace configuration
 - `tsconfig.base.json` - Shared TypeScript config
 - `.eslintrc.js` - ESLint configuration
@@ -111,6 +122,7 @@ This document tracks our development progress, decisions, and context to ensure 
 - `.env.example` - Environment variable template
 
 ### Next Steps
+
 1. Install Docker and start PostgreSQL
 2. Run Prisma migrations
 3. Begin Phase 1: Job board adapter infrastructure
@@ -120,6 +132,7 @@ This document tracks our development progress, decisions, and context to ensure 
 7. Build frontend job list page
 
 ### Notes for Future Sessions
+
 - Database is local-only (not deployed)
 - All API keys go in `.env` (see `.env.example`)
 - Run tests before committing: `npm test`
@@ -134,33 +147,41 @@ This document tracks our development progress, decisions, and context to ensure 
 ## YYYY-MM-DD: [Session Title]
 
 ### Session Goals
+
 - What we planned to accomplish
 
 ### Decisions Made
+
 - Key architectural or implementation decisions
 - Why we chose one approach over another
 
 ### Implementation Progress
 
 #### ✅ Completed
+
 - What we built
 - Tests added
 - Documentation updated
 
 #### ⏸️ In Progress
+
 - What we're currently working on
 
 #### ❌ Blocked
+
 - What's preventing progress
 - What we need to unblock
 
 ### Key Files Modified
+
 - List of important files changed
 
 ### Next Steps
+
 - What to do in the next session
 
 ### Notes
+
 - Context that future sessions need
 - Gotchas or things to remember
 ```
@@ -170,24 +191,28 @@ This document tracks our development progress, decisions, and context to ensure 
 ## 2026-07-23: Adapter Infrastructure & Validation Framework
 
 ### Goals
+
 - Build adapter system for job board integration
 - Establish code validation framework
 
 ### What We Built
 
 #### Adapter Infrastructure
+
 - `BoardAdapter` interface in `shared/src/adapters.ts`
 - `AdapterRegistry` to manage multiple board adapters
 - `MockAdapter` for testing
 - Custom error types: `AdapterRegistrationError`, `AdapterNotFoundError`
 
 **Key design decisions**:
+
 - Each adapter is isolated - failures don't cascade
 - Registry pattern allows adding boards without core changes
 - `getAdapter()` throws on missing adapter (explicit error handling)
 - `hasAdapter()` for safe existence checks
 
 #### Code Validation Framework
+
 Created `docs/CODE_VALIDATION.md` with validation from 6 roles:
 
 1. **Architect**: System structure, boundaries, extensibility
@@ -198,6 +223,7 @@ Created `docs/CODE_VALIDATION.md` with validation from 6 roles:
 6. **Maintainer**: Documentation, logging, deployment
 
 Applied validation to current codebase:
+
 - ✅ Architect: Clean separation, no circular dependencies
 - ✅ Developer: Type-safe, clear naming, small functions
 - ⚠️ Tester: Need more registry tests (added to TODO)
@@ -206,17 +232,20 @@ Applied validation to current codebase:
 - ⚠️ Maintainer: Need health endpoints, metrics (added to TODO)
 
 ### Technical Debt Identified
+
 - Add integration tests for AdapterRegistry with MockAdapter
 - Add health check API endpoint
 - Add metrics for adapter success/failure rates
 - Add rate limiting to AdapterConfig
 
 ### Next Steps
+
 1. Implement Indeed adapter (public search, no auth needed)
 2. Test full pipeline: Indeed → Registry → Storage → API
 3. Add missing tests and monitoring
 
 ### Status
+
 - 26/26 tests passing
 - Build succeeds
 - Committed: fe40dc4
@@ -227,28 +256,34 @@ Applied validation to current codebase:
 ## 2026-07-23 (earlier): Storage Interface Implementation
 
 ### What We Did
+
 - Fixed storage interface type naming to match shared types
 - Changed `JobSource` → `Source` throughout the codebase
 - Updated MockStorage to use `sources` map instead of `jobSources`
 - Added sample data file with realistic test data
 
 ### Why This Matters
+
 - Type consistency between shared package and backend implementation
 - Sample data enables testing without a database
 - Sets foundation for Phase 1 adapter development
 
 ### Files Modified
+
 - `shared/src/storage.ts` - Fixed type imports and interface definitions
 - `backend/src/storage/mock-storage.ts` - Updated to use correct types
 - `backend/src/storage/sample-data.ts` - New file with test data
 
 ### Test Status
+
 - 13/13 tests passing
 - Pre-commit hook successfully blocked secrets
 - Code pushed to GitHub (commit a2198f1)
 
 ### Next Step
+
 Phase 1: Job Board Adapter Infrastructure
+
 - Create base adapter interface
 - Implement adapter registry
 - Build first adapter (likely Indeed - simpler structure)
@@ -259,6 +294,7 @@ Phase 1: Job Board Adapter Infrastructure
 ## 2026-07-24: ATS Adapter Implementation (Greenhouse, Lever, Ashby, Workday)
 
 ### Goals
+
 - Implement 4 production-ready ATS platform adapters
 - Achieve 100% test coverage with pure transform functions
 - Follow consistent patterns across all adapters
@@ -266,7 +302,9 @@ Phase 1: Job Board Adapter Infrastructure
 ### What We Built
 
 #### 1. Greenhouse Adapter (`greenhouse-adapter.ts`)
+
 **18 tests passing**
+
 - Uses Greenhouse's public JSON API (`/boards/{org}?content=true`)
 - Extracts: title, location, job type, seniority, tags, posted date, salary
 - Rate limiting: 30 concurrent requests, 500ms delay between batches
@@ -274,7 +312,9 @@ Phase 1: Job Board Adapter Infrastructure
 - Company list: 6,782 companies (from `greenhouse-companies.json`)
 
 #### 2. Lever API Adapter (`lever-adapter.ts`)
+
 **38 tests passing**
+
 - Uses Lever's public API (`https://api.lever.co/v0/postings/{org}?mode=json`)
 - Extracts: title, location, job type, seniority, tags, posted date, salary
 - Rate limiting: 30 concurrent requests, 500ms delay between batches
@@ -282,7 +322,9 @@ Phase 1: Job Board Adapter Infrastructure
 - Company list: 2,126 companies (from `lever-companies.json`)
 
 #### 3. Ashby GraphQL Adapter (`ashby-adapter.ts`)
+
 **45 tests passing**
+
 - Uses Ashby's GraphQL API with strict rate limiting
 - Query structure from Feashliaa reference implementation
 - Extracts: title, location, job type, seniority, tags, posted date
@@ -292,7 +334,9 @@ Phase 1: Job Board Adapter Infrastructure
 - Company list: 3,580 companies (from `ashby-companies.json`)
 
 #### 4. Workday POST API Adapter (`workday-adapter.ts`)
+
 **47 tests passing**
+
 - Uses Workday's tenant-specific POST API (`https://{tenant}.myworkdayjobs.com/wday/cxs/{tenant}/{site}/jobs`)
 - Extracts: title, location, seniority, tags, posted date (no job type/salary from Workday)
 - Rate limiting: 50 concurrent requests, 500ms delay between batches
@@ -333,6 +377,7 @@ Phase 1: Job Board Adapter Infrastructure
    - 100% coverage of critical paths
 
 ### Test Results
+
 ```
 ✓ greenhouse-adapter.test.ts (18 tests)
 ✓ lever-adapter.test.ts (38 tests)
@@ -346,6 +391,7 @@ Total: 202 tests passing
 ```
 
 ### Files Created
+
 - `backend/src/adapters/greenhouse-adapter.ts`
 - `backend/src/adapters/lever-adapter.ts`
 - `backend/src/adapters/ashby-adapter.ts`
@@ -366,6 +412,7 @@ Total: 202 tests passing
 - `docs/adapter-implementation-validation.md`
 
 ### Key Decisions
+
 1. **Pure functions over classes**: Easier to test, no hidden state
 2. **Consistent patterns**: All adapters follow same structure (fetch → transform → return)
 3. **Rate limiting per adapter**: Different APIs have different tolerance
@@ -373,6 +420,7 @@ Total: 202 tests passing
 5. **Silent blocking detection (Workday)**: Workday doesn't return 429/403, so we detect blocking by checking if `total` changes mid-pagination
 
 ### Next Steps
+
 1. Test adapters with real API calls (not just mocks)
 2. Compare data quality across adapters
 3. Add deduplication logic (same job on multiple boards)
@@ -380,6 +428,7 @@ Total: 202 tests passing
 5. Add scoring/matching engine
 
 ### Notes
+
 - All adapters use User-Agent rotation to avoid fingerprinting
 - Ashby is the most restrictive (5 concurrent, 2s jitter)
 - Workday requires tenant-specific URLs (no global endpoint)
@@ -387,6 +436,7 @@ Total: 202 tests passing
 - All adapters implement the `BoardAdapter` interface from `shared/src/adapters.ts`
 
 ### Status
+
 - ✅ All 4 adapters implemented
 - ✅ 202 tests passing (100% coverage)
 - ✅ Committed and pushed to GitHub (commit 1285a0d)
@@ -397,6 +447,7 @@ Total: 202 tests passing
 ## 2026-07-25: Documentation Overhaul
 
 ### Goals
+
 - Create comprehensive end-user workflow documentation
 - Update stale README and setup guides
 - Audit codebase from multiple expert perspectives
@@ -405,7 +456,9 @@ Total: 202 tests passing
 ### What We Did
 
 #### 1. Created AUDIT.md
+
 Comprehensive expert audit from 7 perspectives:
+
 - **Security**: Input validation, secrets management, CORS, rate limiting
 - **Architecture**: Layered design, adapter isolation, orchestrator patterns
 - **Maintainability**: Test coverage (296 tests), code organization, missing linting
@@ -415,6 +468,7 @@ Comprehensive expert audit from 7 perspectives:
 - **Product**: Working end-to-end flow, unclear value prop, no auto-refresh
 
 **Key findings:**
+
 - No critical vulnerabilities for single-user tool
 - Need to test adapters with live APIs (all tests use mocks)
 - Board labels in UI still reference deleted LinkedIn/Indeed adapters
@@ -422,7 +476,9 @@ Comprehensive expert audit from 7 perspectives:
 - No notifications, no auto-refresh, no CSV export
 
 #### 2. Created WORKFLOW.md
+
 End-user guide covering:
+
 - Step-by-step workflow: Upload Resume → Configure Preferences → Search → Review → Apply
 - Current limitations (profile editing must use API, no auto-refresh, etc.)
 - API reference quick guide
@@ -431,6 +487,7 @@ End-user guide covering:
 - Troubleshooting guide
 
 #### 3. Updated README.md
+
 - Added current status section (Phase 3 complete)
 - Updated tech stack (PostgreSQL, not just SQLite)
 - Added adapter coverage table (4 ATS platforms, 78+ boards)
@@ -439,6 +496,7 @@ End-user guide covering:
 - Removed LinkedIn/Indeed references
 
 #### 4. Updated TODO.md
+
 - Added quick reference table (phase status)
 - Reorganized into Critical / Should Have / Would Like / Future sections
 - Added adapter coverage table
@@ -446,6 +504,7 @@ End-user guide covering:
 - Listed all completed work with checkmarks
 
 #### 5. Updated setup-guide.md
+
 - Removed LinkedIn/Indeed references
 - Updated adapter list (Greenhouse, Lever, Ashby, Workday)
 - Added Qwen API key section (optional for resume parsing)
@@ -453,7 +512,9 @@ End-user guide covering:
 - Updated expected output (shows 4 adapters registered)
 
 #### 6. Cleaned Up Stale Docs
+
 Deleted:
+
 - `indeed-adapter-design.md` (adapter removed)
 - `linkedin-strategy.md` (adapter removed)
 - `HANDOFF.md` (Phase 1 handoff no longer relevant)
@@ -462,6 +523,7 @@ Deleted:
 - `implementation-plan-phase2-frontend.md` (Phase 2 complete)
 
 ### Current Documentation Structure
+
 ```
 docs/
 ├── AUDIT.md              # Expert audit (NEW)
@@ -482,18 +544,21 @@ docs/
 ```
 
 ### Key Decisions
+
 1. **Documentation as living reference**: README, TODO, setup-guide kept current; JOURNAL preserves history
 2. **Separate audit from workflow**: AUDIT.md for technical debt/issues, WORKFLOW.md for how to use the system
 3. **Delete vs keep stale docs**: Deleted implementation plans (phases complete), kept design docs (still relevant)
 4. **No auto-generated docs**: Manual updates for now (could add OpenAPI/Swagger later)
 
 ### What's Still Missing
+
 - **OpenAPI/Swagger spec**: Auto-generated API docs from route definitions
 - **Frontend component docs**: Storybook or similar for UI components
 - **Deployment guide**: How to deploy to production (if ever needed)
 - **Contributing guide**: How to add new adapters, how to contribute (currently solo project)
 
 ### Next Steps
+
 1. Test adapters with live APIs (all tests use mocks currently)
 2. Populate company lists for each adapter
 3. Fix board labels in UI (greenhouse, lever, ashby, workday instead of linkedin, indeed)
@@ -503,6 +568,7 @@ docs/
 7. Fix Board table FK constraint (populate rows or remove constraint)
 
 ### Status
+
 - ✅ Documentation comprehensive and current
 - ✅ 296 tests passing
 - ✅ Build clean
@@ -513,6 +579,7 @@ docs/
 ## 2026-07-25 (earlier): Cleanup Commit
 
 ### What We Did
+
 - Removed LinkedIn and Indeed adapters (broken, replaced by ATS adapters)
 - Fixed Workday adapter (added job_type, is_remote, status fields)
 - Updated storage interface (added remote filter to JobFilter)
@@ -524,18 +591,21 @@ docs/
 - Fixed frontend DashboardPage.tsx type cast
 
 ### Test Results
+
 - 296 tests passing across 15 test files
 - Build clean (backend + frontend)
 - Committed: 985bf84
 - Pushed to GitHub
 
 ### Files Modified
+
 - Deleted: `indeed-adapter.ts`, `linkedin-adapter.ts` + tests
 - Updated: `workday-adapter.ts`, `extractor.ts`, `prisma-storage.ts`, `mock-storage.ts`
 - Updated: `applications.ts`, `jobs.ts`, various test files
 - Updated: `DashboardPage.tsx` (frontend type cast fix)
 
 ### Status
+
 - ✅ All changes committed and pushed
 - ✅ No breaking changes (sample data still works)
 - ⏸️ Ready for documentation update (which we did above)
@@ -545,6 +615,7 @@ docs/
 ## 2026-07-25: Database-Backed Board Company Management
 
 ### Goals
+
 - Replace hardcoded company lists with database-backed management
 - Enable dynamic addition/removal of companies per adapter
 - Provide API endpoints to manage company lists
@@ -553,7 +624,9 @@ docs/
 ### What We Built
 
 #### 1. Database Schema
+
 Added `BoardCompany` model to Prisma schema:
+
 ```prisma
 model BoardCompany {
   id            String   @id @default(cuid())
@@ -574,6 +647,7 @@ model BoardCompany {
 ```
 
 **Key design decisions:**
+
 - Composite unique constraint ensures no duplicate companies per adapter
 - `enabled` flag allows disabling companies without deleting them
 - `success_count`/`failure_count` track adapter reliability per company
@@ -581,7 +655,9 @@ model BoardCompany {
 - `metadata` JSON field for adapter-specific data (tenant IDs, org names, etc.)
 
 #### 2. Storage Layer
+
 Extended `Storage` interface with board company methods:
+
 - `saveBoardCompany(board, companyId, data)` - Create or update single company
 - `listBoardCompanies(board?, enabled?)` - List with optional filters
 - `getBoardCompany(id)` - Get by ID
@@ -591,45 +667,55 @@ Extended `Storage` interface with board company methods:
 - `bulkUpsertBoardCompanies(board, companies[])` - Batch import
 
 **Implementation notes:**
+
 - MockStorage: Uses Map for fast in-memory lookups
 - PrismaStorage: Uses Prisma transactions for atomic bulk operations
 - Both implementations handle composite unique constraint properly
 
 #### 3. API Endpoints
+
 Created new router at `/api/boards`:
 
 **GET /api/boards**
+
 - Lists all adapters with company counts
 - Response: `{boards: [{name: "greenhouse", enabled: 3, disabled: 1, total: 4}, ...]}`
 
 **GET /api/boards/:adapter/companies**
+
 - List companies for specific adapter
 - Query params: `?enabled=true` to filter
 - Response: `{companies: [...], counts: {enabled, disabled, total}}`
 
 **POST /api/boards/:adapter/companies**
+
 - Add single company or bulk import array
 - Body: `{company_id: "stripe", company_name: "Stripe"}` or `[{...}, {...}]`
 - Returns: `{added: 2, updated: 1}`
 
 **PUT /api/boards/:adapter/companies/:id**
+
 - Update company fields (enable/disable, metadata, etc.)
 - Body: `{enabled: false, metadata: {reason: "API changed"}}`
 
 **DELETE /api/boards/:adapter/companies/:id**
+
 - Remove company from adapter's list
 
 **GET /api/boards/:adapter/jobs**
+
 - Fetch jobs from enabled companies only
 - Query params: `?limit=50`
 - Uses adapter's existing fetch logic but filtered to DB companies
 
 **POST /api/boards/:adapter/update**
+
 - Trigger background refresh of company list
 - For Greenhouse: fetches from https://boards-api.greenhouse.io/v1/boards
 - Returns immediately, runs async
 
 #### 4. Frontend Fixes
+
 - Updated board label mappings in `JobCard.tsx` and `JobDetails.tsx`
   - Changed from `linkedin/indeed/glassdoor/monster` to `greenhouse/lever/ashby/workday`
 - Fixed pagination bug in `HomePage.tsx`
@@ -638,7 +724,9 @@ Created new router at `/api/boards`:
   - Now includes adapters list, storage type, database connection, rate limiter status
 
 ### Testing
+
 Added 29 new tests:
+
 - **boards.test.ts** (18 tests): API endpoint validation
   - GET /api/boards - list all adapters
   - GET /api/boards/:adapter/companies - list with filters
@@ -658,6 +746,7 @@ Added 29 new tests:
 **Total test count: 327 passing** (298 existing + 29 new)
 
 ### Files Modified
+
 - `backend/prisma/schema.prisma` - Added BoardCompany model
 - `shared/src/types.ts` - Added BoardCompany interface
 - `shared/src/storage.ts` - Extended Storage interface
@@ -711,6 +800,7 @@ curl -X POST http://localhost:3000/api/boards/greenhouse/update
 6. **Adapter-specific metadata**: JSON field for Workday tenant IDs, Ashby org names, etc.
 
 ### What's Working
+
 - ✅ Add/remove companies via API
 - ✅ Enable/disable companies without deletion
 - ✅ Fetch jobs from database-backed company lists
@@ -720,6 +810,7 @@ curl -X POST http://localhost:3000/api/boards/greenhouse/update
 - ✅ Pagination shows actual job counts
 
 ### Known Limitations
+
 - Background refresh only works for Greenhouse (has public API)
 - Lever/Ashby/Workday require manual company addition (no discovery endpoint)
 - No automatic cleanup of disabled companies (manual deletion required)
@@ -728,17 +819,20 @@ curl -X POST http://localhost:3000/api/boards/greenhouse/update
 ### Next Steps
 
 **Phase 2.3: Update Adapters to Use Database**
+
 - Modify each adapter to query `storage.listBoardCompanies(board, enabled=true)`
 - Replace hardcoded company lists with database lookups
 - Implement per-company retry logic using `success_count`/`failure_count`
 - Update `last_checked` after each fetch attempt
 
 **Phase 2.4: Add Company Discovery for Other Adapters**
+
 - Lever: Scrape https://www.lever.co/companies or similar
 - Ashby: Check if they have a public directory
 - Workday: Maintain list of known tenant URLs
 
 **Phase 2.5: Frontend UI for Board Management**
+
 - Create "Boards" page showing all adapters and their companies
 - Add/remove companies with toggle switches
 - Show success/failure counts and last checked time
@@ -746,12 +840,14 @@ curl -X POST http://localhost:3000/api/boards/greenhouse/update
 - Bulk import from CSV/JSON
 
 **Phase 3: Profile Preferences Editing**
+
 - Add UI for editing location preferences
 - Add salary range slider
 - Add job type toggles (remote/hybrid/onsite)
 - Add seniority level selection
 
 ### Status
+
 - ✅ Database-backed company management implemented
 - ✅ Full CRUD API endpoints working
 - ✅ 327 tests passing (29 new tests added)
@@ -759,6 +855,7 @@ curl -X POST http://localhost:3000/api/boards/greenhouse/update
 - ⏸️ Ready for Phase 2.3 (adapter integration)
 
 ### Notes for Future Sessions
+
 - Board companies are stored in `BoardCompany` table
 - Composite key: `(board, company_id)` - must be unique
 - `enabled` flag controls whether adapter scrapes that company

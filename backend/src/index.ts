@@ -1,64 +1,68 @@
-import express from 'express';
-import cors from 'cors';
-import 'express-async-errors';
-import { config } from './config.js';
-import { errorHandler } from './middleware/errorHandler.js';
-import { createHealthRouter } from './routes/health.js';
-import { createJobsRouter } from './routes/jobs.js';
-import { createProfileRouter } from './routes/profile.js';
-import { createApplicationsRouter } from './routes/applications.js';
-import { createDashboardRouter } from './routes/dashboard.js';
-import { createBoardsRouter } from './routes/boards.js';
-import { MockStorage } from './storage/mock-storage.js';
-import { PrismaStorage } from './storage/prisma-storage.js';
-import { RateLimiter } from './utils/rate-limiter.js';
-import { Orchestrator } from './services/orchestrator.js';
-import { MockAdapter } from './adapters/mock-adapter.js';
-import { GreenhouseAdapter } from './adapters/greenhouse-adapter.js';
-import { LeverAdapter } from './adapters/lever-adapter.js';
-import { AshbyAdapter } from './adapters/ashby-adapter.js';
-import { WorkdayAdapter } from './adapters/workday-adapter.js';
-import { sampleJobs, sampleSources, sampleProfile } from './storage/sample-data.js';
-import logger from './utils/logger.js';
+import express from 'express'
+import cors from 'cors'
+import 'express-async-errors'
+import { config } from './config.js'
+import { errorHandler } from './middleware/errorHandler.js'
+import { createHealthRouter } from './routes/health.js'
+import { createJobsRouter } from './routes/jobs.js'
+import { createProfileRouter } from './routes/profile.js'
+import { createApplicationsRouter } from './routes/applications.js'
+import { createDashboardRouter } from './routes/dashboard.js'
+import { createBoardsRouter } from './routes/boards.js'
+import { MockStorage } from './storage/mock-storage.js'
+import { PrismaStorage } from './storage/prisma-storage.js'
+import { RateLimiter } from './utils/rate-limiter.js'
+import { Orchestrator } from './services/orchestrator.js'
+import { MockAdapter } from './adapters/mock-adapter.js'
+import { GreenhouseAdapter } from './adapters/greenhouse-adapter.js'
+import { LeverAdapter } from './adapters/lever-adapter.js'
+import { AshbyAdapter } from './adapters/ashby-adapter.js'
+import { WorkdayAdapter } from './adapters/workday-adapter.js'
+import { sampleJobs, sampleSources, sampleProfile } from './storage/sample-data.js'
+import logger from './utils/logger.js'
 
-const app = express();
+const app = express()
 
 // ---------------------------------------------------------------------------
 // Middleware
 // ---------------------------------------------------------------------------
 
-app.use(cors({ origin: config.frontendUrl }));
-app.use(express.json());
+app.use(cors({ origin: config.frontendUrl }))
+app.use(express.json())
 
 app.use((req, _res, next) => {
   logger.info(`${req.method} ${req.path}`, {
     ip: req.ip,
     userAgent: req.get('user-agent'),
-  });
-  next();
-});
+  })
+  next()
+})
 
 // ---------------------------------------------------------------------------
 // Data layer
 // ---------------------------------------------------------------------------
 
 // Use PrismaStorage when DATABASE_URL is configured, fall back to MockStorage
-const storage = config.hasDatabase ? new PrismaStorage() : new MockStorage();
-await storage.connect();
+const storage = config.hasDatabase ? new PrismaStorage() : new MockStorage()
+await storage.connect()
 
 // Seed sample data for development (idempotent — skips if data already exists)
-const existingJobs = await storage.listJobs({ limit: 1 });
+const existingJobs = await storage.listJobs({ limit: 1 })
 if (existingJobs.length === 0) {
   for (const job of sampleJobs) {
-    await storage.saveJob(job);
+    await storage.saveJob(job)
   }
   for (const source of sampleSources) {
-    await storage.saveJobSource(source);
+    await storage.saveJobSource(source)
   }
-  await storage.saveProfile(sampleProfile);
-  logger.info('Seeded sample data', { jobs: sampleJobs.length, sources: sampleSources.length, profile: true });
+  await storage.saveProfile(sampleProfile)
+  logger.info('Seeded sample data', {
+    jobs: sampleJobs.length,
+    sources: sampleSources.length,
+    profile: true,
+  })
 } else {
-  logger.info('Sample data already seeded, skipping', { existingJobs: existingJobs.length });
+  logger.info('Sample data already seeded, skipping', { existingJobs: existingJobs.length })
 }
 
 // ---------------------------------------------------------------------------
@@ -66,52 +70,52 @@ if (existingJobs.length === 0) {
 // ---------------------------------------------------------------------------
 
 // Initialize all adapters - 4 ATS platforms (public APIs, no auth required)
-const adapters = new Map<string, any>();
+const adapters = new Map<string, any>()
 
-const greenhouse = new GreenhouseAdapter();
-adapters.set('greenhouse', greenhouse);
+const greenhouse = new GreenhouseAdapter()
+adapters.set('greenhouse', greenhouse)
 
-const lever = new LeverAdapter();
-adapters.set('lever', lever);
+const lever = new LeverAdapter()
+adapters.set('lever', lever)
 
-const ashby = new AshbyAdapter();
-adapters.set('ashby', ashby);
+const ashby = new AshbyAdapter()
+adapters.set('ashby', ashby)
 
-const workday = new WorkdayAdapter();
-adapters.set('workday', workday);
+const workday = new WorkdayAdapter()
+adapters.set('workday', workday)
 
 // Keep mock adapter for testing if needed
 if (process.env.NODE_ENV !== 'production') {
-  const mock = new MockAdapter('mock', 'Mock Board', [], []);
-  adapters.set('mock', mock);
+  const mock = new MockAdapter('mock', 'Mock Board', [], [])
+  adapters.set('mock', mock)
 }
 
 // ---------------------------------------------------------------------------
 // Orchestrator
 // ---------------------------------------------------------------------------
 
-const rateLimiter = new RateLimiter(60, 60_000); // 60 req/min total
-const orchestrator = new Orchestrator(adapters, storage, rateLimiter);
+const rateLimiter = new RateLimiter(60, 60_000) // 60 req/min total
+const orchestrator = new Orchestrator(adapters, storage, rateLimiter)
 
 // ---------------------------------------------------------------------------
 // Routes
 // ---------------------------------------------------------------------------
 
-app.use('/health', createHealthRouter(adapters, rateLimiter, config.hasDatabase));
-app.use('/api/jobs', createJobsRouter(orchestrator, storage));
-app.use('/api/profile', createProfileRouter(storage));
-app.use('/api/applications', createApplicationsRouter(storage));
-app.use('/api/dashboard', createDashboardRouter(storage));
-app.use('/api/boards', createBoardsRouter(storage));
+app.use('/health', createHealthRouter(adapters, rateLimiter, config.hasDatabase))
+app.use('/api/jobs', createJobsRouter(orchestrator, storage))
+app.use('/api/profile', createProfileRouter(storage))
+app.use('/api/applications', createApplicationsRouter(storage))
+app.use('/api/dashboard', createDashboardRouter(storage))
+app.use('/api/boards', createBoardsRouter(storage))
 
 // Also mount health at /api/health for frontend compatibility
-app.use('/api/health', createHealthRouter(adapters, rateLimiter, config.hasDatabase));
+app.use('/api/health', createHealthRouter(adapters, rateLimiter, config.hasDatabase))
 
 // ---------------------------------------------------------------------------
 // Error handling
 // ---------------------------------------------------------------------------
 
-app.use(errorHandler);
+app.use(errorHandler)
 
 // ---------------------------------------------------------------------------
 // Start
@@ -123,24 +127,24 @@ const server = app.listen(config.port, () => {
     nodeEnv: config.nodeEnv,
     databaseUrl: config.databaseUrl ? '[configured]' : '[not set]',
     adapters: Array.from(adapters.keys()),
-  });
-});
+  })
+})
 
 // ---------------------------------------------------------------------------
 // Graceful shutdown
 // ---------------------------------------------------------------------------
 
 async function shutdown(signal: string) {
-  logger.info(`${signal} received, shutting down gracefully`);
-  rateLimiter.abort('server shutting down');
+  logger.info(`${signal} received, shutting down gracefully`)
+  rateLimiter.abort('server shutting down')
   server.close(async () => {
-    await storage.disconnect();
-    logger.info('Server closed');
-    process.exit(0);
-  });
+    await storage.disconnect()
+    logger.info('Server closed')
+    process.exit(0)
+  })
 }
 
-process.on('SIGTERM', () => shutdown('SIGTERM'));
-process.on('SIGINT', () => shutdown('SIGINT'));
+process.on('SIGTERM', () => shutdown('SIGTERM'))
+process.on('SIGINT', () => shutdown('SIGINT'))
 
-export default app;
+export default app

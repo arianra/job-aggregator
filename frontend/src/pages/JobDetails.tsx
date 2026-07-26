@@ -1,49 +1,47 @@
-import { useParams, useNavigate } from 'react-router-dom';
-import { useJob } from '../hooks/useJobs';
-import { useApplications, useCreateApplication, useUpdateApplication, useDeleteApplication } from '../hooks/useApplications';
-import type { Match, Application, ApplicationStatus } from '../types';
-import { useState } from 'react';
+import { useParams, useNavigate } from 'react-router-dom'
+import { useJob } from '../hooks/useJobs'
+import {
+  useApplications,
+  useCreateApplication,
+  useUpdateApplication,
+  useDeleteApplication,
+} from '../hooks/useApplications'
+import type { Match, Application, ApplicationStatus } from '../types'
+import { useState } from 'react'
 
 export function JobDetails() {
-  const { id } = useParams<{ id: string }>();
-  const navigate = useNavigate();
-  const { data, isLoading, isError, error } = useJob(id);
-  const { data: appData } = useApplications();
-  const createApp = useCreateApplication();
-  const updateApp = useUpdateApplication();
-  const deleteApp = useDeleteApplication();
-  const [noteText, setNoteText] = useState('');
+  const { id } = useParams<{ id: string }>()
+  const navigate = useNavigate()
+  const { data, isLoading, isError, error } = useJob(id)
+  const { data: appData } = useApplications()
+  const createApp = useCreateApplication()
+  const updateApp = useUpdateApplication()
+  const deleteApp = useDeleteApplication()
+  const [noteText, setNoteText] = useState('')
 
-  const application: Application | undefined = appData?.data?.find(
-    (a) => a.job_id === id
-  );
+  const application: Application | undefined = appData?.data?.find((a) => a.job_id === id)
 
   if (isLoading) {
     return (
       <div className="flex justify-center py-12">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500" />
       </div>
-    );
+    )
   }
 
   if (isError || !data?.data) {
     return (
       <div className="text-center py-12">
-        <p className="text-red-600">
-          {error instanceof Error ? error.message : 'Job not found'}
-        </p>
-        <button
-          onClick={() => navigate('/jobs')}
-          className="mt-4 text-blue-500 hover:underline"
-        >
+        <p className="text-red-600">{error instanceof Error ? error.message : 'Job not found'}</p>
+        <button onClick={() => navigate('/jobs')} className="mt-4 text-blue-500 hover:underline">
           ← Back to jobs
         </button>
       </div>
-    );
+    )
   }
 
-  const job = data.data;
-  const match = data.match;
+  const job = data.data
+  const match = data.match
 
   return (
     <div className="max-w-3xl mx-auto">
@@ -65,15 +63,11 @@ export function JobDetails() {
         <div className="flex flex-wrap gap-3 text-sm text-gray-500 mb-6">
           <span>📍 {formatLoc(job.location)}</span>
           {job.salary_range && (
-            <span className="text-green-700 font-medium">
-              {fmtSalary(job.salary_range)}
-            </span>
+            <span className="text-green-700 font-medium">{fmtSalary(job.salary_range)}</span>
           )}
           {job.posted_date && <span>📅 Posted {fmtDate(job.posted_date)}</span>}
           {job.is_remote && (
-            <span className="bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded text-xs">
-              Remote
-            </span>
+            <span className="bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded text-xs">Remote</span>
           )}
         </div>
 
@@ -101,10 +95,7 @@ export function JobDetails() {
             <h2 className="text-lg font-semibold mb-2">Tags</h2>
             <div className="flex flex-wrap gap-2">
               {job.tags.map((tag: string) => (
-                <span
-                  key={tag}
-                  className="text-sm bg-gray-100 text-gray-700 px-2 py-1 rounded"
-                >
+                <span key={tag} className="text-sm bg-gray-100 text-gray-700 px-2 py-1 rounded">
                   {tag}
                 </span>
               ))}
@@ -115,9 +106,7 @@ export function JobDetails() {
         {/* Sources */}
         {job.sources?.length > 0 && (
           <div className="mb-6">
-            <h2 className="text-lg font-semibold mb-2">
-              Sources ({job.sources.length})
-            </h2>
+            <h2 className="text-lg font-semibold mb-2">Sources ({job.sources.length})</h2>
             <div className="space-y-2">
               {job.sources.map((s) => (
                 <a
@@ -127,9 +116,7 @@ export function JobDetails() {
                   rel="noopener noreferrer"
                   className="block p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
                 >
-                  <span className="font-medium text-gray-800">
-                    {boardLabel(s.board)}
-                  </span>
+                  <span className="font-medium text-gray-800">{boardLabel(s.board)}</span>
                   <span className="text-gray-500 text-sm ml-2">
                     View on {boardLabel(s.board)} →
                   </span>
@@ -179,15 +166,20 @@ export function JobDetails() {
                 <span className="text-sm text-gray-500">Status:</span>
                 <select
                   value={application.status}
-                  onChange={(e) =>
-                    updateApp.mutate({ id: application.id, status: e.target.value })
-                  }
+                  onChange={(e) => updateApp.mutate({ id: application.id, status: e.target.value })}
                   disabled={updateApp.isPending}
                   className="text-sm border border-gray-300 rounded px-3 py-1.5 bg-white"
                 >
                   {[
-                    'saved', 'applied', 'screening', 'interview',
-                    'offer', 'accepted', 'rejected', 'withdrawn', 'archived',
+                    'saved',
+                    'applied',
+                    'screening',
+                    'interview',
+                    'offer',
+                    'accepted',
+                    'rejected',
+                    'withdrawn',
+                    'archived',
                   ].map((s) => (
                     <option key={s} value={s}>
                       {s.charAt(0).toUpperCase() + s.slice(1)}
@@ -227,16 +219,16 @@ export function JobDetails() {
                     className="flex-1 text-sm border border-gray-300 rounded px-3 py-1.5"
                     onKeyDown={(e) => {
                       if (e.key === 'Enter' && noteText.trim()) {
-                        updateApp.mutate({ id: application.id, note: noteText.trim() });
-                        setNoteText('');
+                        updateApp.mutate({ id: application.id, note: noteText.trim() })
+                        setNoteText('')
                       }
                     }}
                   />
                   <button
                     onClick={() => {
                       if (noteText.trim()) {
-                        updateApp.mutate({ id: application.id, note: noteText.trim() });
-                        setNoteText('');
+                        updateApp.mutate({ id: application.id, note: noteText.trim() })
+                        setNoteText('')
                       }
                     }}
                     disabled={!noteText.trim() || updateApp.isPending}
@@ -251,7 +243,7 @@ export function JobDetails() {
         </div>
       </div>
     </div>
-  );
+  )
 }
 
 // ---------------------------------------------------------------------------
@@ -259,10 +251,10 @@ export function JobDetails() {
 // ---------------------------------------------------------------------------
 
 function formatLoc(loc: { city?: string; state?: string; remote: boolean }) {
-  if (loc.remote) return 'Remote';
-  if (loc.city && loc.state) return `${loc.city}, ${loc.state}`;
-  if (loc.city) return loc.city;
-  return 'Unknown';
+  if (loc.remote) return 'Remote'
+  if (loc.city && loc.state) return `${loc.city}, ${loc.state}`
+  if (loc.city) return loc.city
+  return 'Unknown'
 }
 
 function fmtSalary(s: { min: number; max: number; currency: string }) {
@@ -271,8 +263,8 @@ function fmtSalary(s: { min: number; max: number; currency: string }) {
       style: 'currency',
       currency: s.currency,
       maximumFractionDigits: 0,
-    }).format(n);
-  return `${fmt(s.min)} – ${fmt(s.max)}`;
+    }).format(n)
+  return `${fmt(s.min)} – ${fmt(s.max)}`
 }
 
 function fmtDate(date: string) {
@@ -280,7 +272,7 @@ function fmtDate(date: string) {
     month: 'short',
     day: 'numeric',
     year: 'numeric',
-  });
+  })
 }
 
 function boardLabel(board: string) {
@@ -290,8 +282,8 @@ function boardLabel(board: string) {
     ashby: 'Ashby',
     workday: 'Workday',
     mock: 'Mock',
-  };
-  return labels[board] ?? board;
+  }
+  return labels[board] ?? board
 }
 
 // ---------------------------------------------------------------------------
@@ -306,7 +298,7 @@ function ScoreBanner({ match }: { match: Match }) {
     { key: 'salary', label: 'Salary', ...match.dimensions.salary },
     { key: 'preferences', label: 'Preferences', ...match.dimensions.preferences },
     { key: 'recency', label: 'Recency', ...match.dimensions.recency },
-  ];
+  ]
 
   return (
     <div className="mb-6 p-4 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg border border-blue-100">
@@ -337,26 +329,29 @@ function ScoreBanner({ match }: { match: Match }) {
       {match.reasons.length > 0 && (
         <div className="mt-3 flex flex-wrap gap-1.5">
           {match.reasons.map((r, i) => (
-            <span key={i} className="text-xs bg-white border border-blue-200 text-blue-700 px-2 py-0.5 rounded">
+            <span
+              key={i}
+              className="text-xs bg-white border border-blue-200 text-blue-700 px-2 py-0.5 rounded"
+            >
               {r}
             </span>
           ))}
         </div>
       )}
     </div>
-  );
+  )
 }
 
 function scoreBadge(score: number): string {
-  if (score >= 80) return 'bg-green-100 text-green-800';
-  if (score >= 60) return 'bg-blue-100 text-blue-800';
-  if (score >= 40) return 'bg-yellow-100 text-yellow-800';
-  return 'bg-red-100 text-red-800';
+  if (score >= 80) return 'bg-green-100 text-green-800'
+  if (score >= 60) return 'bg-blue-100 text-blue-800'
+  if (score >= 40) return 'bg-yellow-100 text-yellow-800'
+  return 'bg-red-100 text-red-800'
 }
 
 function barColor(score: number): string {
-  if (score >= 80) return 'bg-green-500';
-  if (score >= 60) return 'bg-blue-500';
-  if (score >= 40) return 'bg-yellow-500';
-  return 'bg-red-500';
+  if (score >= 80) return 'bg-green-500'
+  if (score >= 60) return 'bg-blue-500'
+  if (score >= 40) return 'bg-yellow-500'
+  return 'bg-red-500'
 }

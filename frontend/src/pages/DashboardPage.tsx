@@ -1,37 +1,37 @@
-import { Link } from 'react-router-dom';
-import { useJobs } from '../hooks/useJobs';
-import { useApplications } from '../hooks/useApplications';
-import type { ApplicationCount } from '../types';
+import { Link } from 'react-router-dom'
+import { useJobs } from '../hooks/useJobs'
+import { useApplications } from '../hooks/useApplications'
+import type { ApplicationCount } from '../types'
 
 export function DashboardPage() {
-  const { data: jobData, isLoading: jobsLoading } = useJobs(1, 100);
-  const { data: appData, isLoading: appsLoading } = useApplications();
+  const { data: jobData, isLoading: jobsLoading } = useJobs(1, 100)
+  const { data: appData, isLoading: appsLoading } = useApplications()
 
-  const jobs = jobData?.data ?? [];
-  const scores = jobData?.scores ?? {};
-  const counts: ApplicationCount | null = appData?.counts ?? null;
-  const apps = appData?.data ?? [];
+  const jobs = jobData?.data ?? []
+  const scores = jobData?.scores ?? {}
+  const counts: ApplicationCount | null = appData?.counts ?? null
+  const apps = appData?.data ?? []
 
   // Score distribution
-  const scoreBuckets = { '80+': 0, '60-79': 0, '40-59': 0, '0-39': 0, unscored: 0 };
+  const scoreBuckets = { '80+': 0, '60-79': 0, '40-59': 0, '0-39': 0, unscored: 0 }
   for (const job of jobs) {
-    const s = scores[job.id];
-    if (s === undefined) scoreBuckets.unscored++;
-    else if (s >= 80) scoreBuckets['80+']++;
-    else if (s >= 60) scoreBuckets['60-79']++;
-    else if (s >= 40) scoreBuckets['40-59']++;
-    else scoreBuckets['0-39']++;
+    const s = scores[job.id]
+    if (s === undefined) scoreBuckets.unscored++
+    else if (s >= 80) scoreBuckets['80+']++
+    else if (s >= 60) scoreBuckets['60-79']++
+    else if (s >= 40) scoreBuckets['40-59']++
+    else scoreBuckets['0-39']++
   }
-  const maxBucket = Math.max(...Object.values(scoreBuckets), 1);
+  const maxBucket = Math.max(...Object.values(scoreBuckets), 1)
 
-  const isLoading = jobsLoading || appsLoading;
+  const isLoading = jobsLoading || appsLoading
 
   if (isLoading) {
     return (
       <div className="flex justify-center py-12">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500" />
       </div>
-    );
+    )
   }
 
   return (
@@ -60,8 +60,8 @@ export function DashboardPage() {
                 { key: 'offer', label: 'Offer', color: 'bg-green-400' },
                 { key: 'accepted', label: 'Accepted', color: 'bg-green-500' },
               ].map((stage) => {
-                const val = (counts as unknown as Record<string, number>)[stage.key] ?? 0;
-                const width = counts.total > 0 ? (val / counts.total) * 100 : 0;
+                const val = (counts as unknown as Record<string, number>)[stage.key] ?? 0
+                const width = counts.total > 0 ? (val / counts.total) * 100 : 0
                 return (
                   <div key={stage.key} className="flex items-center gap-3">
                     <span className="w-20 text-sm text-gray-600">{stage.label}</span>
@@ -74,7 +74,7 @@ export function DashboardPage() {
                       </div>
                     </div>
                   </div>
-                );
+                )
               })}
               <div className="flex gap-3 pt-1 border-t border-gray-100">
                 <span className="w-20 text-xs text-gray-400">End states</span>
@@ -85,7 +85,9 @@ export function DashboardPage() {
               </div>
             </div>
           ) : (
-            <p className="text-gray-400 text-sm">No applications yet. Save or apply to jobs to see your pipeline.</p>
+            <p className="text-gray-400 text-sm">
+              No applications yet. Save or apply to jobs to see your pipeline.
+            </p>
           )}
         </div>
 
@@ -100,8 +102,8 @@ export function DashboardPage() {
                 { key: '40-59', label: 'Fair (40–59)', color: 'bg-yellow-500' },
                 { key: '0-39', label: 'Poor (0–39)', color: 'bg-red-500' },
               ].map((bucket) => {
-                const val = (scoreBuckets as Record<string, number>)[bucket.key] ?? 0;
-                const width = (val / maxBucket) * 100;
+                const val = (scoreBuckets as Record<string, number>)[bucket.key] ?? 0
+                const width = (val / maxBucket) * 100
                 return (
                   <div key={bucket.key} className="flex items-center gap-3">
                     <span className="w-32 text-sm text-gray-600">{bucket.label}</span>
@@ -114,7 +116,7 @@ export function DashboardPage() {
                       </div>
                     </div>
                   </div>
-                );
+                )
               })}
               {scoreBuckets.unscored > 0 && (
                 <div className="text-xs text-gray-400 pl-3">
@@ -138,9 +140,12 @@ export function DashboardPage() {
         {apps.length > 0 ? (
           <div className="space-y-2">
             {apps.slice(0, 10).map((app) => {
-              const job = jobs.find((j) => j.id === app.job_id);
+              const job = jobs.find((j) => j.id === app.job_id)
               return (
-                <div key={app.id} className="flex items-center justify-between py-2 border-b border-gray-50 last:border-0">
+                <div
+                  key={app.id}
+                  className="flex items-center justify-between py-2 border-b border-gray-50 last:border-0"
+                >
                   <div className="flex-1 min-w-0">
                     <Link
                       to={`/jobs/${app.job_id}`}
@@ -153,23 +158,29 @@ export function DashboardPage() {
                     </p>
                   </div>
                   <div className="flex items-center gap-3">
-                    <span className={`text-xs font-medium px-2 py-0.5 rounded ${statusBadge(app.status)}`}>
+                    <span
+                      className={`text-xs font-medium px-2 py-0.5 rounded ${statusBadge(app.status)}`}
+                    >
                       {app.status}
                     </span>
                     {app.notes.length > 0 && (
-                      <span className="text-xs text-gray-400">{app.notes.length} note{app.notes.length !== 1 ? 's' : ''}</span>
+                      <span className="text-xs text-gray-400">
+                        {app.notes.length} note{app.notes.length !== 1 ? 's' : ''}
+                      </span>
                     )}
                   </div>
                 </div>
-              );
+              )
             })}
           </div>
         ) : (
-          <p className="text-gray-400 text-sm">No activity yet. Save or apply to jobs to get started.</p>
+          <p className="text-gray-400 text-sm">
+            No activity yet. Save or apply to jobs to get started.
+          </p>
         )}
       </div>
     </div>
-  );
+  )
 }
 
 // ---------------------------------------------------------------------------
@@ -182,14 +193,14 @@ function StatCard({ label, value, color }: { label: string; value: number; color
     green: 'border-green-200 bg-green-50 text-green-700',
     purple: 'border-purple-200 bg-purple-50 text-purple-700',
     indigo: 'border-indigo-200 bg-indigo-50 text-indigo-700',
-  };
+  }
 
   return (
     <div className={`rounded-lg border p-4 ${colorMap[color] ?? colorMap.blue}`}>
       <p className="text-2xl font-bold">{value}</p>
       <p className="text-sm opacity-75">{label}</p>
     </div>
-  );
+  )
 }
 
 function statusBadge(status: string): string {
@@ -203,6 +214,6 @@ function statusBadge(status: string): string {
     rejected: 'bg-red-100 text-red-700',
     withdrawn: 'bg-yellow-100 text-yellow-700',
     archived: 'bg-gray-200 text-gray-500',
-  };
-  return colors[status] || 'bg-gray-100 text-gray-700';
+  }
+  return colors[status] || 'bg-gray-100 text-gray-700'
 }

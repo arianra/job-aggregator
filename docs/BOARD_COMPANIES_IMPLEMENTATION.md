@@ -1,17 +1,20 @@
 # Board Companies Feature - Implementation Summary
 
 ## Overview
+
 Implemented database-backed company list management for ATS adapters (Phase 2.2).
 
 ## What Was Built
 
 ### Database Schema
+
 - Added `BoardCompany` table to store company lists per adapter
 - Fields: id, board, company_id, company_name, metadata, last_checked, success_count, failure_count, enabled
 - Composite unique constraint on (board, company_id)
 - Foreign key relationship to Board table
 
 ### Storage Layer
+
 - Added methods to `Storage` interface:
   - `saveBoardCompany()` - Save single company
   - `listBoardCompanies()` - List with filtering
@@ -22,6 +25,7 @@ Implemented database-backed company list management for ATS adapters (Phase 2.2)
   - `getBoardCompanyCounts()` - Get enabled/disabled counts
 
 ### API Endpoints
+
 All endpoints mounted at `/api/boards`:
 
 1. **GET /api/boards** - List all adapters with counts
@@ -31,12 +35,14 @@ All endpoints mounted at `/api/boards`:
 5. **DELETE /api/boards/:adapter/companies/:id** - Delete company
 
 ### Key Features
+
 - **Automatic Board creation**: `bulkUpsertBoardCompanies()` auto-creates Board records if they don't exist
 - **Upsert logic**: POST endpoint updates existing companies or creates new ones
 - **Filtering**: List endpoints support filtering by board and enabled status
 - **Counts**: Always return enabled/disabled/total counts
 
 ### Testing
+
 - **327 tests passing** (298 original + 29 new)
 - Added comprehensive test suite:
   - 18 API endpoint tests

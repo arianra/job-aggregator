@@ -6,17 +6,17 @@ const { combine, timestamp, printf, colorize, errors } = winston.format
 // Custom format for console output
 const consoleFormat = printf(({ level, message, timestamp, stack, ...meta }) => {
   let msg = `${timestamp} [${level}]: ${message}`
-  
+
   // Add metadata if present
   if (Object.keys(meta).length > 0) {
     msg += ` ${JSON.stringify(meta)}`
   }
-  
+
   // Add stack trace if present
   if (stack) {
     msg += `\n${stack}`
   }
-  
+
   return msg
 })
 
@@ -33,19 +33,13 @@ const fileFormat = printf(({ level, message, timestamp, stack, ...meta }) => {
 
 const logger = winston.createLogger({
   level: process.env.LOG_LEVEL || 'info',
-  format: combine(
-    errors({ stack: true }),
-    timestamp({ format: 'YYYY-MM-DD HH:mm:ss' })
-  ),
+  format: combine(errors({ stack: true }), timestamp({ format: 'YYYY-MM-DD HH:mm:ss' })),
   transports: [
     // Console transport with colors
     new winston.transports.Console({
-      format: combine(
-        colorize(),
-        consoleFormat
-      ),
+      format: combine(colorize(), consoleFormat),
     }),
-    
+
     // File transport for errors
     new winston.transports.File({
       filename: path.join(process.cwd(), 'logs', 'error.log'),
@@ -54,7 +48,7 @@ const logger = winston.createLogger({
       maxsize: 5242880, // 5MB
       maxFiles: 5,
     }),
-    
+
     // File transport for all logs
     new winston.transports.File({
       filename: path.join(process.cwd(), 'logs', 'combined.log'),

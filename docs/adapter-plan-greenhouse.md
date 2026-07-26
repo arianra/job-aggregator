@@ -7,6 +7,7 @@ Implement a `GreenhouseAdapter` that scrapes job listings from Greenhouse-powere
 Greenhouse is used by ~6,800 companies (Airbnb, Twilio, Dropbox, Figma, Databricks, etc.). Each company has a unique `board_token` that maps to `https://boards-api.greenhouse.io/v1/boards/{board_token}/jobs`.
 
 **Reference implementations:**
+
 - `Feashliaa/job-board-aggregator` (Python) — uses Greenhouse REST API with concurrent workers (30 workers for Greenhouse)
 - `strelov1/freehire` (Go) — 178,084 open jobs from 6,782 companies via Greenhouse API
 - `amikai/openings-mcp` (Go) — supports Greenhouse among 18 ATS platforms
@@ -16,11 +17,13 @@ Greenhouse is used by ~6,800 companies (Airbnb, Twilio, Dropbox, Figma, Databric
 ## API Reference
 
 ### List Jobs
+
 ```
 GET https://boards-api.greenhouse.io/v1/boards/{board_token}/jobs
 ```
 
 **Response:**
+
 ```json
 {
   "jobs": [
@@ -30,12 +33,8 @@ GET https://boards-api.greenhouse.io/v1/boards/{board_token}/jobs
       "location": {
         "name": "San Francisco, CA"
       },
-      "departments": [
-        { "name": "Engineering" }
-      ],
-      "offices": [
-        { "name": "San Francisco" }
-      ],
+      "departments": [{ "name": "Engineering" }],
+      "offices": [{ "name": "San Francisco" }],
       "absolute_url": "https://boards.greenhouse.io/company/jobs/6789123",
       "internal_job_id": 1234567,
       "updated_at": "2026-07-20T18:00:00.000Z",
@@ -50,18 +49,23 @@ GET https://boards-api.greenhouse.io/v1/boards/{board_token}/jobs
 ```
 
 ### List Job Boards (discover companies)
+
 ```
 GET https://boards-api.greenhouse.io/v1/boards
 ```
+
 Returns a list of all known board tokens. **This is the key endpoint for discovery.**
 
 ### Get Single Job
+
 ```
 GET https://boards-api.greenhouse.io/v1/boards/{board_token}/jobs/{job_id}
 ```
+
 Returns full job details including questions and EEOC fields.
 
 ### Rate Limits
+
 - No formal rate limit documented
 - Feashliaa uses 30 concurrent workers for Greenhouse
 - Recommendation: 10 concurrent requests, 500ms delay between batches
@@ -142,7 +146,7 @@ function parseLocation(loc: { name: string }): Location {
   const remote = /remote/i.test(raw)
 
   // Try to split "City, State" pattern
-  const parts = raw.split(',').map(p => p.trim())
+  const parts = raw.split(',').map((p) => p.trim())
   const country = parts.length >= 3 ? parts[parts.length - 1] : 'USA'
 
   if (parts.length === 1) {
@@ -162,9 +166,7 @@ function parseLocation(loc: { name: string }): Location {
  * Greenhouse stores salary as a metadata field, not a structured object.
  */
 function parseSalary(metadata: Array<{ name: string; value: string }>): SalaryRange | undefined {
-  const salaryField = metadata.find(m =>
-    /salary|compensation|pay/i.test(m.name)
-  )
+  const salaryField = metadata.find((m) => /salary|compensation|pay/i.test(m.name))
   if (!salaryField) return undefined
 
   // Try to match "$120,000 - $180,000" or "$120k - $180k"
@@ -195,9 +197,7 @@ function parseSalary(metadata: Array<{ name: string; value: string }>): SalaryRa
 function parseJobType(
   metadata: Array<{ name: string; value: string }>
 ): 'full-time' | 'part-time' | 'contract' | 'internship' {
-  const typeField = metadata.find(m =>
-    /employment\s*type|job\s*type/i.test(m.name)
-  )
+  const typeField = metadata.find((m) => /employment\s*type|job\s*type/i.test(m.name))
   if (!typeField) return 'full-time' // default
 
   const val = typeField.value.toLowerCase()
@@ -213,9 +213,7 @@ function parseJobType(
 function parseSeniority(
   metadata: Array<{ name: string; value: string }>
 ): 'intern' | 'entry' | 'mid' | 'senior' | 'lead' | 'manager' | 'director' | undefined {
-  const seniorityField = metadata.find(m =>
-    /seniority|level|experience/i.test(m.name)
-  )
+  const seniorityField = metadata.find((m) => /seniority|level|experience/i.test(m.name))
   if (!seniorityField) return undefined
 
   const val = seniorityField.value.toLowerCase()
@@ -247,17 +245,48 @@ function stripHtml(html: string): string {
  */
 function extractTags(description: string): string[] {
   const keywords = [
-    'react', 'node', 'typescript', 'javascript', 'python',
-    'aws', 'docker', 'kubernetes', 'sql', 'postgresql',
-    'mongodb', 'graphql', 'rest', 'api', 'java', 'golang',
-    'ruby', 'rails', 'vue', 'angular', 'next', 'nuxt',
-    'rust', 'go', 'elixir', 'terraform', 'linux', 'git',
-    'redis', 'elasticsearch', 'kafka', 'cicd', 'agile',
-    'scrum', 'tdd', 'microservices', 'serverless', 'sre',
+    'react',
+    'node',
+    'typescript',
+    'javascript',
+    'python',
+    'aws',
+    'docker',
+    'kubernetes',
+    'sql',
+    'postgresql',
+    'mongodb',
+    'graphql',
+    'rest',
+    'api',
+    'java',
+    'golang',
+    'ruby',
+    'rails',
+    'vue',
+    'angular',
+    'next',
+    'nuxt',
+    'rust',
+    'go',
+    'elixir',
+    'terraform',
+    'linux',
+    'git',
+    'redis',
+    'elasticsearch',
+    'kafka',
+    'cicd',
+    'agile',
+    'scrum',
+    'tdd',
+    'microservices',
+    'serverless',
+    'sre',
   ]
 
   const lower = description.toLowerCase()
-  return keywords.filter(kw => lower.includes(kw))
+  return keywords.filter((kw) => lower.includes(kw))
 }
 
 /**
@@ -266,7 +295,7 @@ function extractTags(description: string): string[] {
 function transformGreenhouseJob(
   raw: GreenhouseJob,
   boardToken: string,
-  companyName: string,
+  companyName: string
 ): { job: Partial<Job>; source: Partial<Source> } {
   const description = raw.content || ''
   const plainText = stripHtml(description)
@@ -375,9 +404,7 @@ export class GreenhouseAdapter implements BoardAdapter {
     for (let i = 0; i < boardTokens.length; i += CONCURRENCY) {
       const batch = boardTokens.slice(i, i + CONCURRENCY)
 
-      const results = await Promise.allSettled(
-        batch.map(token => this.fetchBoardJobs(token)),
-      )
+      const results = await Promise.allSettled(batch.map((token) => this.fetchBoardJobs(token)))
 
       for (const result of results) {
         if (result.status === 'fulfilled') {
@@ -421,9 +448,7 @@ export class GreenhouseAdapter implements BoardAdapter {
     // For now, iterate through known boards (expensive, but correct).
     for (const [token, companyName] of this.boards) {
       try {
-        const resp = await this.client.get<GreenhouseJob>(
-          `/boards/${token}/jobs/${boardJobId}`,
-        )
+        const resp = await this.client.get<GreenhouseJob>(`/boards/${token}/jobs/${boardJobId}`)
         const { job, source } = transformGreenhouseJob(resp.data, token, companyName)
 
         return {
@@ -473,7 +498,7 @@ export class GreenhouseAdapter implements BoardAdapter {
       const batch = boardsToScrape.slice(i, i + CONCURRENCY)
 
       const results = await Promise.allSettled(
-        batch.map(([token, name]) => this.fetchBoardJobs(token)),
+        batch.map(([token, name]) => this.fetchBoardJobs(token))
       )
 
       for (const result of results) {
@@ -499,36 +524,32 @@ export class GreenhouseAdapter implements BoardAdapter {
 
     if (query.title) {
       const lower = query.title.toLowerCase()
-      filtered = filtered.filter(j =>
-        j.title.toLowerCase().includes(lower) ||
-        j.description.toLowerCase().includes(lower)
+      filtered = filtered.filter(
+        (j) => j.title.toLowerCase().includes(lower) || j.description.toLowerCase().includes(lower)
       )
     }
 
     if (query.location) {
       const lower = query.location.toLowerCase()
-      filtered = filtered.filter(j =>
-        (j.location.city?.toLowerCase() || '').includes(lower) ||
-        (j.location.state?.toLowerCase() || '').includes(lower) ||
-        (j.location.country.toLowerCase() || '').includes(lower) ||
-        (query.remote && j.location.remote)
+      filtered = filtered.filter(
+        (j) =>
+          (j.location.city?.toLowerCase() || '').includes(lower) ||
+          (j.location.state?.toLowerCase() || '').includes(lower) ||
+          (j.location.country.toLowerCase() || '').includes(lower) ||
+          (query.remote && j.location.remote)
       )
     }
 
     if (query.remote !== undefined) {
-      filtered = filtered.filter(j => j.is_remote === query.remote)
+      filtered = filtered.filter((j) => j.is_remote === query.remote)
     }
 
     if (query.salaryMin !== undefined) {
-      filtered = filtered.filter(j =>
-        j.salary_range && j.salary_range.max >= query.salaryMin!
-      )
+      filtered = filtered.filter((j) => j.salary_range && j.salary_range.max >= query.salaryMin!)
     }
 
     if (query.salaryMax !== undefined) {
-      filtered = filtered.filter(j =>
-        j.salary_range && j.salary_range.min <= query.salaryMax!
-      )
+      filtered = filtered.filter((j) => j.salary_range && j.salary_range.min <= query.salaryMax!)
     }
 
     if (query.limit) {
@@ -536,7 +557,7 @@ export class GreenhouseAdapter implements BoardAdapter {
     }
 
     const sources = filtered
-      .map(j => allSources.find(s => s.job_id === j.id))
+      .map((j) => allSources.find((s) => s.job_id === j.id))
       .filter((s): s is Source => s !== undefined)
 
     return {
@@ -583,9 +604,7 @@ export class GreenhouseAdapter implements BoardAdapter {
     const companyName = this.boards.get(boardToken) || 'Unknown'
 
     try {
-      const resp = await this.client.get<GreenhouseJobsResponse>(
-        `/boards/${boardToken}/jobs`,
-      )
+      const resp = await this.client.get<GreenhouseJobsResponse>(`/boards/${boardToken}/jobs`)
 
       const jobs: Job[] = []
       const sources: Source[] = []
@@ -615,7 +634,7 @@ export class GreenhouseAdapter implements BoardAdapter {
 // ============================================================================
 
 function sleep(ms: number): Promise<void> {
-  return new Promise(resolve => setTimeout(resolve, ms))
+  return new Promise((resolve) => setTimeout(resolve, ms))
 }
 ```
 
@@ -637,6 +656,7 @@ Write tests covering:
 10. **`discoverBoards`** — mock /boards endpoint, verify boards map is populated
 
 **Mock pattern (follow the Indeed test pattern):**
+
 ```typescript
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { GreenhouseAdapter } from '../greenhouse-adapter'
@@ -698,6 +718,7 @@ GREENHOUSE_COMPANIES=airbnb,stripe,figma,notion
 ```
 
 Parse in constructor:
+
 ```typescript
 constructor() {
   const companies = process.env.GREENHOUSE_COMPANIES?.split(',').map(s => s.trim())

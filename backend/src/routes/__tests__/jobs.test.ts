@@ -1,13 +1,13 @@
-import { describe, it, expect, beforeEach } from 'vitest';
-import request from 'supertest';
-import express from 'express';
-import 'express-async-errors';
-import { createJobsRouter } from '../jobs.js';
-import { Orchestrator } from '../../services/orchestrator.js';
-import { MockStorage } from '../../storage/mock-storage.js';
-import { RateLimiter } from '../../utils/rate-limiter.js';
-import { MockAdapter } from '../../adapters/mock-adapter.js';
-import type { Job, Source } from '@job-aggregator/shared';
+import { describe, it, expect, beforeEach } from 'vitest'
+import request from 'supertest'
+import express from 'express'
+import 'express-async-errors'
+import { createJobsRouter } from '../jobs.js'
+import { Orchestrator } from '../../services/orchestrator.js'
+import { MockStorage } from '../../storage/mock-storage.js'
+import { RateLimiter } from '../../utils/rate-limiter.js'
+import { MockAdapter } from '../../adapters/mock-adapter.js'
+import type { Job, Source } from '@job-aggregator/shared'
 
 function makeJob(overrides: Partial<Job> = {}): Job {
   return {
@@ -36,7 +36,7 @@ function makeJob(overrides: Partial<Job> = {}): Job {
     sources: [],
     status: 'active',
     ...overrides,
-  } as Job;
+  } as Job
 }
 
 function makeSource(jobId: string, board: string): Source {
@@ -48,27 +48,27 @@ function makeSource(jobId: string, board: string): Source {
     url: `https://${board}.com/jobs/123`,
     scraped_at: new Date(),
     status: 'active',
-  } as Source;
+  } as Source
 }
 
 describe('Jobs Routes', () => {
-  let app: express.Express;
-  let storage: MockStorage;
-  let orchestrator: Orchestrator;
+  let app: express.Express
+  let storage: MockStorage
+  let orchestrator: Orchestrator
 
   beforeEach(async () => {
-    storage = new MockStorage();
-    await storage.connect();
+    storage = new MockStorage()
+    await storage.connect()
 
-    const adapter = new MockAdapter('indeed', 'Indeed', [], []);
-    const adapters = new Map([['indeed', adapter]]);
-    const rateLimiter = new RateLimiter(60, 60_000);
-    orchestrator = new Orchestrator(adapters, storage, rateLimiter);
+    const adapter = new MockAdapter('indeed', 'Indeed', [], [])
+    const adapters = new Map([['indeed', adapter]])
+    const rateLimiter = new RateLimiter(60, 60_000)
+    orchestrator = new Orchestrator(adapters, storage, rateLimiter)
 
-    app = express();
-    app.use(express.json());
-    app.use('/api/jobs', createJobsRouter(orchestrator, storage));
-  });
+    app = express()
+    app.use(express.json())
+    app.use('/api/jobs', createJobsRouter(orchestrator, storage))
+  })
 
   // -----------------------------------------------------------------------
   // POST /api/jobs/search
@@ -76,33 +76,33 @@ describe('Jobs Routes', () => {
 
   describe('POST /api/jobs/search', () => {
     it('returns 200 with search results', async () => {
-      const job = makeJob({ id: 'job-1', title: 'React Developer' });
-      const adapter = new MockAdapter('indeed', 'Indeed', [job], [makeSource('job-1', 'indeed')]);
-      const adapters = new Map([['indeed', adapter]]);
-      const orch = new Orchestrator(adapters, storage, new RateLimiter(60, 60_000));
+      const job = makeJob({ id: 'job-1', title: 'React Developer' })
+      const adapter = new MockAdapter('indeed', 'Indeed', [job], [makeSource('job-1', 'indeed')])
+      const adapters = new Map([['indeed', adapter]])
+      const orch = new Orchestrator(adapters, storage, new RateLimiter(60, 60_000))
 
-      const testApp = express();
-      testApp.use(express.json());
-      testApp.use('/api/jobs', createJobsRouter(orch, storage));
+      const testApp = express()
+      testApp.use(express.json())
+      testApp.use('/api/jobs', createJobsRouter(orch, storage))
 
       const res = await request(testApp)
         .post('/api/jobs/search')
         .send({ keywords: 'React', limit: 10 })
-        .expect(200);
+        .expect(200)
 
-      expect(res.body.success).toBe(true);
-      expect(res.body.totalJobs).toBe(1);
-      expect(res.body.errors).toHaveLength(0);
-    });
+      expect(res.body.success).toBe(true)
+      expect(res.body.totalJobs).toBe(1)
+      expect(res.body.errors).toHaveLength(0)
+    })
 
     it('returns 400 for invalid body', async () => {
       const res = await request(app)
         .post('/api/jobs/search')
         .send({ limit: 'not-a-number' })
-        .expect(400);
+        .expect(400)
 
-      expect(res.body.error).toBe('Validation failed');
-    });
+      expect(res.body.error).toBe('Validation failed')
+    })
 
     it('accepts all optional fields', async () => {
       const res = await request(app)
@@ -115,11 +115,11 @@ describe('Jobs Routes', () => {
           salaryMax: 200000,
           limit: 25,
         })
-        .expect(200);
+        .expect(200)
 
-      expect(res.body.success).toBe(true);
-    });
-  });
+      expect(res.body.success).toBe(true)
+    })
+  })
 
   // -----------------------------------------------------------------------
   // GET /api/jobs
@@ -127,66 +127,76 @@ describe('Jobs Routes', () => {
 
   describe('GET /api/jobs', () => {
     it('returns paginated jobs', async () => {
-      const job1 = makeJob({ id: 'job-1', title: 'Job 1' });
-      const job2 = makeJob({ id: 'job-2', title: 'Job 2' });
-      await storage.saveJob(job1);
-      await storage.saveJob(job2);
+      const job1 = makeJob({ id: 'job-1', title: 'Job 1' })
+      const job2 = makeJob({ id: 'job-2', title: 'Job 2' })
+      await storage.saveJob(job1)
+      await storage.saveJob(job2)
 
-      const res = await request(app)
-        .get('/api/jobs?page=1&pageSize=10')
-        .expect(200);
+      const res = await request(app).get('/api/jobs?page=1&pageSize=10').expect(200)
 
-      expect(res.body.success).toBe(true);
-      expect(res.body.page).toBe(1);
-      expect(res.body.data).toHaveLength(2);
-    });
+      expect(res.body.success).toBe(true)
+      expect(res.body.page).toBe(1)
+      expect(res.body.data).toHaveLength(2)
+    })
 
     it('respects pagination', async () => {
       for (let i = 0; i < 5; i++) {
-        await storage.saveJob(makeJob({ id: `job-${i}`, title: `Job ${i}` }));
+        await storage.saveJob(makeJob({ id: `job-${i}`, title: `Job ${i}` }))
       }
 
-      const res = await request(app)
-        .get('/api/jobs?page=1&pageSize=2')
-        .expect(200);
+      const res = await request(app).get('/api/jobs?page=1&pageSize=2').expect(200)
 
-      expect(res.body.data).toHaveLength(2);
-    });
+      expect(res.body.data).toHaveLength(2)
+    })
 
     it('filters by company', async () => {
-      const job = makeJob({ id: 'job-1', title: 'Dev', company: { id: 'c1', name: 'CoolCorp', aliases: [], created_at: new Date(), updated_at: new Date() } });
-      await storage.saveJob(job);
+      const job = makeJob({
+        id: 'job-1',
+        title: 'Dev',
+        company: {
+          id: 'c1',
+          name: 'CoolCorp',
+          aliases: [],
+          created_at: new Date(),
+          updated_at: new Date(),
+        },
+      })
+      await storage.saveJob(job)
 
-      const res = await request(app)
-        .get('/api/jobs?company=CoolCorp')
-        .expect(200);
+      const res = await request(app).get('/api/jobs?company=CoolCorp').expect(200)
 
-      expect(res.body.data).toHaveLength(1);
-      expect(res.body.data[0].company.name).toBe('CoolCorp');
-    });
+      expect(res.body.data).toHaveLength(1)
+      expect(res.body.data[0].company.name).toBe('CoolCorp')
+    })
 
     it('filters by remote', async () => {
-      const remote = makeJob({ id: 'job-1', title: 'Remote', is_remote: true, location: { city: '', state: '', country: 'US', remote: true } });
-      const onsite = makeJob({ id: 'job-2', title: 'Onsite', is_remote: false, location: { city: 'NYC', state: 'NY', country: 'US', remote: false } });
-      await storage.saveJob(remote);
-      await storage.saveJob(onsite);
+      const remote = makeJob({
+        id: 'job-1',
+        title: 'Remote',
+        is_remote: true,
+        location: { city: '', state: '', country: 'US', remote: true },
+      })
+      const onsite = makeJob({
+        id: 'job-2',
+        title: 'Onsite',
+        is_remote: false,
+        location: { city: 'NYC', state: 'NY', country: 'US', remote: false },
+      })
+      await storage.saveJob(remote)
+      await storage.saveJob(onsite)
 
-      const res = await request(app)
-        .get('/api/jobs?remote=true')
-        .expect(200);
+      const res = await request(app).get('/api/jobs?remote=true').expect(200)
 
-      expect(res.body.data).toHaveLength(1);
-      expect(res.body.data[0].title).toBe('Remote');
-    });
+      expect(res.body.data).toHaveLength(1)
+      expect(res.body.data[0].title).toBe('Remote')
+    })
 
     it('returns empty array when no jobs match', async () => {
-      const res = await request(app)
-        .get('/api/jobs')
-        .expect(200);
+      const res = await request(app).get('/api/jobs').expect(200)
 
-      expect(res.body.data).toHaveLength(0);
-    });
-  });
+      expect(res.body.data).toHaveLength(0)
+    })
+  })
 
   // -----------------------------------------------------------------------
   // GET /api/jobs/:id
@@ -194,26 +204,22 @@ describe('Jobs Routes', () => {
 
   describe('GET /api/jobs/:id', () => {
     it('returns a single job with sources', async () => {
-      const job = makeJob({ id: 'job-1', title: 'Backend Dev' });
-      await storage.saveJob(job);
-      await storage.saveJobSource(makeSource('job-1', 'indeed'));
+      const job = makeJob({ id: 'job-1', title: 'Backend Dev' })
+      await storage.saveJob(job)
+      await storage.saveJobSource(makeSource('job-1', 'indeed'))
 
-      const res = await request(app)
-        .get('/api/jobs/job-1')
-        .expect(200);
+      const res = await request(app).get('/api/jobs/job-1').expect(200)
 
-      expect(res.body.success).toBe(true);
-      expect(res.body.data.title).toBe('Backend Dev');
-      expect(res.body.data.sources).toHaveLength(1);
-      expect(res.body.data.sources[0].board).toBe('indeed');
-    });
+      expect(res.body.success).toBe(true)
+      expect(res.body.data.title).toBe('Backend Dev')
+      expect(res.body.data.sources).toHaveLength(1)
+      expect(res.body.data.sources[0].board).toBe('indeed')
+    })
 
     it('returns 404 for unknown job', async () => {
-      const res = await request(app)
-        .get('/api/jobs/nonexistent')
-        .expect(404);
+      const res = await request(app).get('/api/jobs/nonexistent').expect(404)
 
-      expect(res.body.error).toBe('Job not found');
-    });
-  });
-});
+      expect(res.body.error).toBe('Job not found')
+    })
+  })
+})

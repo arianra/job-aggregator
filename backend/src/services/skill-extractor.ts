@@ -1,18 +1,18 @@
-import logger from '../utils/logger.js';
-import { parseResumeWithQwen } from './qwen-parser.js';
+import logger from '../utils/logger.js'
+import { parseResumeWithQwen } from './qwen-parser.js'
 
 interface QwenConfig {
-  apiKey: string;
-  model?: string;
-  baseUrl?: string;
+  apiKey: string
+  model?: string
+  baseUrl?: string
 }
 
-const DEFAULT_MODEL = 'qwen-max';
-const DEFAULT_BASE_URL = 'https://dashscope.aliyuncs.com/compatible-mode/v1';
+const DEFAULT_MODEL = 'qwen-max'
+const DEFAULT_BASE_URL = 'https://dashscope.aliyuncs.com/compatible-mode/v1'
 
 /**
  * Extract skills from job descriptions using Qwen AI
- * 
+ *
  * @param jobTexts - Array of job description texts to analyze
  * @param config - Qwen API configuration
  * @returns Array of skill arrays (one per job)
@@ -21,13 +21,13 @@ export async function extractSkillsFromText(
   jobTexts: string[],
   config: QwenConfig
 ): Promise<string[][]> {
-  const model = config.model || DEFAULT_MODEL;
-  const baseUrl = config.baseUrl || DEFAULT_BASE_URL;
+  const model = config.model || DEFAULT_MODEL
+  const baseUrl = config.baseUrl || DEFAULT_BASE_URL
 
-  logger.info(`[skill-extractor] extracting skills from ${jobTexts.length} jobs`);
+  logger.info(`[skill-extractor] extracting skills from ${jobTexts.length} jobs`)
 
   try {
-    const prompt = buildSkillExtractionPrompt(jobTexts);
+    const prompt = buildSkillExtractionPrompt(jobTexts)
 
     const response = await fetch(`${baseUrl}/chat/completions`, {
       method: 'POST',
@@ -45,27 +45,27 @@ export async function extractSkillsFromText(
         max_tokens: 3000,
         response_format: { type: 'json_object' },
       }),
-    });
+    })
 
     if (!response.ok) {
-      const body = await response.text();
-      throw new Error(`Qwen API error ${response.status}: ${body}`);
+      const body = await response.text()
+      throw new Error(`Qwen API error ${response.status}: ${body}`)
     }
 
     const data = (await response.json()) as {
-      choices: [{ message: { content: string } }];
-    };
+      choices: [{ message: { content: string } }]
+    }
 
-    const raw = data.choices[0].message.content;
-    logger.info(`[skill-extractor] extraction complete`);
+    const raw = data.choices[0].message.content
+    logger.info(`[skill-extractor] extraction complete`)
 
-    const parsed = JSON.parse(raw) as { jobs: Array<{ skills: string[] }> };
-    
-    return parsed.jobs.map(job => job.skills || []);
+    const parsed = JSON.parse(raw) as { jobs: Array<{ skills: string[] }> }
+
+    return parsed.jobs.map((job) => job.skills || [])
   } catch (err) {
-    const msg = err instanceof Error ? err.message : String(err);
-    logger.error(`[skill-extractor] extraction failed: ${msg}`);
-    throw new Error(`Skill extraction failed: ${msg}`);
+    const msg = err instanceof Error ? err.message : String(err)
+    logger.error(`[skill-extractor] extraction failed: ${msg}`)
+    throw new Error(`Skill extraction failed: ${msg}`)
   }
 }
 
@@ -88,13 +88,15 @@ Rules:
 - Include tools and platforms (Docker, Kubernetes, AWS, etc.)
 - Do not include soft skills or generic terms
 - If no skills found, return empty array
-- Be concise - only the most important/relevant skills`;
+- Be concise - only the most important/relevant skills`
 
 function buildSkillExtractionPrompt(jobTexts: string[]): string {
-  const numberedJobs = jobTexts.map((text, idx) => {
-    const truncated = text.slice(0, 2000); // Limit per job
-    return `Job ${idx + 1}:\n${truncated}`;
-  }).join('\n\n---\n\n');
+  const numberedJobs = jobTexts
+    .map((text, idx) => {
+      const truncated = text.slice(0, 2000) // Limit per job
+      return `Job ${idx + 1}:\n${truncated}`
+    })
+    .join('\n\n---\n\n')
 
-  return `Extract technical skills from these ${jobTexts.length} job descriptions:\n\n${numberedJobs}`;
+  return `Extract technical skills from these ${jobTexts.length} job descriptions:\n\n${numberedJobs}`
 }

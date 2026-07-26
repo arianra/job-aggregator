@@ -41,11 +41,13 @@ Open http://localhost:5173 in your browser.
 Go to **Profile** page → upload your resume (PDF, DOCX, or TXT).
 
 The system will:
+
 - Extract text from the file
 - Send it to Qwen AI for structured parsing (if API key configured)
 - Create a profile with your skills, experience, education
 
 **What gets extracted:**
+
 - Name, email, phone, location
 - Skills with proficiency levels and years
 - Work experience (companies, titles, dates, descriptions)
@@ -82,18 +84,21 @@ curl -X PUT http://localhost:3000/api/profile \
 ### 4. Search for Jobs
 
 Go to **Jobs** page → use the filter panel:
+
 - **Keywords:** job titles, skills, technologies
 - **Location:** city/state filter
 - **Remote only:** checkbox for remote positions
 - Click **Search** to trigger a multi-board scrape
 
 The system will:
+
 1. Query all 4 ATS adapters (Greenhouse, Lever, Ashby, Workday) in parallel
 2. Each adapter fetches from its configured company lists
 3. Results are deduplicated (same job on multiple boards → one entry)
 4. Jobs are scored against your profile
 
 **What you'll see:**
+
 - "Found X jobs across Y sources" message
 - Jobs appear in the list with match scores
 - Filter panel clears after search
@@ -101,11 +106,13 @@ The system will:
 ### 5. Review Scored Jobs
 
 Go to **Dashboard** to see:
+
 - **Score distribution** — how many jobs are excellent/good/fair/poor matches
 - **Pipeline** — your application funnel (saved → applied → interview → offer)
 - **Recent activity** — latest application status changes
 
 Click any job in the list to see:
+
 - **Match score breakdown** — skills, experience, location, salary, preferences, recency
 - **Reasons** — "Strong skill match (92%)", "Recently posted"
 - **Flags** — "direct_apply_available", "salary_above_min"
@@ -115,6 +122,7 @@ Click any job in the list to see:
 ### 6. Apply and Track
 
 On any job detail page:
+
 - **💾 Save** — bookmark for later
 - **✓ Mark Applied** — record that you applied
 - **Status dropdown** — track through pipeline: saved → applied → screening → interview → offer → accepted/rejected/withdrawn
@@ -132,33 +140,33 @@ Dashboard updates automatically with pipeline counts.
 
 ## Current Limitations (as of 2026-07-25)
 
-| Limitation | Status | Workaround |
-|-----------|--------|------------|
-| Profile preferences can't be edited in UI | 🔴 Missing | Use `PUT /api/profile` API |
-| No auto-refresh / scheduled scraping | 🔴 Missing | Manually click "Search" |
-| No notifications | 🔴 Missing | Check dashboard manually |
-| Company lists may not be populated | 🟡 Needs testing | Adapters have fallbacks but may return 0 jobs |
-| Adapters not tested against live APIs | 🟡 Untested | First live run may reveal issues |
-| No CSV export | 🔴 Missing | Copy-paste from UI |
-| No email integration | 🔴 Not built | — |
+| Limitation                                | Status           | Workaround                                    |
+| ----------------------------------------- | ---------------- | --------------------------------------------- |
+| Profile preferences can't be edited in UI | 🔴 Missing       | Use `PUT /api/profile` API                    |
+| No auto-refresh / scheduled scraping      | 🔴 Missing       | Manually click "Search"                       |
+| No notifications                          | 🔴 Missing       | Check dashboard manually                      |
+| Company lists may not be populated        | 🟡 Needs testing | Adapters have fallbacks but may return 0 jobs |
+| Adapters not tested against live APIs     | 🟡 Untested      | First live run may reveal issues              |
+| No CSV export                             | 🔴 Missing       | Copy-paste from UI                            |
+| No email integration                      | 🔴 Not built     | —                                             |
 
 ---
 
 ## API Reference (Quick)
 
-| Endpoint | Method | Purpose |
-|----------|--------|---------|
-| `GET /api/profile` | GET | View your profile |
-| `POST /api/profile/upload` | POST | Upload resume |
-| `PUT /api/profile` | PUT | Update profile/preferences |
-| `GET /api/jobs?page=1&pageSize=20&scored=true` | GET | List jobs (paginated, scored) |
-| `GET /api/jobs/:id?scored=true` | GET | Single job with score breakdown |
-| `POST /api/jobs/search` | POST | Trigger multi-board scrape |
-| `GET /api/applications` | GET | List your applications |
-| `POST /api/applications` | POST | Save/apply to a job |
-| `PUT /api/applications/:id` | PUT | Update status, add note |
-| `DELETE /api/applications/:id` | DELETE | Remove an application |
-| `GET /health` | GET | System health check |
+| Endpoint                                       | Method | Purpose                         |
+| ---------------------------------------------- | ------ | ------------------------------- |
+| `GET /api/profile`                             | GET    | View your profile               |
+| `POST /api/profile/upload`                     | POST   | Upload resume                   |
+| `PUT /api/profile`                             | PUT    | Update profile/preferences      |
+| `GET /api/jobs?page=1&pageSize=20&scored=true` | GET    | List jobs (paginated, scored)   |
+| `GET /api/jobs/:id?scored=true`                | GET    | Single job with score breakdown |
+| `POST /api/jobs/search`                        | POST   | Trigger multi-board scrape      |
+| `GET /api/applications`                        | GET    | List your applications          |
+| `POST /api/applications`                       | POST   | Save/apply to a job             |
+| `PUT /api/applications/:id`                    | PUT    | Update status, add note         |
+| `DELETE /api/applications/:id`                 | DELETE | Remove an application           |
+| `GET /health`                                  | GET    | System health check             |
 
 ---
 
@@ -216,14 +224,14 @@ This ensures job tags are relevant to your skills and improves match quality.
 
 ## Scoring Dimensions
 
-| Dimension | Weight | What it measures |
-|-----------|--------|-----------------|
-| Skills | 35% | Overlap between your skills and job tags/requirements |
-| Experience | 20% | Years of experience vs. job requirements, seniority alignment |
-| Location | 15% | Job location vs. your preferred locations, remote preference |
-| Salary | 15% | Job salary range vs. your minimum salary preference |
-| Preferences | 10% | Job type, seniority, keyword match |
-| Recency | 5% | How recently the job was posted |
+| Dimension   | Weight | What it measures                                              |
+| ----------- | ------ | ------------------------------------------------------------- |
+| Skills      | 35%    | Overlap between your skills and job tags/requirements         |
+| Experience  | 20%    | Years of experience vs. job requirements, seniority alignment |
+| Location    | 15%    | Job location vs. your preferred locations, remote preference  |
+| Salary      | 15%    | Job salary range vs. your minimum salary preference           |
+| Preferences | 10%    | Job type, seniority, keyword match                            |
+| Recency     | 5%     | How recently the job was posted                               |
 
 **Score tiers:** Excellent (80+), Good (60-79), Fair (40-59), Poor (0-39)
 
@@ -231,10 +239,10 @@ This ensures job tags are relevant to your skills and improves match quality.
 
 ## Troubleshooting
 
-| Problem | Solution |
-|---------|----------|
-| "No jobs found" after search | Check adapter health at `/health`. May need to populate company lists. |
-| Scores all look the same | Profile may not have enough skills/experience data. Upload a better resume or edit preferences. |
-| Backend won't start | Check PostgreSQL is running: `docker compose ps`. Check `.env` has `DATABASE_URL`. |
-| Frontend shows "undefined" in health bar | Backend health endpoint doesn't return all fields yet (known bug). |
-| Resume upload fails | Check file size < 10MB. Check format (PDF/DOCX/TXT). Check Qwen API key if using AI parsing. |
+| Problem                                  | Solution                                                                                        |
+| ---------------------------------------- | ----------------------------------------------------------------------------------------------- |
+| "No jobs found" after search             | Check adapter health at `/health`. May need to populate company lists.                          |
+| Scores all look the same                 | Profile may not have enough skills/experience data. Upload a better resume or edit preferences. |
+| Backend won't start                      | Check PostgreSQL is running: `docker compose ps`. Check `.env` has `DATABASE_URL`.              |
+| Frontend shows "undefined" in health bar | Backend health endpoint doesn't return all fields yet (known bug).                              |
+| Resume upload fails                      | Check file size < 10MB. Check format (PDF/DOCX/TXT). Check Qwen API key if using AI parsing.    |

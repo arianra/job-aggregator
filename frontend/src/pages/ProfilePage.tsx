@@ -1,58 +1,58 @@
-import { useState } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import api from '../api/client';
-import type { Job, JobSource } from '../types';
+import { useState } from 'react'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import api from '../api/client'
+import type { Job, JobSource } from '../types'
 
 interface Profile {
-  id: string;
-  name: string;
-  email?: string;
-  phone?: string;
-  skills?: { name: string; proficiency: string; years?: number }[];
-  experience?: { company: string; title: string; start_date: string; end_date?: string }[];
-  education?: { institution: string; degree: string; field?: string }[];
-  resume?: { filename: string };
+  id: string
+  name: string
+  email?: string
+  phone?: string
+  skills?: { name: string; proficiency: string; years?: number }[]
+  experience?: { company: string; title: string; start_date: string; end_date?: string }[]
+  education?: { institution: string; degree: string; field?: string }[]
+  resume?: { filename: string }
 }
 
 export function ProfilePage() {
-  const queryClient = useQueryClient();
-  const [uploadMsg, setUploadMsg] = useState('');
+  const queryClient = useQueryClient()
+  const [uploadMsg, setUploadMsg] = useState('')
 
   const { data: profileData, isLoading } = useQuery({
     queryKey: ['profile'],
     queryFn: async () => {
-      const { data } = await api.get('/profile');
-      return data.data as Profile | null;
+      const { data } = await api.get('/profile')
+      return data.data as Profile | null
     },
-  });
+  })
 
   const uploadMutation = useMutation({
     mutationFn: async (file: File) => {
-      const form = new FormData();
-      form.append('resume', file);
+      const form = new FormData()
+      form.append('resume', file)
       const { data } = await api.post('/profile/upload', form, {
         headers: { 'Content-Type': 'multipart/form-data' },
-      });
-      return data;
+      })
+      return data
     },
     onSuccess: (data) => {
-      setUploadMsg(data.aiParsed ? 'Resume parsed with AI!' : 'Resume uploaded (text only).');
-      queryClient.invalidateQueries({ queryKey: ['profile'] });
+      setUploadMsg(data.aiParsed ? 'Resume parsed with AI!' : 'Resume uploaded (text only).')
+      queryClient.invalidateQueries({ queryKey: ['profile'] })
     },
     onError: (err: Error) => {
-      setUploadMsg(`Upload failed: ${err.message}`);
+      setUploadMsg(`Upload failed: ${err.message}`)
     },
-  });
+  })
 
   if (isLoading) {
     return (
       <div className="flex justify-center py-12">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500" />
       </div>
-    );
+    )
   }
 
-  const profile = profileData;
+  const profile = profileData
 
   if (!profile) {
     return (
@@ -60,19 +60,17 @@ export function ProfilePage() {
         <h1 className="text-2xl font-bold mb-6">Your Profile</h1>
 
         <div className="bg-white rounded-lg shadow p-6 border border-gray-100">
-          <p className="text-gray-600 mb-4">
-            No profile yet. Upload your resume to get started.
-          </p>
+          <p className="text-gray-600 mb-4">No profile yet. Upload your resume to get started.</p>
 
           <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center">
             <input
               type="file"
               accept=".pdf,.docx,.txt"
               onChange={(e) => {
-                const file = e.target.files?.[0];
+                const file = e.target.files?.[0]
                 if (file) {
-                  setUploadMsg('Uploading...');
-                  uploadMutation.mutate(file);
+                  setUploadMsg('Uploading...')
+                  uploadMutation.mutate(file)
                 }
               }}
               className="text-sm"
@@ -81,13 +79,15 @@ export function ProfilePage() {
           </div>
 
           {uploadMsg && (
-            <p className={`mt-3 text-sm ${uploadMsg.includes('failed') ? 'text-red-600' : 'text-green-600'}`}>
+            <p
+              className={`mt-3 text-sm ${uploadMsg.includes('failed') ? 'text-red-600' : 'text-green-600'}`}
+            >
               {uploadMsg}
             </p>
           )}
         </div>
       </div>
-    );
+    )
   }
 
   return (
@@ -169,21 +169,23 @@ export function ProfilePage() {
             type="file"
             accept=".pdf,.docx,.txt"
             onChange={(e) => {
-              const file = e.target.files?.[0];
+              const file = e.target.files?.[0]
               if (file) {
-                setUploadMsg('Uploading...');
-                uploadMutation.mutate(file);
+                setUploadMsg('Uploading...')
+                uploadMutation.mutate(file)
               }
             }}
             className="text-sm"
           />
           {uploadMsg && (
-            <p className={`mt-2 text-sm ${uploadMsg.includes('failed') ? 'text-red-600' : 'text-green-600'}`}>
+            <p
+              className={`mt-2 text-sm ${uploadMsg.includes('failed') ? 'text-red-600' : 'text-green-600'}`}
+            >
               {uploadMsg}
             </p>
           )}
         </div>
       </div>
     </div>
-  );
+  )
 }

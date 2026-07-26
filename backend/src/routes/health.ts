@@ -1,12 +1,12 @@
-import { Router } from 'express';
-import type { RateLimiter } from '../utils/rate-limiter.js';
+import { Router } from 'express'
+import type { RateLimiter } from '../utils/rate-limiter.js'
 
 export function createHealthRouter(
   adapters: Map<string, unknown>,
   rateLimiter: RateLimiter,
-  hasDatabase: boolean,
+  hasDatabase: boolean
 ) {
-  const router = Router();
+  const router = Router()
 
   router.get('/', (_req, res) => {
     res.json({
@@ -20,8 +20,8 @@ export function createHealthRouter(
         active: rateLimiter.activeCount,
         pending: rateLimiter.pendingCount,
       },
-    });
-  });
+    })
+  })
 
-  return router;
+  return router
 }

@@ -1,14 +1,14 @@
 interface PaginationProps {
-  page: number;
-  pageSize: number;
-  total: number;
-  onPageChange: (page: number) => void;
+  page: number
+  pageSize: number
+  total: number
+  onPageChange: (page: number) => void
 }
 
 export function Pagination({ page, pageSize, total, onPageChange }: PaginationProps) {
-  const totalPages = Math.max(1, Math.ceil(total / pageSize));
+  const totalPages = Math.max(1, Math.ceil(total / pageSize))
 
-  if (totalPages <= 1) return null;
+  if (totalPages <= 1) return null
 
   return (
     <div className="flex items-center justify-center gap-2 mt-6">
@@ -32,5 +32,5 @@ export function Pagination({ page, pageSize, total, onPageChange }: PaginationPr
         Next →
       </button>
     </div>
-  );
+  )
 }

@@ -1,17 +1,16 @@
-import { useFilterStore } from '../../stores/filterStore';
-import { useSearch } from '../../hooks/useJobs';
-import type { FormEvent } from 'react';
+import { useFilterStore } from '../../stores/filterStore'
+import { useSearch } from '../../hooks/useJobs'
+import type { FormEvent } from 'react'
 
 export function FilterPanel() {
-  const { filters, setFilters, clearFilters, hasActiveFilters } =
-    useFilterStore();
-  const searchMutation = useSearch();
+  const { filters, setFilters, clearFilters, hasActiveFilters } = useFilterStore()
+  const searchMutation = useSearch()
 
   const handleSubmit = (e: FormEvent) => {
-    e.preventDefault();
+    e.preventDefault()
     // Trigger a fresh scrape with current filters
-    searchMutation.mutate(filters);
-  };
+    searchMutation.mutate(filters)
+  }
 
   return (
     <form onSubmit={handleSubmit} className="bg-white rounded-lg shadow p-5 border border-gray-100">
@@ -31,15 +30,11 @@ export function FilterPanel() {
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {/* Keywords */}
         <div>
-          <label className="block text-xs font-medium text-gray-600 mb-1">
-            Keywords
-          </label>
+          <label className="block text-xs font-medium text-gray-600 mb-1">Keywords</label>
           <input
             type="text"
             value={filters.keywords ?? ''}
-            onChange={(e) =>
-              setFilters({ keywords: e.target.value || undefined })
-            }
+            onChange={(e) => setFilters({ keywords: e.target.value || undefined })}
             placeholder="React, TypeScript…"
             className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
           />
@@ -47,15 +42,11 @@ export function FilterPanel() {
 
         {/* Location */}
         <div>
-          <label className="block text-xs font-medium text-gray-600 mb-1">
-            Location
-          </label>
+          <label className="block text-xs font-medium text-gray-600 mb-1">Location</label>
           <input
             type="text"
             value={filters.location ?? ''}
-            onChange={(e) =>
-              setFilters({ location: e.target.value || undefined })
-            }
+            onChange={(e) => setFilters({ location: e.target.value || undefined })}
             placeholder="San Francisco, CA"
             className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
           />
@@ -67,9 +58,7 @@ export function FilterPanel() {
             <input
               type="checkbox"
               checked={filters.remote ?? false}
-              onChange={(e) =>
-                setFilters({ remote: e.target.checked || undefined })
-              }
+              onChange={(e) => setFilters({ remote: e.target.checked || undefined })}
               className="rounded border-gray-300 text-blue-500 focus:ring-blue-500"
             />
             <span className="text-sm text-gray-700">Remote only</span>
@@ -91,16 +80,15 @@ export function FilterPanel() {
       {/* Search error */}
       {searchMutation.isError && (
         <p className="mt-3 text-sm text-red-600">
-          {searchMutation.error instanceof Error
-            ? searchMutation.error.message
-            : 'Search failed'}
+          {searchMutation.error instanceof Error ? searchMutation.error.message : 'Search failed'}
         </p>
       )}
 
       {/* Search success */}
       {searchMutation.isSuccess && (
         <p className="mt-3 text-sm text-green-600">
-          Found {searchMutation.data.totalJobs} jobs across {searchMutation.data.totalSources} sources.
+          Found {searchMutation.data.totalJobs} jobs across {searchMutation.data.totalSources}{' '}
+          sources.
           {searchMutation.data.errors.length > 0 && (
             <span className="text-amber-600 ml-1">
               ({searchMutation.data.errors.length} errors)
@@ -109,5 +97,5 @@ export function FilterPanel() {
         </p>
       )}
     </form>
-  );
+  )
 }

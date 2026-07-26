@@ -1,9 +1,9 @@
-import { Routes, Route, Link } from 'react-router-dom';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { HomePage } from './pages/HomePage';
-import { JobDetails } from './pages/JobDetails';
-import { ProfilePage } from './pages/ProfilePage';
-import { DashboardPage } from './pages/DashboardPage';
+import { Routes, Route, Link } from 'react-router-dom'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { HomePage } from './pages/HomePage'
+import { JobDetails } from './pages/JobDetails'
+import { ProfilePage } from './pages/ProfilePage'
+import { DashboardPage } from './pages/DashboardPage'
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -12,7 +12,7 @@ const queryClient = new QueryClient({
       refetchOnWindowFocus: false,
     },
   },
-});
+})
 
 function App() {
   return (
@@ -21,7 +21,10 @@ function App() {
         {/* Header */}
         <header className="bg-white shadow-sm border-b border-gray-200">
           <div className="max-w-5xl mx-auto px-4 py-4 flex items-center justify-between">
-            <Link to="/" className="text-xl font-bold text-gray-900 hover:text-blue-600 transition-colors">
+            <Link
+              to="/"
+              className="text-xl font-bold text-gray-900 hover:text-blue-600 transition-colors"
+            >
               🌅 Job Aggregator
             </Link>
             <nav className="flex gap-4 text-sm">
@@ -54,7 +57,7 @@ function App() {
         </footer>
       </div>
     </QueryClientProvider>
-  );
+  )
 }
 
-export default App;
+export default App

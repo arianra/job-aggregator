@@ -1,6 +1,7 @@
 # Database Schema Documentation
 
 ## Overview
+
 This document explains the PostgreSQL database schema used by Prisma ORM.
 
 ---
@@ -55,15 +56,16 @@ model Company {
   website     String?
   industry    String?
   size        String?  // "1-10", "11-50", "51-200", "201-500", "501-1000", "1000+"
-  
+
   jobs        Job[]
-  
+
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 }
 ```
 
 **Fields:**
+
 - `id` - Unique identifier (CUID format)
 - `name` - Company name (unique, prevents duplicates)
 - `description` - Optional company description
@@ -74,6 +76,7 @@ model Company {
 - `createdAt/updatedAt` - Timestamps
 
 **Example:**
+
 ```json
 {
   "id": "clx123abc",
@@ -94,7 +97,7 @@ Core entity representing a job posting.
 ```prisma
 model Job {
   id          String   @id @default(cuid())
-  
+
   // Job details
   title       String
   description String
@@ -104,16 +107,16 @@ model Job {
   remote      Boolean  @default(false)
   tags        String[] // ["react", "typescript", "node"]
   postedDate  DateTime?
-  
+
   // Relationships
   companyId   String
   company     Company  @relation(fields: [companyId], references: [id])
   sources     Source[]
-  
+
   // Metadata
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
-  
+
   // Indexes for performance
   @@index([title])
   @@index([location])
@@ -124,6 +127,7 @@ model Job {
 ```
 
 **Fields:**
+
 - `id` - Unique job identifier
 - `title` - Job title (e.g., "Senior Software Engineer")
 - `description` - Full job description (markdown/plain text)
@@ -137,6 +141,7 @@ model Job {
 - `createdAt/updatedAt` - Timestamps
 
 **Indexes:**
+
 - `title` - Fast search by job title
 - `location` - Filter by location
 - `remote` - Filter remote jobs
@@ -144,6 +149,7 @@ model Job {
 - `companyId` - Fast lookup by company
 
 **Example:**
+
 ```json
 {
   "id": "clx456def",
@@ -168,20 +174,20 @@ Tracks where each job was found (Indeed, LinkedIn, etc.).
 ```prisma
 model Source {
   id          String   @id @default(cuid())
-  
+
   // Source details
   board       String   // "indeed", "linkedin"
   externalId  String   // Job ID on the board
   url         String   // Direct link to job posting
   scrapedAt   DateTime @default(now())
-  
+
   // Relationship
   jobId       String
   job         Job      @relation(fields: [jobId], references: [id], onDelete: Cascade)
-  
+
   // Unique constraint
   @@unique([board, externalId])
-  
+
   // Indexes
   @@index([jobId])
   @@index([board])
@@ -189,6 +195,7 @@ model Source {
 ```
 
 **Fields:**
+
 - `id` - Unique source identifier
 - `board` - Job board name (e.g., "indeed", "linkedin")
 - `externalId` - Job ID on that board (e.g., Indeed's job key)
@@ -209,6 +216,7 @@ Job: "Senior React Developer at Acme Corp"
 ```
 
 **Example:**
+
 ```json
 {
   "id": "clx789ghi",
@@ -243,9 +251,9 @@ model Company {
   website     String?
   industry    String?
   size        String?
-  
+
   jobs        Job[]
-  
+
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 }
@@ -260,14 +268,14 @@ model Job {
   remote      Boolean  @default(false)
   tags        String[]
   postedDate  DateTime?
-  
+
   companyId   String
   company     Company  @relation(fields: [companyId], references: [id])
   sources     Source[]
-  
+
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
-  
+
   @@index([title])
   @@index([location])
   @@index([remote])
@@ -281,10 +289,10 @@ model Source {
   externalId  String
   url         String
   scrapedAt   DateTime @default(now())
-  
+
   jobId       String
   job         Job      @relation(fields: [jobId], references: [id], onDelete: Cascade)
-  
+
   @@unique([board, externalId])
   @@index([jobId])
   @@index([board])
@@ -301,14 +309,15 @@ model Source {
 const jobs = await prisma.job.findMany({
   include: {
     company: true,
-    sources: true
-  }
+    sources: true,
+  },
 })
 ```
 
 **Generated SQL:**
+
 ```sql
-SELECT 
+SELECT
   j.*,
   c.name as company_name,
   c.website as company_website
@@ -326,19 +335,20 @@ const jobs = await prisma.job.findMany({
     title: { contains: 'react', mode: 'insensitive' },
     location: 'San Francisco, CA',
     remote: true,
-    salaryMin: { gte: 100000 }
+    salaryMin: { gte: 100000 },
   },
   orderBy: {
-    postedDate: 'desc'
+    postedDate: 'desc',
   },
-  take: 50
+  take: 50,
 })
 ```
 
 **Generated SQL:**
+
 ```sql
 SELECT * FROM Job
-WHERE 
+WHERE
   title ILIKE '%react%'
   AND location = 'San Francisco, CA'
   AND remote = true
@@ -355,12 +365,13 @@ LIMIT 50
 const counts = await prisma.source.groupBy({
   by: ['board'],
   _count: {
-    board: true
-  }
+    board: true,
+  },
 })
 ```
 
 **Result:**
+
 ```json
 [
   { "board": "indeed", "_count": { "board": 150 } },
@@ -378,18 +389,18 @@ Jobs that appear on multiple boards:
 const duplicates = await prisma.job.findMany({
   where: {
     sources: {
-      some: {} // Has at least one source
-    }
+      some: {}, // Has at least one source
+    },
   },
   include: {
     sources: true,
-    company: true
+    company: true,
   },
   orderBy: {
     sources: {
-      _count: 'desc'
-    }
-  }
+      _count: 'desc',
+    },
+  },
 })
 ```
 
@@ -402,13 +413,13 @@ const company = await prisma.company.upsert({
   where: { name: 'Acme Corp' },
   update: {
     website: 'https://acme.com',
-    industry: 'Technology'
+    industry: 'Technology',
   },
   create: {
     name: 'Acme Corp',
     website: 'https://acme.com',
-    industry: 'Technology'
-  }
+    industry: 'Technology',
+  },
 })
 ```
 
@@ -424,6 +435,7 @@ npx prisma migrate dev --name init
 ```
 
 This creates:
+
 - `prisma/migrations/20240120_init/migration.sql` - SQL to create tables
 - Updates `prisma/schema.prisma` if needed
 
@@ -462,10 +474,10 @@ async function main() {
       name: 'Acme Corp',
       website: 'https://acme.com',
       industry: 'Technology',
-      size: '51-200'
-    }
+      size: '51-200',
+    },
   })
-  
+
   // Create jobs
   const job1 = await prisma.job.create({
     data: {
@@ -477,20 +489,20 @@ async function main() {
       remote: true,
       tags: ['react', 'typescript', 'node'],
       postedDate: new Date(),
-      companyId: acme.id
-    }
+      companyId: acme.id,
+    },
   })
-  
+
   // Create sources
   await prisma.source.create({
     data: {
       board: 'indeed',
       externalId: 'abc123',
       url: 'https://indeed.com/viewjob?jk=abc123',
-      jobId: job1.id
-    }
+      jobId: job1.id,
+    },
   })
-  
+
   console.log('Seed data created')
 }
 
@@ -524,6 +536,7 @@ npx prisma db seed
 ### Indexes
 
 Already defined in schema:
+
 - `Job.title` - Fast text search
 - `Job.location` - Filter by location
 - `Job.remote` - Filter remote jobs
@@ -537,10 +550,10 @@ Already defined in schema:
 ```prisma
 model Job {
   // ... existing fields
-  
+
   // Composite index for common filters
   @@index([location, remote, postedDate])
-  
+
   // Full-text search (PostgreSQL specific)
   @@index([title, description])
 }
@@ -549,22 +562,24 @@ model Job {
 ### Query Optimization
 
 **Bad (N+1 problem):**
+
 ```typescript
 const jobs = await prisma.job.findMany()
 for (const job of jobs) {
   const company = await prisma.company.findUnique({
-    where: { id: job.companyId }
+    where: { id: job.companyId },
   })
   console.log(job.title, company.name)
 }
 ```
 
 **Good (single query):**
+
 ```typescript
 const jobs = await prisma.job.findMany({
-  include: { company: true }
+  include: { company: true },
 })
-jobs.forEach(job => {
+jobs.forEach((job) => {
   console.log(job.title, job.company.name)
 })
 ```

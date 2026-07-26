@@ -1,12 +1,22 @@
 /**
  * Storage Interface
- * 
+ *
  * Abstracts database operations so we can swap implementations:
  * - MockStorage: In-memory for testing/development
  * - PostgresStorage: Real database for production
  */
 
-import type { Job, Source, Company, Profile, Match, Application, ApplicationCount, BoardCompany, BoardCompanyFilter } from './types.js'
+import type {
+  Job,
+  Source,
+  Company,
+  Profile,
+  Match,
+  Application,
+  ApplicationCount,
+  BoardCompany,
+  BoardCompanyFilter,
+} from './types.js'
 
 export interface Storage {
   // Jobs
@@ -60,12 +70,17 @@ export interface Storage {
   updateBoardCompaniesByBoard(board: string, updates: Partial<BoardCompany>): Promise<number>
   deleteBoardCompany(id: string): Promise<boolean>
   deleteBoardCompaniesByBoard(board: string): Promise<number>
-  getBoardCompanyCounts(board: string): Promise<{ enabled: number; disabled: number; total: number }>
-  bulkUpsertBoardCompanies(board: string, companies: Array<{
-    company_id: string
-    company_name?: string
-    metadata?: Record<string, unknown>
-  }>): Promise<{ added: number; updated: number }>
+  getBoardCompanyCounts(
+    board: string
+  ): Promise<{ enabled: number; disabled: number; total: number }>
+  bulkUpsertBoardCompanies(
+    board: string,
+    companies: Array<{
+      company_id: string
+      company_name?: string
+      metadata?: Record<string, unknown>
+    }>
+  ): Promise<{ added: number; updated: number }>
 
   // Lifecycle
   connect(): Promise<void>
