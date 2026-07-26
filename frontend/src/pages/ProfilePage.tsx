@@ -2,6 +2,13 @@ import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import api from '../api/client'
 import type { Job, JobSource } from '../types'
+import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card'
+import { Button } from '../components/ui/button'
+import { Badge } from '../components/ui/badge'
+import { Input } from '../components/ui/input'
+import { Label } from '../components/ui/label'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/ui/tabs'
+import { Upload, User, Briefcase, GraduationCap, FileText } from 'lucide-react'
 
 interface Profile {
   id: string
@@ -47,7 +54,7 @@ export function ProfilePage() {
   if (isLoading) {
     return (
       <div className="flex justify-center py-12">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500" />
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
       </div>
     )
   }
@@ -56,136 +63,205 @@ export function ProfilePage() {
 
   if (!profile) {
     return (
-      <div className="max-w-2xl mx-auto">
-        <h1 className="text-2xl font-bold mb-6">Your Profile</h1>
-
-        <div className="bg-white rounded-lg shadow p-6 border border-gray-100">
-          <p className="text-gray-600 mb-4">No profile yet. Upload your resume to get started.</p>
-
-          <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center">
-            <input
-              type="file"
-              accept=".pdf,.docx,.txt"
-              onChange={(e) => {
-                const file = e.target.files?.[0]
-                if (file) {
-                  setUploadMsg('Uploading...')
-                  uploadMutation.mutate(file)
-                }
-              }}
-              className="text-sm"
-            />
-            <p className="text-xs text-gray-400 mt-2">PDF, DOCX, or TXT (max 10MB)</p>
-          </div>
-
-          {uploadMsg && (
-            <p
-              className={`mt-3 text-sm ${uploadMsg.includes('failed') ? 'text-red-600' : 'text-green-600'}`}
-            >
-              {uploadMsg}
-            </p>
-          )}
+      <div className="max-w-2xl mx-auto space-y-6">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">Your Profile</h1>
+          <p className="text-muted-foreground mt-2">No profile yet. Upload your resume to get started.</p>
         </div>
+
+        <Card>
+          <CardContent className="pt-6">
+            <div className="border-2 border-dashed border-border rounded-lg p-8 text-center">
+              <Upload className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
+              <Input
+                type="file"
+                accept=".pdf,.docx,.txt"
+                onChange={(e) => {
+                  const file = e.target.files?.[0]
+                  if (file) {
+                    setUploadMsg('Uploading...')
+                    uploadMutation.mutate(file)
+                  }
+                }}
+                className="max-w-xs mx-auto"
+              />
+              <p className="text-xs text-muted-foreground mt-2">PDF, DOCX, or TXT (max 10MB)</p>
+            </div>
+
+            {uploadMsg && (
+              <div className="mt-4">
+                <Badge variant={uploadMsg.includes('failed') ? 'destructive' : 'default'}>
+                  {uploadMsg}
+                </Badge>
+              </div>
+            )}
+          </CardContent>
+        </Card>
       </div>
     )
   }
 
   return (
-    <div className="max-w-3xl mx-auto">
-      <h1 className="text-2xl font-bold mb-6">Your Profile</h1>
-
-      <div className="bg-white rounded-lg shadow border border-gray-100 divide-y divide-gray-100">
-        {/* Header */}
-        <div className="p-6">
-          <h2 className="text-xl font-semibold">{profile.name}</h2>
-          <div className="text-sm text-gray-500 mt-1 space-x-3">
-            {profile.email && <span>{profile.email}</span>}
-            {profile.phone && <span>{profile.phone}</span>}
-          </div>
-          {profile.resume && (
-            <p className="text-xs text-gray-400 mt-2">Resume: {profile.resume.filename}</p>
-          )}
-        </div>
-
-        {/* Skills */}
-        {profile.skills && profile.skills.length > 0 && (
-          <div className="p-6">
-            <h3 className="font-semibold mb-3">Skills</h3>
-            <div className="flex flex-wrap gap-2">
-              {profile.skills.map((s) => (
-                <span
-                  key={s.name}
-                  className="px-3 py-1 bg-blue-50 text-blue-700 rounded text-sm"
-                  title={`${s.proficiency}${s.years ? ` · ${s.years}y` : ''}`}
-                >
-                  {s.name}
-                  {s.years ? ` (${s.years}y)` : ''}
-                </span>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* Experience */}
-        {profile.experience && profile.experience.length > 0 && (
-          <div className="p-6">
-            <h3 className="font-semibold mb-3">Experience</h3>
-            <div className="space-y-4">
-              {profile.experience.map((e, i) => (
-                <div key={i} className="border-l-2 border-blue-200 pl-4">
-                  <p className="font-medium">{e.title}</p>
-                  <p className="text-sm text-gray-600">{e.company}</p>
-                  <p className="text-xs text-gray-400">
-                    {e.start_date?.slice(0, 7)} – {e.end_date ? e.end_date.slice(0, 7) : 'Present'}
-                  </p>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* Education */}
-        {profile.education && profile.education.length > 0 && (
-          <div className="p-6">
-            <h3 className="font-semibold mb-3">Education</h3>
-            <div className="space-y-2">
-              {profile.education.map((e, i) => (
-                <div key={i}>
-                  <p className="font-medium">{e.degree}</p>
-                  <p className="text-sm text-gray-600">
-                    {e.institution}
-                    {e.field ? ` · ${e.field}` : ''}
-                  </p>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* Upload new resume */}
-        <div className="p-6">
-          <h3 className="font-semibold mb-3">Update Resume</h3>
-          <input
-            type="file"
-            accept=".pdf,.docx,.txt"
-            onChange={(e) => {
-              const file = e.target.files?.[0]
-              if (file) {
-                setUploadMsg('Uploading...')
-                uploadMutation.mutate(file)
-              }
-            }}
-            className="text-sm"
-          />
-          {uploadMsg && (
-            <p
-              className={`mt-2 text-sm ${uploadMsg.includes('failed') ? 'text-red-600' : 'text-green-600'}`}
-            >
-              {uploadMsg}
-            </p>
-          )}
-        </div>
+    <div className="max-w-4xl mx-auto space-y-6">
+      <div>
+        <h1 className="text-3xl font-bold tracking-tight">Your Profile</h1>
+        <p className="text-muted-foreground mt-2">Manage your professional information</p>
       </div>
+
+      <Tabs defaultValue="overview" className="space-y-4">
+        <TabsList>
+          <TabsTrigger value="overview">Overview</TabsTrigger>
+          <TabsTrigger value="experience">Experience</TabsTrigger>
+          <TabsTrigger value="skills">Skills</TabsTrigger>
+          <TabsTrigger value="education">Education</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="overview" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <User className="h-5 w-5" />
+                Personal Information
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div>
+                <Label>Name</Label>
+                <p className="text-lg font-semibold mt-1">{profile.name}</p>
+              </div>
+              
+              {(profile.email || profile.phone) && (
+                <div className="grid grid-cols-2 gap-4">
+                  {profile.email && (
+                    <div>
+                      <Label>Email</Label>
+                      <p className="text-muted-foreground mt-1">{profile.email}</p>
+                    </div>
+                  )}
+                  {profile.phone && (
+                    <div>
+                      <Label>Phone</Label>
+                      <p className="text-muted-foreground mt-1">{profile.phone}</p>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {profile.resume && (
+                <div>
+                  <Label>Resume</Label>
+                  <div className="flex items-center gap-2 mt-1">
+                    <FileText className="h-4 w-4 text-muted-foreground" />
+                    <p className="text-muted-foreground">{profile.resume.filename}</p>
+                  </div>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Update Resume</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <Input
+                type="file"
+                accept=".pdf,.docx,.txt"
+                onChange={(e) => {
+                  const file = e.target.files?.[0]
+                  if (file) {
+                    setUploadMsg('Uploading...')
+                    uploadMutation.mutate(file)
+                  }
+                }}
+              />
+              {uploadMsg && (
+                <Badge variant={uploadMsg.includes('failed') ? 'destructive' : 'default'}>
+                  {uploadMsg}
+                </Badge>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="skills">
+          <Card>
+            <CardHeader>
+              <CardTitle>Skills</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {profile.skills && profile.skills.length > 0 ? (
+                <div className="flex flex-wrap gap-2">
+                  {profile.skills.map((s) => (
+                    <Badge key={s.name} variant="secondary" className="text-sm">
+                      {s.name}
+                      {s.years ? ` (${s.years}y)` : ''}
+                    </Badge>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-muted-foreground">No skills listed</p>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="experience">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Briefcase className="h-5 w-5" />
+                Experience
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {profile.experience && profile.experience.length > 0 ? (
+                <div className="space-y-4">
+                  {profile.experience.map((e, i) => (
+                    <div key={i} className="border-l-2 border-primary pl-4 py-2">
+                      <p className="font-semibold">{e.title}</p>
+                      <p className="text-sm text-muted-foreground">{e.company}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {e.start_date?.slice(0, 7)} – {e.end_date ? e.end_date.slice(0, 7) : 'Present'}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-muted-foreground">No experience listed</p>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="education">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <GraduationCap className="h-5 w-5" />
+                Education
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {profile.education && profile.education.length > 0 ? (
+                <div className="space-y-4">
+                  {profile.education.map((e, i) => (
+                    <div key={i}>
+                      <p className="font-semibold">{e.degree}</p>
+                      <p className="text-sm text-muted-foreground">
+                        {e.institution}
+                        {e.field ? ` · ${e.field}` : ''}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-muted-foreground">No education listed</p>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
     </div>
   )
 }

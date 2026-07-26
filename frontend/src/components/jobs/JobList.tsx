@@ -1,11 +1,9 @@
 import { useJobs } from '../../hooks/useJobs'
-import {
-  useApplications,
-  useCreateApplication,
-  useDeleteApplication,
-} from '../../hooks/useApplications'
+import { useApplications } from '../../hooks/useApplications'
 import { JobCard } from './JobCard'
-import type { ApplicationStatus } from '../../types'
+import { JobCardSkeleton } from '../../components/ui/LoadingSkeleton'
+import { EmptyState } from '../../components/ui/EmptyState'
+import { Briefcase } from 'lucide-react'
 
 interface JobListProps {
   page?: number
@@ -13,66 +11,46 @@ interface JobListProps {
 }
 
 export function JobList({ page = 1, pageSize = 20 }: JobListProps) {
-  const { data, isLoading, isError, error } = useJobs(page, pageSize)
-  const { data: appData } = useApplications()
-  const createApp = useCreateApplication()
-  const deleteApp = useDeleteApplication()
+  const { data: jobsData, isLoading, isError, error } = useJobs(page, pageSize)
+  const { data: appsData } = useApplications()
 
-  // Build a job_id → app lookup
-  const appMap = new Map<string, { id: string; status: ApplicationStatus }>()
-  if (appData?.data) {
-    for (const app of appData.data) {
-      appMap.set(app.job_id, { id: app.id, status: app.status })
-    }
-  }
+  const jobs = jobsData?.data || []
+  const scores = jobsData?.scores || {}
+  const apps = appsData?.data || []
 
-  const handleSave = (jobId: string) => {
-    createApp.mutate({ job_id: jobId })
-  }
-
-  const handleApply = (jobId: string) => {
-    createApp.mutate({ job_id: jobId, status: 'applied' })
-  }
-
-  const handleUndo = (jobId: string) => {
-    const app = appMap.get(jobId)
-    if (app) {
-      deleteApp.mutate(app.id)
-    }
-  }
+  // Create a map of job_id to application
+  const appMap = new Map(apps.map((app) => [app.job_id, app]))
 
   if (isLoading) {
     return (
-      <div className="flex justify-center py-12">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500" />
+      <div className="space-y-4">
+        {[...Array(3)].map((_, i) => (
+          <JobCardSkeleton key={i} />
+        ))}
       </div>
     )
   }
 
   if (isError) {
     return (
-      <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-center">
-        <p className="text-red-700">
-          {error instanceof Error ? error.message : 'Failed to load jobs'}
-        </p>
+      <div className="text-center py-12">
+        <p className="text-destructive">Error loading jobs: {error.message}</p>
       </div>
     )
   }
 
-  const jobs = data?.data ?? []
-  const scores = data?.scores ?? {}
-
   if (jobs.length === 0) {
     return (
-      <div className="text-center py-12 text-gray-500">
-        <p className="text-lg">No jobs found</p>
-        <p className="text-sm mt-1">Try adjusting your filters or triggering a new search.</p>
-      </div>
+      <EmptyState
+        icon={Briefcase}
+        title="No jobs found"
+        description="Try adjusting your search filters or triggering a new search"
+      />
     )
   }
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-4">
       {jobs.map((job) => {
         const app = appMap.get(job.id)
         return (
@@ -80,12 +58,10 @@ export function JobList({ page = 1, pageSize = 20 }: JobListProps) {
             key={job.id}
             job={job}
             score={scores[job.id]}
-            appStatus={app?.status ?? null}
-            onSave={handleSave}
-            onApply={handleApply}
-            onUndo={handleUndo}
-            isSaving={createApp.isPending}
-            isApplying={createApp.isPending}
+            appStatus={app?.status || null}
+            onSave={(jobId) => console.log('Save', jobId)}
+            onApply={(jobId) => console.log('Apply', jobId)}
+            onUndo={(jobId) => console.log('Undo', jobId)}
           />
         )
       })}

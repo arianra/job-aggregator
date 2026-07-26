@@ -3,6 +3,9 @@ import { FilterPanel } from '../components/jobs/FilterPanel'
 import { JobList } from '../components/jobs/JobList'
 import { Pagination } from '../components/ui/pagination'
 import { useHealth, useJobs } from '../hooks/useJobs'
+import { Card, CardContent } from '../components/ui/card'
+import { Badge } from '../components/ui/badge'
+import { Server, Database, Activity } from 'lucide-react'
 
 export function HomePage() {
   const [page, setPage] = useState(1)
@@ -26,10 +29,6 @@ export function HomePage() {
   )
 }
 
-// ---------------------------------------------------------------------------
-// Inline health bar
-// ---------------------------------------------------------------------------
-
 function HealthBar({
   health,
 }: {
@@ -37,22 +36,34 @@ function HealthBar({
 }) {
   if (!health) return null
 
-  const statusColor = health.status === 'ok' ? 'bg-green-500' : 'bg-red-500'
+  const isHealthy = health.status === 'ok'
 
   return (
-    <div className="bg-white rounded-lg shadow p-4 border border-gray-100">
-      <div className="flex items-center gap-3 flex-wrap text-sm text-gray-600">
-        <div className="flex items-center gap-1.5">
-          <div className={`w-2 h-2 ${statusColor} rounded-full`} />
-          <span>{health.status}</span>
+    <Card className="border-border">
+      <CardContent className="pt-6">
+        <div className="flex items-center gap-4 flex-wrap">
+          <div className="flex items-center gap-2">
+            <Badge variant={isHealthy ? 'default' : 'destructive'}>
+              {health.status}
+            </Badge>
+          </div>
+          
+          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+            <Server className="h-4 w-4" />
+            <span>{health.storage}</span>
+          </div>
+          
+          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+            <Database className="h-4 w-4" />
+            <span>{health.database}</span>
+          </div>
+          
+          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+            <Activity className="h-4 w-4" />
+            <span>{health.adapters.join(', ') || 'none'}</span>
+          </div>
         </div>
-        <span className="text-gray-300">|</span>
-        <span>Storage: {health.storage}</span>
-        <span className="text-gray-300">|</span>
-        <span>DB: {health.database}</span>
-        <span className="text-gray-300">|</span>
-        <span>Adapters: {health.adapters.join(', ') || 'none'}</span>
-      </div>
-    </div>
+      </CardContent>
+    </Card>
   )
 }
