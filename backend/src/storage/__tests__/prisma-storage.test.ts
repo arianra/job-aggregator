@@ -4,8 +4,9 @@ import { PrismaStorage } from '../prisma-storage.js';
 import type { Job, Source, Company, Profile, Match, Application } from '@job-aggregator/shared';
 
 // Use a test-specific database
+const testDatabaseUrl = process.env.TEST_DATABASE_URL || 'postgresql://job_aggregator:dev_password_local_only@localhost:5432/job_aggregator_test'
 const testPrisma = new PrismaClient({
-  datasources: { db: { url: 'postgresql://job_aggregator:${process.env.TEST_DB_PASSWORD || 'dev_password_local_only'}@localhost:5432/job_aggregator_test' } },
+  datasources: { db: { url: testDatabaseUrl } },
 });
 
 function makeJob(overrides: Partial<Job> = {}): Job {

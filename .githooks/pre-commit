@@ -73,10 +73,12 @@ for file in $STAGED_FILES; do
   done
 done
 
-# Check for .env files (should be in .gitignore but double-check)
-if echo "$STAGED_FILES" | grep -qE "^\.env"; then
-  echo "${RED}⚠️  FOUND: .env file${NC}"
-  echo "   Environment files should never be committed"
+# Check for .env files with secrets (exclude .env.example, .env.template, etc.)
+ENV_FILES=$(echo "$STAGED_FILES" | grep -E "^\.env(\.[a-zA-Z0-9_-]+)?$" | grep -vE "\.(example|template|sample)$" || true)
+if [ -n "$ENV_FILES" ]; then
+  echo "${RED}⚠️  FOUND: .env file with potential secrets${NC}"
+  echo "   $ENV_FILES"
+  echo "   (Use .env.example for templates)"
   FOUND_SECRETS=1
 fi
 
