@@ -12,7 +12,7 @@ const envSchema = z.object({
   FRONTEND_URL: z.string().url().default('http://localhost:5173'),
   NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
   QWEN_API_KEY: z.string().optional(),
-  RAPIDAPI_KEY: z.string().optional(),
+  QWEN_API_ENDPOINT: z.string().optional(),
 })
 
 const env = envSchema.parse(process.env)
@@ -24,5 +24,5 @@ export const config = {
   nodeEnv: env.NODE_ENV,
   hasDatabase: !!env.DATABASE_URL,
   qwenApiKey: env.QWEN_API_KEY,
-  rapidApiKey: env.RAPIDAPI_KEY,
+  qwenApiEndpoint: env.QWEN_API_ENDPOINT,
 } as const
