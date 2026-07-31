@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import api from '../api/client'
 import type { Job, JobSource } from '../types'
@@ -8,6 +8,7 @@ import { Badge } from '../components/ui/badge'
 import { Input } from '../components/ui/input'
 import { Label } from '../components/ui/label'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/ui/tabs'
+import { Textarea } from '../components/ui/textarea'
 import { Upload, User, Briefcase, GraduationCap, FileText } from 'lucide-react'
 
 interface Profile {
@@ -18,12 +19,20 @@ interface Profile {
   skills?: { name: string; proficiency: string; years?: number }[]
   experience?: { company: string; title: string; start_date: string; end_date?: string }[]
   education?: { institution: string; degree: string; field?: string }[]
-  resume?: { filename: string }
+  resume?: {
+    filename: string
+    parsed_text?: string
+    quality_score?: number
+    quality_issues?: string[]
+    quality_suggestions?: string[]
+  }
 }
 
 export function ProfilePage() {
   const queryClient = useQueryClient()
   const [uploadMsg, setUploadMsg] = useState('')
+  const [resumeText, setResumeText] = useState('')
+  const [isSavingText, setIsSavingText] = useState(false)
 
   const { data: profileData, isLoading } = useQuery({
     queryKey: ['profile'],
@@ -32,6 +41,13 @@ export function ProfilePage() {
       return data.data as Profile | null
     },
   })
+
+  // Initialize resumeText when profile loads
+  React.useEffect(() => {
+    if (profileData?.resume?.parsed_text) {
+      setResumeText(profileData.resume.parsed_text)
+    }
+  }, [profileData])
 
   const uploadMutation = useMutation({
     mutationFn: async (file: File) => {
@@ -50,6 +66,25 @@ export function ProfilePage() {
       setUploadMsg(`Upload failed: ${err.message}`)
     },
   })
+
+  const saveResumeTextMutation = useMutation({
+    mutationFn: async (text: string) => {
+      const { data } = await api.put('/profile/resume-text', { text })
+      return data
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['profile'] })
+    },
+  })
+
+  const handleSaveText = async () => {
+    setIsSavingText(true)
+    try {
+      await saveResumeTextMutation.mutateAsync(resumeText)
+    } finally {
+      setIsSavingText(false)
+    }
+  }
 
   if (isLoading) {
     return (
@@ -114,6 +149,7 @@ export function ProfilePage() {
           <TabsTrigger value="experience">Experience</TabsTrigger>
           <TabsTrigger value="skills">Skills</TabsTrigger>
           <TabsTrigger value="education">Education</TabsTrigger>
+          <TabsTrigger value="resume-text">Resume Text</TabsTrigger>
         </TabsList>
 
         <TabsContent value="overview" className="space-y-4">
@@ -257,6 +293,97 @@ export function ProfilePage() {
                 </div>
               ) : (
                 <p className="text-muted-foreground">No education listed</p>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="resume-text">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <FileText className="h-5 w-5" />
+                  Resume Text
+                </div>
+                {profile.resume?.quality_score && (
+                  <Badge variant={profile.resume.quality_score >= 80 ? 'default' : 'secondary'}>
+                    Quality: {profile.resume.quality_score}%
+                  </Badge>
+                )}
+              </CardTitle>
+              <CardDescription>
+                Edit the extracted text from your resume. This will be used for ATS optimization.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {profile.resume?.filename && (
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <FileText className="h-4 w-4" />
+                  <span>{profile.resume.filename}</span>
+                </div>
+              )}
+
+              <Textarea
+                value={resumeText}
+                onChange={(e) => setResumeText(e.target.value)}
+                placeholder="Your resume text will appear here after uploading a PDF..."
+                className="min-h-[400px] font-mono text-sm"
+              />
+
+              {profile.resume?.quality_issues && profile.resume.quality_issues.length > 0 && (
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium">Issues Found:</Label>
+                  <ul className="text-sm text-muted-foreground space-y-1">
+                    {profile.resume.quality_issues.map((issue, idx) => (
+                      <li key={idx} className="flex items-start gap-2">
+                        <span className="text-destructive">•</span>
+                        <span>{issue}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              {profile.resume?.quality_suggestions && profile.resume.quality_suggestions.length > 0 && (
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium">Suggestions:</Label>
+                  <ul className="text-sm text-muted-foreground space-y-1">
+                    {profile.resume.quality_suggestions.map((suggestion, idx) => (
+                      <li key={idx} className="flex items-start gap-2">
+                        <span className="text-primary">→</span>
+                        <span>{suggestion}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              <div className="flex items-center gap-3">
+                <Button
+                  onClick={handleSaveText}
+                  disabled={isSavingText || !resumeText.trim()}
+                >
+                  {isSavingText ? 'Saving...' : 'Save Changes'}
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    if (profile.resume?.parsed_text) {
+                      setResumeText(profile.resume.parsed_text)
+                    }
+                  }}
+                  disabled={!profile.resume?.parsed_text}
+                >
+                  Reset to Original
+                </Button>
+              </div>
+
+              {saveResumeTextMutation.isSuccess && (
+                <Badge variant="default">Text saved successfully!</Badge>
+              )}
+              {saveResumeTextMutation.isError && (
+                <Badge variant="destructive">Failed to save text</Badge>
               )}
             </CardContent>
           </Card>

@@ -7,6 +7,7 @@ import type { Storage } from '@job-aggregator/shared'
 import type { Profile, Skill, Experience, Education } from '@job-aggregator/shared'
 import { extractText } from '../services/extractor.js'
 import { parseResumeWithQwen } from '../services/qwen-parser.js'
+import { cleanResumeText, getTextQualityScore } from '../services/resume-text.js'
 import { config } from '../config.js'
 import logger from '../utils/logger.js'
 
@@ -84,6 +85,39 @@ export function createProfileRouter(storage: Storage): Router {
     }
   })
 
+  // PUT /api/profile/resume-text — update just the resume text
+  router.put('/resume-text', async (req: Request, res: Response) => {
+    try {
+      const profiles = await storage.listProfiles()
+      if (profiles.length === 0) {
+        res.status(404).json({ error: 'No profile exists. Upload a resume first.' })
+        return
+      }
+
+      const currentProfile = profiles.reduce((latest, current) =>
+        current.updated_at > latest.updated_at ? current : latest
+      )
+
+      if (!req.body.text || typeof req.body.text !== 'string') {
+        res.status(400).json({ error: 'text field is required' })
+        return
+      }
+
+      // Update the resume.parsed_text field
+      const updatedProfile = await storage.updateProfile(currentProfile.id, {
+        resume: {
+          ...currentProfile.resume,
+          parsed_text: req.body.text,
+        },
+      })
+
+      res.json({ success: true, data: updatedProfile })
+    } catch (err) {
+      logger.error('PUT /api/profile/resume-text failed', { err })
+      res.status(500).json({ error: 'Internal server error' })
+    }
+  })
+
   // POST /api/profile/upload — upload resume, extract text, parse with Qwen
   router.post('/upload', upload.single('resume'), async (req: Request, res: Response) => {
     try {
@@ -100,6 +134,11 @@ export function createProfileRouter(storage: Storage): Router {
       // Step 1: Extract text
       const extracted = await extractText(filePath, filename)
       logger.info(`[profile] text extracted: ${extracted.charCount} chars`)
+
+      // Clean the extracted text
+      const cleanedText = cleanResumeText(extracted.text)
+      const textQuality = getTextQualityScore(cleanedText)
+      logger.info(`[profile] text cleaned: ${cleanedText.length} chars, quality score: ${textQuality.score}`)
 
       // Step 2: Parse with Qwen (if API key configured)
       let parsedProfile: Partial<Profile> = {}
@@ -176,7 +215,10 @@ export function createProfileRouter(storage: Storage): Router {
           filename,
           mime_type: req.file.mimetype,
           stored_path: filePath,
-          parsed_text: extracted.text,
+          parsed_text: cleanedText,
+          quality_score: textQuality.score,
+          quality_issues: textQuality.issues,
+          quality_suggestions: textQuality.suggestions,
         },
       } as Profile
 
