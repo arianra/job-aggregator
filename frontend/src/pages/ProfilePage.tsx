@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import api from '../api/client'
 import type { Job, JobSource } from '../types'
-import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card'
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../components/ui/card'
 import { Button } from '../components/ui/button'
 import { Badge } from '../components/ui/badge'
 import { Input } from '../components/ui/input'
@@ -10,6 +10,7 @@ import { Label } from '../components/ui/label'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/ui/tabs'
 import { Textarea } from '../components/ui/textarea'
 import { Upload, User, Briefcase, GraduationCap, FileText } from 'lucide-react'
+import { ResumePdfViewer } from '../components/pdf/ResumePdfViewer'
 
 interface Profile {
   id: string
@@ -43,7 +44,7 @@ export function ProfilePage() {
   })
 
   // Initialize resumeText when profile loads
-  React.useEffect(() => {
+  useEffect(() => {
     if (profileData?.resume?.parsed_text) {
       setResumeText(profileData.resume.parsed_text)
     }
@@ -189,6 +190,9 @@ export function ProfilePage() {
                   <div className="flex items-center gap-2 mt-1">
                     <FileText className="h-4 w-4 text-muted-foreground" />
                     <p className="text-muted-foreground">{profile.resume.filename}</p>
+                    {profile.resume.filename.toLowerCase().endsWith('.pdf') && (
+                      <ResumePdfViewer filename={profile.resume.filename} />
+                    )}
                   </div>
                 </div>
               )}
