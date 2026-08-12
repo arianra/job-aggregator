@@ -272,7 +272,7 @@ function normalizeSkill(s: string): string {
 
 function inferRequiredYears(job: Job): number {
   const text = (job.description + ' ' + (job.requirements ?? []).join(' ')).toLowerCase()
-  const matches = text.match(/(\d+)[\+]?\s*(?:years|yrs?)(?:\s*(?:of\s*)?experience)?/g)
+  const matches = text.match(/(\d+)[+]?\s*(?:years|yrs?)(?:\s*(?:of\s*)?experience)?/g)
   if (!matches) return 0
 
   const years = matches.map((m) => parseInt(m.match(/\d+/)?.[0] ?? '0', 10))

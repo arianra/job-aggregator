@@ -18,7 +18,11 @@ export function ApplicationsPage() {
         </CardHeader>
         <CardContent>
           <p className="text-sm text-muted-foreground">
-            Navigate to <Link to="/jobs" className="text-primary hover:underline">Jobs</Link> to find and apply for positions.
+            Navigate to{' '}
+            <Link to="/jobs" className="text-primary hover:underline">
+              Jobs
+            </Link>{' '}
+            to find and apply for positions.
           </p>
         </CardContent>
       </Card>

@@ -26,14 +26,14 @@ export function cleanResumeText(rawText: string): string {
   // Normalize bullet symbols - convert various bullets to consistent format
   // First normalize all bullet types to •
   cleaned = cleaned.replace(/[●○◦▪▫■□◆◇·]/g, '•')
-  
+
   // Then remove leading bullets (they're just formatting artifacts from PDF extraction)
   cleaned = cleaned.replace(/^\s*•\s*/gm, '')
 
   // Fix common PDF extraction issues:
   // - Words split across lines (hyphenation)
   cleaned = cleaned.replace(/(\w+)-\s*\n\s*(\w+)/g, '$1$2')
-  
+
   // - Broken URLs/emails across lines
   cleaned = cleaned.replace(/([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+)\s*\n\s*([a-zA-Z0-9.-]+)/g, '$1$2')
 
@@ -60,7 +60,7 @@ export function getTextQualityScore(text: string): {
     return {
       score: 0,
       issues: ['No text content'],
-      suggestions: ['Upload a resume to begin']
+      suggestions: ['Upload a resume to begin'],
     }
   }
 
@@ -81,10 +81,8 @@ export function getTextQualityScore(text: string): {
 
   // Check for common section headers
   const standardSections = ['experience', 'education', 'skills', 'summary']
-  const foundSections = standardSections.filter(section =>
-    new RegExp(section, 'i').test(text)
-  )
-  
+  const foundSections = standardSections.filter((section) => new RegExp(section, 'i').test(text))
+
   if (foundSections.length < 3) {
     issues.push('Missing standard resume sections')
     suggestions.push('Add Experience, Education, and Skills sections')
@@ -98,13 +96,13 @@ export function getTextQualityScore(text: string): {
 
   // Check for contact info
   const hasEmail = /[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/.test(text)
-  const hasPhone = /[\(]?\d{3}[\)]?[-\s]?\d{3}[-\s]?\d{4}/.test(text)
-  
+  const hasPhone = /[(]?\d{3}[)]?[-\s]?\d{3}[-\s]?\d{4}/.test(text)
+
   if (!hasEmail) {
     issues.push('No email address detected')
     suggestions.push('Add your email address')
   }
-  
+
   if (!hasPhone) {
     suggestions.push('Consider adding a phone number')
   }
@@ -120,7 +118,7 @@ export function getTextQualityScore(text: string): {
   return {
     score,
     issues,
-    suggestions: suggestions.slice(0, 5) // Limit suggestions
+    suggestions: suggestions.slice(0, 5), // Limit suggestions
   }
 }
 

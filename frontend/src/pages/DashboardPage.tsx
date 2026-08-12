@@ -20,19 +20,22 @@ export function DashboardPage() {
   const totalJobs = jobs.length
   const totalApplications = applications.length
   const interviews = applications.filter((a: Application) => a.status === 'interview').length
-  const offers = applications.filter((a: Application) => a.status === 'offer' || a.status === 'accepted').length
+  const offers = applications.filter(
+    (a: Application) => a.status === 'offer' || a.status === 'accepted'
+  ).length
 
   const recentApplications = applications
-    .sort((a: Application, b: Application) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime())
+    .sort(
+      (a: Application, b: Application) =>
+        new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime()
+    )
     .slice(0, 5)
 
   return (
     <div className="space-y-6">
       <div>
         <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
-        <p className="text-muted-foreground">
-          Overview of your job search progress
-        </p>
+        <p className="text-muted-foreground">Overview of your job search progress</p>
       </div>
 
       <Tabs defaultValue="overview" className="space-y-4">
@@ -61,21 +64,14 @@ export function DashboardPage() {
               icon={CheckCircle2}
               description="Scheduled"
             />
-            <MetricCard
-              label="Offers"
-              value={offers}
-              icon={TrendingUp}
-              description="Received"
-            />
+            <MetricCard label="Offers" value={offers} icon={TrendingUp} description="Received" />
           </div>
 
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
             <Card className="lg:col-span-4">
               <CardHeader>
                 <CardTitle>Pipeline Status</CardTitle>
-                <CardDescription>
-                  Current breakdown of your applications
-                </CardDescription>
+                <CardDescription>Current breakdown of your applications</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="space-y-3">
@@ -142,9 +138,7 @@ export function DashboardPage() {
           <Card>
             <CardHeader>
               <CardTitle>Recent Activity</CardTitle>
-              <CardDescription>
-                Your latest application updates
-              </CardDescription>
+              <CardDescription>Your latest application updates</CardDescription>
             </CardHeader>
             <CardContent>
               {recentApplications.length === 0 ? (
@@ -163,12 +157,8 @@ export function DashboardPage() {
                     return (
                       <div key={app.id} className="flex items-center justify-between">
                         <div className="space-y-1">
-                          <p className="text-sm font-medium leading-none">
-                            {job.title}
-                          </p>
-                          <p className="text-sm text-muted-foreground">
-                            {job.company.name}
-                          </p>
+                          <p className="text-sm font-medium leading-none">{job.title}</p>
+                          <p className="text-sm text-muted-foreground">{job.company.name}</p>
                         </div>
                         <div className="flex items-center gap-3">
                           <StatusBadge status={app.status} />
@@ -176,7 +166,8 @@ export function DashboardPage() {
                             <div className="flex items-center gap-1 text-sm text-muted-foreground">
                               <DollarSign className="h-3 w-3" />
                               <span>
-                                {job.salary_range.min.toLocaleString()} - {job.salary_range.max.toLocaleString()}
+                                {job.salary_range.min.toLocaleString()} -{' '}
+                                {job.salary_range.max.toLocaleString()}
                               </span>
                             </div>
                           )}

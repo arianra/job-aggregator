@@ -12,7 +12,15 @@ import { Card, CardContent } from '../components/ui/card'
 import { Button } from '../components/ui/button'
 import { Badge } from '../components/ui/badge'
 import { Separator } from '../components/ui/separator'
-import { ArrowLeft, MapPin, Calendar, DollarSign, ExternalLink, Bookmark, CheckCircle } from 'lucide-react'
+import {
+  ArrowLeft,
+  MapPin,
+  Calendar,
+  DollarSign,
+  ExternalLink,
+  Bookmark,
+  CheckCircle,
+} from 'lucide-react'
 import { ScoreBadge } from '../components/ui/ScoreBadge'
 import { StatusBadge } from '../components/ui/StatusBadge'
 
@@ -39,7 +47,9 @@ export function JobDetails() {
   if (isError || !data?.data) {
     return (
       <div className="text-center py-12">
-        <p className="text-destructive">{error instanceof Error ? error.message : 'Job not found'}</p>
+        <p className="text-destructive">
+          {error instanceof Error ? error.message : 'Job not found'}
+        </p>
         <Link to="/jobs" className="mt-4 inline-block text-primary hover:underline text-sm">
           ← Back to jobs
         </Link>
@@ -118,7 +128,9 @@ export function JobDetails() {
               <h2 className="text-lg font-semibold mb-2">Tags</h2>
               <div className="flex flex-wrap gap-2">
                 {job.tags.map((tag: string) => (
-                  <Badge key={tag} variant="secondary">{tag}</Badge>
+                  <Badge key={tag} variant="secondary">
+                    {tag}
+                  </Badge>
                 ))}
               </div>
             </div>
@@ -148,7 +160,12 @@ export function JobDetails() {
           {/* Direct apply */}
           {job.direct_apply_url && (
             <Button className="w-full sm:w-auto">
-              <a href={job.direct_apply_url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2">
+              <a
+                href={job.direct_apply_url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-2"
+              >
                 Apply directly <ExternalLink className="h-4 w-4" />
               </a>
             </Button>
@@ -183,7 +200,9 @@ export function JobDetails() {
                   <StatusBadge status={application.status} />
                   <select
                     value={application.status}
-                    onChange={(e) => updateApp.mutate({ id: application.id, status: e.target.value })}
+                    onChange={(e) =>
+                      updateApp.mutate({ id: application.id, status: e.target.value })
+                    }
                     disabled={updateApp.isPending}
                     className="text-sm border border-border rounded-md px-3 py-1.5 bg-background focus:outline-none focus:ring-2 focus:ring-ring"
                   >

@@ -87,11 +87,10 @@ export function FilterPanel() {
 
       {searchMutation.isSuccess && searchMutation.data && (
         <div className="text-sm text-muted-foreground">
-          Found {searchMutation.data.totalJobs} jobs across {searchMutation.data.totalSources} sources
+          Found {searchMutation.data.totalJobs} jobs across {searchMutation.data.totalSources}{' '}
+          sources
           {searchMutation.data.errors.length > 0 && (
-            <span className="text-destructive">
-              {' '}({searchMutation.data.errors.length} errors)
-            </span>
+            <span className="text-destructive"> ({searchMutation.data.errors.length} errors)</span>
           )}
         </div>
       )}

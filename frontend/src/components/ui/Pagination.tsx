@@ -21,7 +21,7 @@ export function Pagination({ page, pageSize, total, onPageChange, className }: P
   const getPageNumbers = () => {
     const pages: (number | string)[] = []
     const maxVisible = 5
-    
+
     if (totalPages <= maxVisible) {
       // Show all pages
       for (let i = 1; i <= totalPages; i++) {
@@ -31,22 +31,22 @@ export function Pagination({ page, pageSize, total, onPageChange, className }: P
       // Show first, last, and pages around current
       const start = Math.max(1, page - 1)
       const end = Math.min(totalPages, page + 1)
-      
+
       if (start > 1) {
         pages.push(1)
         if (start > 2) pages.push('...')
       }
-      
+
       for (let i = start; i <= end; i++) {
         pages.push(i)
       }
-      
+
       if (end < totalPages) {
         if (end < totalPages - 1) pages.push('...')
         pages.push(totalPages)
       }
     }
-    
+
     return pages
   }
 
@@ -77,10 +77,10 @@ export function Pagination({ page, pageSize, total, onPageChange, className }: P
               </span>
             )
           }
-          
+
           const pageNumNumber = pageNum as number
           const isActive = page === pageNumNumber
-          
+
           return (
             <Button
               key={pageNumNumber}

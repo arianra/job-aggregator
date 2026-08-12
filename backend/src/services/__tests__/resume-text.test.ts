@@ -21,7 +21,7 @@ describe('cleanResumeText', () => {
     const input = 'Line 1   \nLine 2  \nLine 3'
     const result = cleanResumeText(input)
     const lines = result.split('\n')
-    lines.forEach(line => {
+    lines.forEach((line) => {
       expect(line).toBe(line.trim())
     })
   })
@@ -30,7 +30,7 @@ describe('cleanResumeText', () => {
     const input = 'Line 1\n  Line 2\n    Line 3'
     const result = cleanResumeText(input)
     const lines = result.split('\n')
-    lines.forEach(line => {
+    lines.forEach((line) => {
       expect(line).toBe(line.trim())
     })
   })
@@ -110,7 +110,8 @@ describe('getTextQualityScore', () => {
   })
 
   it('should detect email addresses', () => {
-    const input = 'John Doe\njohn@example.com\nExperience section here\nEducation section here\nSkills section here'
+    const input =
+      'John Doe\njohn@example.com\nExperience section here\nEducation section here\nSkills section here'
     const result = getTextQualityScore(input)
     expect(result.issues).not.toContain('No email address detected')
   })
@@ -125,17 +126,16 @@ describe('getTextQualityScore', () => {
     const input = '• Led team of 5 engineers\n• Improved performance by 30%'
     const result = getTextQualityScore(input)
     // Should not suggest adding bullet points
-    const hasBulletSuggestion = result.suggestions.some(s =>
-      s.includes('bullet points')
-    )
+    const hasBulletSuggestion = result.suggestions.some((s) => s.includes('bullet points'))
     expect(hasBulletSuggestion).toBe(false)
   })
 
   it('should suggest bullet points when none exist', () => {
-    const input = 'John Doe\nemail@test.com\nExperience: Worked at Google\nEducation: BS\nSkills: JavaScript'
+    const input =
+      'John Doe\nemail@test.com\nExperience: Worked at Google\nEducation: BS\nSkills: JavaScript'
     const result = getTextQualityScore(input)
-    const hasBulletSuggestion = result.suggestions.some(s =>
-      s.includes('bullet points') || s.includes('Bullet points')
+    const hasBulletSuggestion = result.suggestions.some(
+      (s) => s.includes('bullet points') || s.includes('Bullet points')
     )
     expect(hasBulletSuggestion).toBe(true)
   })

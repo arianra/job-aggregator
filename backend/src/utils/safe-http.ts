@@ -1,4 +1,4 @@
-import axios, { AxiosInstance, AxiosRequestConfig, AxiosResponse } from 'axios';
+import axios, { AxiosInstance, AxiosRequestConfig, AxiosResponse } from 'axios'
 import { TokenBucketRateLimiter } from './token-bucket.js'
 import { Cache } from './cache.js'
 

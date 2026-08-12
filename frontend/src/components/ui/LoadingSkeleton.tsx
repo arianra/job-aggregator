@@ -5,11 +5,7 @@ interface SkeletonProps {
 }
 
 export function Skeleton({ className }: SkeletonProps) {
-  return (
-    <div
-      className={cn('animate-pulse rounded-md bg-muted', className)}
-    />
-  )
+  return <div className={cn('animate-pulse rounded-md bg-muted', className)} />
 }
 
 export function CardSkeleton() {
@@ -58,7 +54,7 @@ export function TableSkeleton({ rows = 5 }: { rows?: number }) {
         <Skeleton className="h-4 w-1/4" />
         <Skeleton className="h-4 w-1/6" />
       </div>
-      
+
       {/* Rows */}
       {Array.from({ length: rows }).map((_, i) => (
         <div key={i} className="flex gap-4 py-2">

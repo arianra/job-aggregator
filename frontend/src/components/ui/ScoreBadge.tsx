@@ -24,7 +24,8 @@ export function ScoreBadge({ score, className }: ScoreBadgeProps) {
 function getScoreConfig(score: number) {
   if (score >= 80) {
     return {
-      className: 'bg-excellent-100 text-excellent-700 dark:bg-excellent-500/20 dark:text-excellent-400',
+      className:
+        'bg-excellent-100 text-excellent-700 dark:bg-excellent-500/20 dark:text-excellent-400',
     }
   }
   if (score >= 60) {

@@ -273,22 +273,28 @@ describe('Cache', () => {
   })
 
   describe('destroy', () => {
-    it('should stop sweep interval', async () => {
-      const destroyCache = new Cache<string>({
-        maxEntries: 10,
-        defaultTtlMs: 100,
-        sweepIntervalMs: 50,
-        name: 'destroy-cache',
-      })
+    it('should stop sweep interval', () => {
+      vi.useFakeTimers()
+      try {
+        const destroyCache = new Cache<string>({
+          maxEntries: 10,
+          defaultTtlMs: 10_000,
+          sweepIntervalMs: 50,
+          name: 'destroy-cache',
+        })
+        const sweepSpy = vi.spyOn(destroyCache, 'sweep')
 
-      destroyCache.set('key1', 'value1')
-      destroyCache.destroy()
+        destroyCache.set('key1', 'value1')
+        destroyCache.destroy()
 
-      // Wait longer than sweep interval
-      await new Promise((resolve) => setTimeout(resolve, 100))
+        // Wait longer than several sweep intervals
+        vi.advanceTimersByTime(200)
 
-      // Entry should still exist because sweep was stopped
-      expect(destroyCache.has('key1')).toBe(true)
+        expect(sweepSpy).not.toHaveBeenCalled()
+        expect(destroyCache.has('key1')).toBe(true)
+      } finally {
+        vi.useRealTimers()
+      }
     })
   })
 
@@ -320,7 +326,7 @@ describe('Cache', () => {
       cache.set('key1', 'value1', 0)
 
       // Should be expired immediately
-      await new Promise((resolve) => setTimeout(resolve, 1))
+      await new Promise((resolve) => setTimeout(resolve, 10))
       expect(cache.get('key1')).toBeNull()
     })
 

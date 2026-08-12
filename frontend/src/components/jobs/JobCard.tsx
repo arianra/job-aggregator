@@ -37,7 +37,11 @@ export function JobCard({
   const formatSalary = () => {
     if (!job.salary_range) return null
     const { min, max, currency } = job.salary_range
-    const fmt = new Intl.NumberFormat('en-US', { style: 'currency', currency, maximumFractionDigits: 0 })
+    const fmt = new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency,
+      maximumFractionDigits: 0,
+    })
     return `${fmt.format(min)} - ${fmt.format(max)}`
   }
 
@@ -46,7 +50,7 @@ export function JobCard({
     const date = new Date(job.posted_date)
     const now = new Date()
     const diffDays = Math.floor((now.getTime() - date.getTime()) / (1000 * 60 * 60 * 24))
-    
+
     if (diffDays === 0) return 'Today'
     if (diffDays === 1) return 'Yesterday'
     if (diffDays < 7) return `${diffDays} days ago`
@@ -90,9 +94,7 @@ export function JobCard({
                 </div>
               )}
 
-              {job.is_remote && (
-                <Badge variant="outline">Remote</Badge>
-              )}
+              {job.is_remote && <Badge variant="outline">Remote</Badge>}
             </div>
 
             {job.tags && job.tags.length > 0 && (
@@ -118,9 +120,7 @@ export function JobCard({
               </Badge>
             )}
 
-            {appStatus && (
-              <Badge variant="outline">{appStatus}</Badge>
-            )}
+            {appStatus && <Badge variant="outline">{appStatus}</Badge>}
           </div>
         </div>
 
@@ -139,21 +139,13 @@ export function JobCard({
             )}
 
             {!appStatus && onApply && (
-              <Button
-                size="sm"
-                onClick={() => onApply(job.id)}
-                disabled={isApplying}
-              >
+              <Button size="sm" onClick={() => onApply(job.id)} disabled={isApplying}>
                 {isApplying ? 'Applying...' : 'Apply'}
               </Button>
             )}
 
             {appStatus && onUndo && (
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => onUndo(job.id)}
-              >
+              <Button variant="outline" size="sm" onClick={() => onUndo(job.id)}>
                 Undo
               </Button>
             )}

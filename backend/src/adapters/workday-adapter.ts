@@ -450,7 +450,7 @@ export class WorkdayAdapter implements BoardAdapter {
     let offset = 0
     let observedTotal: number | null = null
 
-    while (true) {
+    for (;;) {
       const payload = {
         appliedFacets: {},
         limit: this.PAGE_SIZE,

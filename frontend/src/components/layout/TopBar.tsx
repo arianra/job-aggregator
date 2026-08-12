@@ -14,7 +14,7 @@ export function TopBar() {
   return (
     <header className="sticky top-0 z-30 flex h-16 items-center gap-4 border-b bg-card/95 backdrop-blur supports-[backdrop-filter]:bg-card/60 px-6">
       <div className="flex-1" />
-      
+
       <DropdownMenu>
         <DropdownMenuTrigger>
           <Button variant="outline" size="icon" className="h-9 w-9">

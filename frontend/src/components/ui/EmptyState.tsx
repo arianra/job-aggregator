@@ -28,11 +28,11 @@ export function EmptyState({
           <Icon className="h-6 w-6 text-muted-foreground" />
         </div>
       )}
-      
+
       <h3 className="mt-4 text-sm font-semibold">{title}</h3>
-      
+
       <p className="mt-1 text-sm text-muted-foreground">{description}</p>
-      
+
       {action && <div className="mt-6">{action}</div>}
     </div>
   )

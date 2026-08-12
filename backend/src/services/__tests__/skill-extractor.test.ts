@@ -1,10 +1,22 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { extractSkillsFromText } from '../skill-extractor.js'
-import { parseResumeWithQwen } from '../qwen-parser.js'
 
 // Mock fetch globally
 const mockFetch = vi.fn()
 global.fetch = mockFetch
+
+// Helper: Anthropic Messages-protocol response with a single text block
+function anthropicResponse(payload: unknown) {
+  return {
+    ok: true,
+    status: 200,
+    json: () =>
+      Promise.resolve({
+        id: 'msg_test',
+        content: [{ type: 'text', text: JSON.stringify(payload) }],
+      }),
+  }
+}
 
 describe('extractSkillsFromText', () => {
   beforeEach(() => {
@@ -13,29 +25,16 @@ describe('extractSkillsFromText', () => {
 
   const mockConfig = {
     apiKey: 'test-key',
-    model: 'qwen-max',
+    model: 'qwen3.8-max',
     baseUrl: 'https://test-api.example.com',
   }
 
   it('should extract skills from single job', async () => {
     const jobText = 'Looking for React, TypeScript, and AWS experts'
-    const mockResponse = {
-      ok: true,
-      json: () =>
-        Promise.resolve({
-          choices: [
-            {
-              message: {
-                content: JSON.stringify({
-                  jobs: [{ skills: ['React', 'TypeScript', 'AWS'] }],
-                }),
-              },
-            },
-          ],
-        }),
-    }
 
-    mockFetch.mockResolvedValue(mockResponse)
+    mockFetch.mockResolvedValue(
+      anthropicResponse({ jobs: [{ skills: ['React', 'TypeScript', 'AWS'] }] })
+    )
 
     const result = await extractSkillsFromText([jobText], mockConfig)
 
@@ -46,7 +45,7 @@ describe('extractSkillsFromText', () => {
       expect.objectContaining({
         method: 'POST',
         headers: expect.objectContaining({
-          Authorization: 'Bearer test-key',
+          'x-api-key': 'test-key',
         }),
       })
     )
@@ -55,23 +54,11 @@ describe('extractSkillsFromText', () => {
   it('should extract skills from multiple jobs', async () => {
     const jobTexts = ['React and TypeScript developer', 'Python and Django engineer']
 
-    const mockResponse = {
-      ok: true,
-      json: () =>
-        Promise.resolve({
-          choices: [
-            {
-              message: {
-                content: JSON.stringify({
-                  jobs: [{ skills: ['React', 'TypeScript'] }, { skills: ['Python', 'Django'] }],
-                }),
-              },
-            },
-          ],
-        }),
-    }
-
-    mockFetch.mockResolvedValue(mockResponse)
+    mockFetch.mockResolvedValue(
+      anthropicResponse({
+        jobs: [{ skills: ['React', 'TypeScript'] }, { skills: ['Python', 'Django'] }],
+      })
+    )
 
     const result = await extractSkillsFromText(jobTexts, mockConfig)
 
@@ -82,23 +69,8 @@ describe('extractSkillsFromText', () => {
 
   it('should handle empty skills array', async () => {
     const jobText = 'Looking for a great team player'
-    const mockResponse = {
-      ok: true,
-      json: () =>
-        Promise.resolve({
-          choices: [
-            {
-              message: {
-                content: JSON.stringify({
-                  jobs: [{ skills: [] }],
-                }),
-              },
-            },
-          ],
-        }),
-    }
 
-    mockFetch.mockResolvedValue(mockResponse)
+    mockFetch.mockResolvedValue(anthropicResponse({ jobs: [{ skills: [] }] }))
 
     const result = await extractSkillsFromText([jobText], mockConfig)
 
@@ -130,54 +102,28 @@ describe('extractSkillsFromText', () => {
 
   it('should use default model and base URL', async () => {
     const configWithoutOptional = { apiKey: 'test-key' }
-    const mockResponse = {
-      ok: true,
-      json: () =>
-        Promise.resolve({
-          choices: [
-            {
-              message: {
-                content: JSON.stringify({ jobs: [{ skills: ['React'] }] }),
-              },
-            },
-          ],
-        }),
-    }
 
-    mockFetch.mockResolvedValue(mockResponse)
+    mockFetch.mockResolvedValue(anthropicResponse({ jobs: [{ skills: ['React'] }] }))
 
     await extractSkillsFromText(['test'], configWithoutOptional)
 
     expect(mockFetch).toHaveBeenCalledWith(
-      expect.stringContaining('dashscope.aliyuncs.com'),
+      expect.stringContaining('token-plan.ap-southeast-1.maas.aliyuncs.com'),
       expect.objectContaining({
-        body: expect.stringContaining('qwen-max'),
+        body: expect.stringContaining('qwen3.8-max'),
       })
     )
   })
 
   it('should truncate long job texts', async () => {
     const longText = 'a'.repeat(5000)
-    const mockResponse = {
-      ok: true,
-      json: () =>
-        Promise.resolve({
-          choices: [
-            {
-              message: {
-                content: JSON.stringify({ jobs: [{ skills: [] }] }),
-              },
-            },
-          ],
-        }),
-    }
 
-    mockFetch.mockResolvedValue(mockResponse)
+    mockFetch.mockResolvedValue(anthropicResponse({ jobs: [{ skills: [] }] }))
 
     await extractSkillsFromText([longText], mockConfig)
 
     const callBody = JSON.parse(mockFetch.mock.calls[0][1].body)
-    const promptContent = callBody.messages[1].content
+    const promptContent = callBody.messages[0].content
 
     // Should be truncated to ~2000 chars per job
     expect(promptContent.length).toBeLessThan(2500)

@@ -1,14 +1,11 @@
 import logger from '../utils/logger.js'
-import { parseResumeWithQwen } from './qwen-parser.js'
+import { qwenComplete, extractJson } from './qwen-client.js'
 
-interface QwenConfig {
+export interface QwenConfig {
   apiKey: string
   model?: string
   baseUrl?: string
 }
-
-const DEFAULT_MODEL = 'qwen-max'
-const DEFAULT_BASE_URL = 'https://dashscope.aliyuncs.com/compatible-mode/v1'
 
 /**
  * Extract skills from job descriptions using Qwen AI
@@ -21,45 +18,14 @@ export async function extractSkillsFromText(
   jobTexts: string[],
   config: QwenConfig
 ): Promise<string[][]> {
-  const model = config.model || DEFAULT_MODEL
-  const baseUrl = config.baseUrl || DEFAULT_BASE_URL
-
   logger.info(`[skill-extractor] extracting skills from ${jobTexts.length} jobs`)
 
   try {
     const prompt = buildSkillExtractionPrompt(jobTexts)
-
-    const response = await fetch(`${baseUrl}/chat/completions`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${config.apiKey}`,
-      },
-      body: JSON.stringify({
-        model,
-        messages: [
-          { role: 'system', content: SKILL_EXTRACTION_SYSTEM_PROMPT },
-          { role: 'user', content: prompt },
-        ],
-        temperature: 0.1,
-        max_tokens: 3000,
-        response_format: { type: 'json_object' },
-      }),
-    })
-
-    if (!response.ok) {
-      const body = await response.text()
-      throw new Error(`Qwen API error ${response.status}: ${body}`)
-    }
-
-    const data = (await response.json()) as {
-      choices: [{ message: { content: string } }]
-    }
-
-    const raw = data.choices[0].message.content
+    const raw = await qwenComplete(SKILL_EXTRACTION_SYSTEM_PROMPT, prompt, config, 3000)
     logger.info(`[skill-extractor] extraction complete`)
 
-    const parsed = JSON.parse(raw) as { jobs: Array<{ skills: string[] }> }
+    const parsed = JSON.parse(extractJson(raw)) as { jobs: Array<{ skills: string[] }> }
 
     return parsed.jobs.map((job) => job.skills || [])
   } catch (err) {

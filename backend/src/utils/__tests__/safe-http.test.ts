@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import axios from 'axios'
 import { SafeHttpClient, safeHttp, globalRateLimiter } from '../safe-http.js'
 import { Cache } from '../cache.js'

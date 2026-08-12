@@ -43,21 +43,19 @@ function HealthBar({
       <CardContent className="pt-6">
         <div className="flex items-center gap-4 flex-wrap">
           <div className="flex items-center gap-2">
-            <Badge variant={isHealthy ? 'default' : 'destructive'}>
-              {health.status}
-            </Badge>
+            <Badge variant={isHealthy ? 'default' : 'destructive'}>{health.status}</Badge>
           </div>
-          
+
           <div className="flex items-center gap-2 text-sm text-muted-foreground">
             <Server className="h-4 w-4" />
             <span>{health.storage}</span>
           </div>
-          
+
           <div className="flex items-center gap-2 text-sm text-muted-foreground">
             <Database className="h-4 w-4" />
             <span>{health.database}</span>
           </div>
-          
+
           <div className="flex items-center gap-2 text-sm text-muted-foreground">
             <Activity className="h-4 w-4" />
             <span>{health.adapters.join(', ') || 'none'}</span>

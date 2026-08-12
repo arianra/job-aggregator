@@ -1,4 +1,5 @@
 import logger from '../utils/logger.js'
+import { qwenComplete, extractJson } from './qwen-client.js'
 
 /**
  * Structured profile data extracted from a resume by Qwen AI.
@@ -33,14 +34,11 @@ export interface ParsedProfile {
 /**
  * Qwen API configuration.
  */
-interface QwenConfig {
+export interface QwenConfig {
   apiKey: string
   model?: string
   baseUrl?: string
 }
-
-const DEFAULT_MODEL = 'qwen-max'
-const DEFAULT_BASE_URL = 'https://dashscope.aliyuncs.com/compatible-mode/v1'
 
 /**
  * Use Qwen to parse resume text into structured profile data.
@@ -49,45 +47,13 @@ export async function parseResumeWithQwen(
   resumeText: string,
   config: QwenConfig
 ): Promise<ParsedProfile> {
-  const model = config.model || DEFAULT_MODEL
-  const baseUrl = config.baseUrl || DEFAULT_BASE_URL
-
   const prompt = buildPrompt(resumeText)
 
-  logger.info(`[qwen] calling ${model} for resume parsing (${resumeText.length} chars)`)
-
   try {
-    const response = await fetch(`${baseUrl}/chat/completions`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${config.apiKey}`,
-      },
-      body: JSON.stringify({
-        model,
-        messages: [
-          { role: 'system', content: SYSTEM_PROMPT },
-          { role: 'user', content: prompt },
-        ],
-        temperature: 0.1,
-        max_tokens: 2000,
-        response_format: { type: 'json_object' },
-      }),
-    })
-
-    if (!response.ok) {
-      const body = await response.text()
-      throw new Error(`Qwen API error ${response.status}: ${body}`)
-    }
-
-    const data = (await response.json()) as {
-      choices: [{ message: { content: string } }]
-    }
-
-    const raw = data.choices[0].message.content
+    const raw = await qwenComplete(SYSTEM_PROMPT, prompt, config)
     logger.info(`[qwen] resume parsed successfully`)
 
-    const parsed = JSON.parse(raw) as ParsedProfile
+    const parsed = JSON.parse(extractJson(raw)) as ParsedProfile
     validateParsedProfile(parsed)
     return parsed
   } catch (err) {
@@ -124,7 +90,7 @@ Important rules:
 - start_date should be ISO format like "2020-01" or "2020-01-15"`
 
 function buildPrompt(resumeText: string): string {
-  // Truncate if excessively long (Qwen context limits)
+  // Truncate if excessively long (model context limits)
   const truncated = resumeText.slice(0, 8000)
   return `Parse this resume into structured JSON:\n\n${truncated}`
 }

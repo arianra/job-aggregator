@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, afterEach } from 'vitest'
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import request from 'supertest'
 import express from 'express'
 import fs from 'node:fs/promises'
@@ -207,6 +207,66 @@ describe('Profile API - Resume PDF', () => {
       const res = await request(app).get('/api/profile/resume-pdf')
       expect(res.status).toBe(200)
       expect(res.headers['content-disposition']).toBe('inline; filename="new-resume.pdf"')
+    })
+  })
+
+  describe('upload → serve round-trip', () => {
+    // Keep uploads off the real network: the route degrades gracefully when
+    // AI parsing fails, which is exactly the path we want in tests.
+    vi.mock('../../services/qwen-parser.js', () => ({
+      parseResumeWithQwen: vi.fn().mockRejectedValue(new Error('AI disabled in tests')),
+    }))
+
+    const realPdfPath = path.join(process.cwd(), '..', 'test-resume.pdf')
+
+    it('serves exactly what upload persisted (relative stored_path)', async () => {
+      const uploaded = await fs.readFile(realPdfPath)
+
+      const up = await request(app)
+        .post('/api/profile/upload')
+        .attach('resume', uploaded, 'roundtrip.pdf')
+      expect(up.status).toBe(200)
+
+      // stored_path must be a bare filename, not an absolute path — this is
+      // the invariant that cross-platform serving depends on.
+      const storedPath = up.body.data.resume.stored_path as string
+      expect(storedPath).not.toContain('/')
+      expect(storedPath).not.toContain('\\')
+      expect(storedPath).not.toContain(':')
+
+      const served = await request(app).get('/api/profile/resume-pdf')
+      expect(served.status).toBe(200)
+      expect(served.headers['content-type']).toBe('application/pdf')
+      expect(Buffer.from(served.body).equals(uploaded)).toBe(true)
+
+      // Clean up the persisted file
+      await fs.unlink(path.join(process.cwd(), 'uploads', 'resumes', storedPath)).catch(() => {})
+    })
+
+    it('serves legacy rows whose stored_path is an absolute path from another platform', async () => {
+      const uploaded = await fs.readFile(realPdfPath)
+      const up = await request(app)
+        .post('/api/profile/upload')
+        .attach('resume', uploaded, 'legacy.pdf')
+      expect(up.status).toBe(200)
+
+      const storedPath = up.body.data.resume.stored_path as string
+      const profileId = up.body.data.id as string
+
+      // Simulate a row written by a backend on another platform
+      // (e.g. WSL /mnt/d/... served by Windows): same basename, foreign root.
+      const foreign = `/mnt/d/somewhere/else/${storedPath}`
+      const profiles = await storage.listProfiles()
+      const current = profiles.find((p) => p.id === profileId)!
+      await storage.updateProfile(profileId, {
+        resume: { ...current.resume, stored_path: foreign },
+      })
+
+      const served = await request(app).get('/api/profile/resume-pdf')
+      expect(served.status).toBe(200)
+      expect(Buffer.from(served.body).equals(uploaded)).toBe(true)
+
+      await fs.unlink(path.join(process.cwd(), 'uploads', 'resumes', storedPath)).catch(() => {})
     })
   })
 })

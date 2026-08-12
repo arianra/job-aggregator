@@ -102,7 +102,9 @@ export function ProfilePage() {
       <div className="max-w-2xl mx-auto space-y-6">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Your Profile</h1>
-          <p className="text-muted-foreground mt-2">No profile yet. Upload your resume to get started.</p>
+          <p className="text-muted-foreground mt-2">
+            No profile yet. Upload your resume to get started.
+          </p>
         </div>
 
         <Card>
@@ -166,7 +168,7 @@ export function ProfilePage() {
                 <Label>Name</Label>
                 <p className="text-lg font-semibold mt-1">{profile.name}</p>
               </div>
-              
+
               {(profile.email || profile.phone) && (
                 <div className="grid grid-cols-2 gap-4">
                   {profile.email && (
@@ -262,7 +264,8 @@ export function ProfilePage() {
                       <p className="font-semibold">{e.title}</p>
                       <p className="text-sm text-muted-foreground">{e.company}</p>
                       <p className="text-xs text-muted-foreground">
-                        {e.start_date?.slice(0, 7)} – {e.end_date ? e.end_date.slice(0, 7) : 'Present'}
+                        {e.start_date?.slice(0, 7)} –{' '}
+                        {e.end_date ? e.end_date.slice(0, 7) : 'Present'}
                       </p>
                     </div>
                   ))}
@@ -349,25 +352,23 @@ export function ProfilePage() {
                 </div>
               )}
 
-              {profile.resume?.quality_suggestions && profile.resume.quality_suggestions.length > 0 && (
-                <div className="space-y-2">
-                  <Label className="text-sm font-medium">Suggestions:</Label>
-                  <ul className="text-sm text-muted-foreground space-y-1">
-                    {profile.resume.quality_suggestions.map((suggestion, idx) => (
-                      <li key={idx} className="flex items-start gap-2">
-                        <span className="text-primary">→</span>
-                        <span>{suggestion}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
+              {profile.resume?.quality_suggestions &&
+                profile.resume.quality_suggestions.length > 0 && (
+                  <div className="space-y-2">
+                    <Label className="text-sm font-medium">Suggestions:</Label>
+                    <ul className="text-sm text-muted-foreground space-y-1">
+                      {profile.resume.quality_suggestions.map((suggestion, idx) => (
+                        <li key={idx} className="flex items-start gap-2">
+                          <span className="text-primary">→</span>
+                          <span>{suggestion}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
 
               <div className="flex items-center gap-3">
-                <Button
-                  onClick={handleSaveText}
-                  disabled={isSavingText || !resumeText.trim()}
-                >
+                <Button onClick={handleSaveText} disabled={isSavingText || !resumeText.trim()}>
                   {isSavingText ? 'Saving...' : 'Save Changes'}
                 </Button>
                 <Button

@@ -2,6 +2,7 @@ import { Router, Request, Response } from 'express'
 import multer from 'multer'
 import path from 'node:path'
 import fs from 'node:fs'
+import os from 'node:os'
 import fsPromises from 'node:fs/promises'
 import { v4 as uuidv4 } from 'uuid'
 import type { Storage } from '@job-aggregator/shared'
@@ -16,7 +17,7 @@ import logger from '../utils/logger.js'
 // Storage paths
 // ---------------------------------------------------------------------------
 
-const UPLOAD_DIR = '/tmp/job-aggregator-uploads'
+const UPLOAD_DIR = path.join(os.tmpdir(), 'job-aggregator-uploads')
 const RESUME_STORAGE_DIR = path.join(process.cwd(), 'uploads', 'resumes')
 
 // ---------------------------------------------------------------------------
@@ -25,7 +26,14 @@ const RESUME_STORAGE_DIR = path.join(process.cwd(), 'uploads', 'resumes')
 
 const upload = multer({
   storage: multer.diskStorage({
-    destination: UPLOAD_DIR,
+    destination: (_req, _file, cb) => {
+      // Create lazily per-upload: the dir must exist on the current
+      // platform before multer writes into it.
+      fsPromises
+        .mkdir(UPLOAD_DIR, { recursive: true })
+        .then(() => cb(null, UPLOAD_DIR))
+        .catch((err) => cb(err, UPLOAD_DIR))
+    },
     filename: (_req, file, cb) => {
       const ext = path.extname(file.originalname)
       cb(null, `${uuidv4()}${ext}`)
@@ -51,7 +59,6 @@ export function createProfileRouter(storage: Storage): Router {
   const router = Router()
 
   // Ensure upload dirs exist
-  fsPromises.mkdir(UPLOAD_DIR, { recursive: true }).catch(() => {})
   fsPromises.mkdir(RESUME_STORAGE_DIR, { recursive: true }).catch(() => {})
 
   // GET /api/profile — get the current profile
@@ -147,7 +154,9 @@ export function createProfileRouter(storage: Storage): Router {
       // Clean the extracted text
       const cleanedText = cleanResumeText(extracted.text)
       const textQuality = getTextQualityScore(cleanedText)
-      logger.info(`[profile] text cleaned: ${cleanedText.length} chars, quality score: ${textQuality.score}`)
+      logger.info(
+        `[profile] text cleaned: ${cleanedText.length} chars, quality score: ${textQuality.score}`
+      )
 
       // Step 2: Parse with Qwen (if API key configured)
       let parsedProfile: Partial<Profile> = {}
@@ -156,6 +165,7 @@ export function createProfileRouter(storage: Storage): Router {
         try {
           const parsed = await parseResumeWithQwen(extracted.text, {
             apiKey: config.qwenApiKey,
+            baseUrl: config.qwenApiEndpoint,
           })
 
           parsedProfile = {
@@ -198,11 +208,14 @@ export function createProfileRouter(storage: Storage): Router {
         logger.info('[profile] Qwen API key not configured — skipping AI parsing')
       }
 
-      // Step 3: Persist PDF to permanent storage
+      // Step 3: Persist PDF to permanent storage.
+      // stored_path is saved RELATIVE to RESUME_STORAGE_DIR so rows survive
+      // platform/cwd changes (absolute /mnt/d/... vs D:\... paths broke
+      // serving when the backend moved between WSL and Windows).
       const ext = path.extname(filename).toLowerCase()
       const storageFilename = `${uuidv4()}${ext}`
       const permanentPath = path.join(RESUME_STORAGE_DIR, storageFilename)
-      
+
       try {
         await fsPromises.copyFile(filePath, permanentPath)
         logger.info(`[profile] PDF persisted: ${storageFilename}`)
@@ -235,7 +248,7 @@ export function createProfileRouter(storage: Storage): Router {
         resume: {
           filename,
           mime_type: req.file.mimetype,
-          stored_path: permanentPath,
+          stored_path: storageFilename,
           parsed_text: cleanedText,
           quality_score: textQuality.score,
           quality_issues: textQuality.issues,
@@ -285,8 +298,8 @@ export function createProfileRouter(storage: Storage): Router {
         return
       }
 
-      const filePath = currentProfile.resume.stored_path
-      
+      const filePath = resolveResumePath(currentProfile.resume.stored_path)
+
       // Check if file exists
       try {
         await fsPromises.access(filePath)
@@ -297,13 +310,16 @@ export function createProfileRouter(storage: Storage): Router {
 
       // Determine content type
       const ext = path.extname(filePath).toLowerCase()
-      const contentType = ext === '.pdf' ? 'application/pdf' : 
-                         ext === '.docx' ? 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' :
-                         'text/plain'
+      const contentType =
+        ext === '.pdf'
+          ? 'application/pdf'
+          : ext === '.docx'
+            ? 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+            : 'text/plain'
 
       res.setHeader('Content-Type', contentType)
       res.setHeader('Content-Disposition', `inline; filename="${currentProfile.resume.filename}"`)
-      
+
       const fileStream = fs.createReadStream(filePath)
       fileStream.pipe(res)
     } catch (err) {
@@ -325,4 +341,26 @@ function inferProficiency(years?: number): 'beginner' | 'intermediate' | 'advanc
   if (years < 3) return 'intermediate'
   if (years < 6) return 'advanced'
   return 'expert'
+}
+
+/**
+ * Resolve a stored resume path to a readable file on the current platform.
+ *
+ * Handles the three shapes that exist in the DB:
+ *  - relative filenames (new rows): joined onto RESUME_STORAGE_DIR
+ *  - absolute paths from the current platform (old rows): used as-is
+ *  - absolute paths from another platform (e.g. /mnt/d/... written by a WSL
+ *    backend, served by a Windows backend): fall back to the basename in
+ *    RESUME_STORAGE_DIR
+ * Returns the stored value when nothing resolves; the caller 404s.
+ */
+function resolveResumePath(storedPath: string): string {
+  if (!path.isAbsolute(storedPath)) {
+    return path.join(RESUME_STORAGE_DIR, storedPath)
+  }
+  if (fs.existsSync(storedPath)) {
+    return storedPath
+  }
+  const fallback = path.join(RESUME_STORAGE_DIR, path.basename(storedPath))
+  return fs.existsSync(fallback) ? fallback : storedPath
 }
