@@ -13,6 +13,31 @@ This project uses **bd** (beads) for issue tracking. Run `bd prime` for full wor
 > source of truth; don't `bd import` during normal operation; don't
 > reach for third-party Dolt hosting before trying the default).
 
+## Environment: WSL-Native Checkout
+
+The canonical checkout lives on the WSL ext4 filesystem:
+`~/projects/job-aggregator` (i.e. `/home/aria/projects/job-aggregator`).
+A legacy copy may still exist at `D:\projects\job-aggregator` — treat it as
+a backup only; **do not run dev servers, tests, or builds from it**.
+
+Run everything under WSL (Ubuntu):
+
+- Dev servers (`npm run dev`, `tsx watch`, `vite`)
+- Tests, builds, and all Node tooling (linux bindings live here)
+- Docker (`docker compose up/down` — Docker Desktop integrates with WSL)
+- Git pushes (the SSH key for this repo lives in WSL)
+
+Known caveats:
+
+- `node_modules` is platform-bound. If you ever must run the app from the
+  Windows side, re-run `npm install` there first (esbuild/rolldown/prisma
+  engines are native binaries) and `npx prisma generate` on that platform.
+- Docker Desktop itself must be started manually from Windows; the daemon
+  and `docker` CLI work from WSL once it is up.
+- Resume uploads are stored under `backend/uploads/resumes/` with
+  **relative** `stored_path` in the DB; the serve route resolves
+  cross-platform paths via basename fallback.
+
 ## Quick Reference
 
 ```bash
