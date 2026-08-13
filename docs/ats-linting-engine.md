@@ -8,6 +8,10 @@
 ATS-linting feature. Do not start implementation from memory — refer to §4 (rules), §5
 (score), §6 (types), §7 (integration), §10 (decision register), §12 (roadmap).
 
+**Decision layer:** this spec is the *design*; the *decisions* live in the ADRs —
+`docs/adr/0002` (this engine's decision record), `docs/adr/0004` (DOCX-first resume authoring +
+ATS-lint-along-flow), and `docs/adr/README.md` (index). Start every session at `docs/README.md`.
+
 ---
 *This document is the reference every future session should open before touching the ATS
 linting feature. Keep decisions recorded in §10 and rebalance weights (§5.1) only after
