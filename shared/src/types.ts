@@ -134,6 +134,15 @@ export interface ResumeData {
   mime_type: string
   stored_path: string
   parsed_text?: string
+  /**
+   * Persistent AI-parse state of the stored resume text. Drives the
+   * degraded-success UI: any value other than 'parsed' while `parsed_text`
+   * exists means the profile should offer a re-parse action.
+   *  - 'parsed'        — AI parsing succeeded
+   *  - 'parse_failed'  — AI parsing was attempted and failed
+   *  - 'not_configured'— AI parsing was skipped (no API key)
+   */
+  parse_status?: 'parsed' | 'parse_failed' | 'not_configured'
 }
 
 // ============================================================================

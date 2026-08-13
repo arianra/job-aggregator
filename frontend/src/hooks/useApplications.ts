@@ -5,6 +5,7 @@ import {
   updateApplication,
   deleteApplication,
 } from '../api/client'
+import { notify } from '../lib/notify'
 
 // ---------------------------------------------------------------------------
 // Query keys
@@ -35,6 +36,7 @@ export function useCreateApplication() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: applicationKeys.all })
       queryClient.invalidateQueries({ queryKey: ['jobs'] })
+      notify.success('Application saved')
     },
   })
 }
@@ -56,6 +58,7 @@ export function useUpdateApplication() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: applicationKeys.all })
       queryClient.invalidateQueries({ queryKey: ['jobs'] })
+      notify.success('Application updated')
     },
   })
 }
@@ -68,6 +71,7 @@ export function useDeleteApplication() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: applicationKeys.all })
       queryClient.invalidateQueries({ queryKey: ['jobs'] })
+      notify.success('Application removed')
     },
   })
 }

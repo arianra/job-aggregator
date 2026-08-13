@@ -43,6 +43,7 @@ describe('errorHandler', () => {
       expect(mockRes.status).toHaveBeenCalledWith(404)
       expect(mockRes.json).toHaveBeenCalledWith({
         error: {
+          code: 'internal_error',
           message: 'Resource not found',
         },
       })
@@ -91,6 +92,7 @@ describe('errorHandler', () => {
       expect(mockRes.status).toHaveBeenCalledWith(500)
       expect(mockRes.json).toHaveBeenCalledWith({
         error: {
+          code: 'internal_error',
           message: 'Internal server error',
         },
       })

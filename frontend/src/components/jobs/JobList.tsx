@@ -3,6 +3,7 @@ import { useApplications } from '../../hooks/useApplications'
 import { JobCard } from './JobCard'
 import { JobCardSkeleton } from '../../components/ui/LoadingSkeleton'
 import { EmptyState } from '../../components/ui/EmptyState'
+import { Button } from '../../components/ui/button'
 import { Briefcase } from 'lucide-react'
 
 interface JobListProps {
@@ -11,7 +12,11 @@ interface JobListProps {
 }
 
 export function JobList({ page = 1, pageSize = 20 }: JobListProps) {
-  const { data: jobsData, isLoading, isError, error } = useJobs(page, pageSize)
+  const { data: jobsData, isLoading, isError, error, refetch, isFetching } = useJobs(
+    page,
+    pageSize,
+    { silentErrorToast: true }
+  )
   const { data: appsData } = useApplications()
 
   const jobs = jobsData?.data || []
@@ -33,8 +38,13 @@ export function JobList({ page = 1, pageSize = 20 }: JobListProps) {
 
   if (isError) {
     return (
-      <div className="text-center py-12">
-        <p className="text-destructive">Error loading jobs: {error.message}</p>
+      <div className="text-center py-12 space-y-3">
+        <p className="text-destructive">
+          Error loading jobs: {error instanceof Error ? error.message : 'Unknown error'}
+        </p>
+        <Button variant="outline" size="sm" onClick={() => refetch()} disabled={isFetching}>
+          {isFetching ? 'Retrying…' : 'Retry'}
+        </Button>
       </div>
     )
   }

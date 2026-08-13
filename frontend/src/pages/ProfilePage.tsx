@@ -1,7 +1,7 @@
-import { useState, useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import api from '../api/client'
-import type { Job, JobSource } from '../types'
+import api, { reparseProfile } from '../api/client'
+import { notify } from '../lib/notify'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../components/ui/card'
 import { Button } from '../components/ui/button'
 import { Badge } from '../components/ui/badge'
@@ -9,8 +9,11 @@ import { Input } from '../components/ui/input'
 import { Label } from '../components/ui/label'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/ui/tabs'
 import { Textarea } from '../components/ui/textarea'
+import { ActionAlert } from '../components/ActionAlert'
 import { Upload, User, Briefcase, GraduationCap, FileText } from 'lucide-react'
 import { ResumePdfViewer } from '../components/pdf/ResumePdfViewer'
+
+type ParseStatus = 'parsed' | 'parse_failed' | 'not_configured'
 
 interface Profile {
   id: string
@@ -23,17 +26,34 @@ interface Profile {
   resume?: {
     filename: string
     parsed_text?: string
+    parse_status?: ParseStatus
     quality_score?: number
     quality_issues?: string[]
     quality_suggestions?: string[]
   }
 }
 
+/**
+ * Derive the AI-parse state of the stored resume. Prefers the persisted
+ * `parse_status` field; falls back to inference for legacy rows written
+ * before the field existed.
+ */
+function deriveParseStatus(profile: Profile): ParseStatus | undefined {
+  const resume = profile.resume
+  if (!resume?.parsed_text) return undefined
+  if (resume.parse_status) return resume.parse_status
+  // Legacy row: if the AI had worked, we'd have a real name and content.
+  const aiWorked =
+    profile.name &&
+    profile.name !== 'Unnamed' &&
+    ((profile.skills && profile.skills.length > 0) ||
+      (profile.experience && profile.experience.length > 0))
+  return aiWorked ? 'parsed' : 'parse_failed'
+}
+
 export function ProfilePage() {
   const queryClient = useQueryClient()
-  const [uploadMsg, setUploadMsg] = useState('')
   const [resumeText, setResumeText] = useState('')
-  const [isSavingText, setIsSavingText] = useState(false)
 
   const { data: profileData, isLoading } = useQuery({
     queryKey: ['profile'],
@@ -50,6 +70,10 @@ export function ProfilePage() {
     }
   }, [profileData])
 
+  // Upload — transient feedback via toasts. Failures toast automatically via
+  // the global MutationCache policy; degraded success (AI parse failed) is
+  // announced with a warning toast AND surfaced persistently below via the
+  // parse_status-driven ActionAlert.
   const uploadMutation = useMutation({
     mutationFn: async (file: File) => {
       const form = new FormData()
@@ -57,14 +81,31 @@ export function ProfilePage() {
       const { data } = await api.post('/profile/upload', form, {
         headers: { 'Content-Type': 'multipart/form-data' },
       })
-      return data
+      return data as {
+        success: boolean
+        data: Profile
+        aiParsed: boolean
+        warnings?: { code: string; message: string }[]
+      }
     },
-    onSuccess: (data) => {
-      setUploadMsg(data.aiParsed ? 'Resume parsed with AI!' : 'Resume uploaded (text only).')
+    onSuccess: (res) => {
       queryClient.invalidateQueries({ queryKey: ['profile'] })
+      if (res.aiParsed) {
+        notify.success('Resume parsed with AI')
+      } else {
+        notify.warning('Resume saved as text only', {
+          description: res.warnings?.[0]?.message ?? 'AI parsing did not run',
+        })
+      }
     },
-    onError: (err: Error) => {
-      setUploadMsg(`Upload failed: ${err.message}`)
+  })
+
+  // Re-parse — recovery path for degraded profiles. Never a silent outcome.
+  const reparseMutation = useMutation({
+    mutationFn: () => reparseProfile(),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['profile'] })
+      notify.success('Resume parsed with AI')
     },
   })
 
@@ -75,17 +116,9 @@ export function ProfilePage() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['profile'] })
+      notify.success('Resume text saved')
     },
   })
-
-  const handleSaveText = async () => {
-    setIsSavingText(true)
-    try {
-      await saveResumeTextMutation.mutateAsync(resumeText)
-    } finally {
-      setIsSavingText(false)
-    }
-  }
 
   if (isLoading) {
     return (
@@ -116,28 +149,23 @@ export function ProfilePage() {
                 accept=".pdf,.docx,.txt"
                 onChange={(e) => {
                   const file = e.target.files?.[0]
-                  if (file) {
-                    setUploadMsg('Uploading...')
-                    uploadMutation.mutate(file)
-                  }
+                  if (file) uploadMutation.mutate(file)
                 }}
                 className="max-w-xs mx-auto"
               />
               <p className="text-xs text-muted-foreground mt-2">PDF, DOCX, or TXT (max 10MB)</p>
+              {uploadMutation.isPending && (
+                <p className="text-sm text-muted-foreground mt-3">Uploading…</p>
+              )}
             </div>
-
-            {uploadMsg && (
-              <div className="mt-4">
-                <Badge variant={uploadMsg.includes('failed') ? 'destructive' : 'default'}>
-                  {uploadMsg}
-                </Badge>
-              </div>
-            )}
           </CardContent>
         </Card>
       </div>
     )
   }
+
+  const parseStatus = deriveParseStatus(profile)
+  const needsReparse = parseStatus !== undefined && parseStatus !== 'parsed'
 
   return (
     <div className="max-w-4xl mx-auto space-y-6">
@@ -145,6 +173,30 @@ export function ProfilePage() {
         <h1 className="text-3xl font-bold tracking-tight">Your Profile</h1>
         <p className="text-muted-foreground mt-2">Manage your professional information</p>
       </div>
+
+      {/* Persistent degraded-success surface: lives with the resource, not the
+          moment of failure, so a profile that failed AI parsing once is never
+          stuck text-only forever. */}
+      {needsReparse && (
+        <ActionAlert
+          variant={parseStatus === 'not_configured' ? 'default' : 'destructive'}
+          title={
+            parseStatus === 'not_configured'
+              ? 'Resume saved without AI parsing'
+              : 'AI parsing failed for this resume'
+          }
+          description={
+            parseStatus === 'not_configured'
+              ? 'The AI parser is not configured, so your resume was saved as text only. Skills and experience were not extracted.'
+              : 'Your resume was saved as text only — skills and experience were not extracted. You can retry AI parsing now; the stored text is kept.'
+          }
+          action={{
+            label: 'Retry AI parse',
+            onClick: () => reparseMutation.mutate(),
+            pending: reparseMutation.isPending,
+          }}
+        />
+      )}
 
       <Tabs defaultValue="overview" className="space-y-4">
         <TabsList>
@@ -211,16 +263,11 @@ export function ProfilePage() {
                 accept=".pdf,.docx,.txt"
                 onChange={(e) => {
                   const file = e.target.files?.[0]
-                  if (file) {
-                    setUploadMsg('Uploading...')
-                    uploadMutation.mutate(file)
-                  }
+                  if (file) uploadMutation.mutate(file)
                 }}
               />
-              {uploadMsg && (
-                <Badge variant={uploadMsg.includes('failed') ? 'destructive' : 'default'}>
-                  {uploadMsg}
-                </Badge>
+              {uploadMutation.isPending && (
+                <p className="text-sm text-muted-foreground">Uploading…</p>
               )}
             </CardContent>
           </Card>
@@ -368,8 +415,11 @@ export function ProfilePage() {
                 )}
 
               <div className="flex items-center gap-3">
-                <Button onClick={handleSaveText} disabled={isSavingText || !resumeText.trim()}>
-                  {isSavingText ? 'Saving...' : 'Save Changes'}
+                <Button
+                  onClick={() => saveResumeTextMutation.mutate(resumeText)}
+                  disabled={saveResumeTextMutation.isPending || !resumeText.trim()}
+                >
+                  {saveResumeTextMutation.isPending ? 'Saving…' : 'Save Changes'}
                 </Button>
                 <Button
                   variant="outline"
@@ -383,13 +433,6 @@ export function ProfilePage() {
                   Reset to Original
                 </Button>
               </div>
-
-              {saveResumeTextMutation.isSuccess && (
-                <Badge variant="default">Text saved successfully!</Badge>
-              )}
-              {saveResumeTextMutation.isError && (
-                <Badge variant="destructive">Failed to save text</Badge>
-              )}
             </CardContent>
           </Card>
         </TabsContent>

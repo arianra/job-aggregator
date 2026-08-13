@@ -7,6 +7,7 @@ import fsPromises from 'node:fs/promises'
 import { v4 as uuidv4 } from 'uuid'
 import type { Storage } from '@job-aggregator/shared'
 import type { Profile, Skill, Experience, Education } from '@job-aggregator/shared'
+import { ERROR_CODES, type ApiWarning } from '@job-aggregator/shared'
 import { extractText } from '../services/extractor.js'
 import { parseResumeWithQwen } from '../services/qwen-parser.js'
 import { cleanResumeText, getTextQualityScore } from '../services/resume-text.js'
@@ -160,6 +161,8 @@ export function createProfileRouter(storage: Storage): Router {
 
       // Step 2: Parse with Qwen (if API key configured)
       let parsedProfile: Partial<Profile> = {}
+      const warnings: ApiWarning[] = []
+      let parseStatus: 'parsed' | 'parse_failed' | 'not_configured'
 
       if (config.qwenApiKey && config.qwenApiKey !== 'your-qwen-api-key-here') {
         try {
@@ -201,11 +204,25 @@ export function createProfileRouter(storage: Storage): Router {
               graduation_year: e.graduation_year,
             })) as Education[],
           }
+          parseStatus = 'parsed'
         } catch (err) {
-          logger.warn(`[profile] Qwen parsing failed, using raw text only`, { err })
+          logger.warn(`[profile] Qwen parsing failed, saving as text-only with warning`, { err })
+          parseStatus = 'parse_failed'
+          warnings.push({
+            code: ERROR_CODES.AI_PARSE_FAILED,
+            message:
+              err instanceof Error && err.message
+                ? `AI parsing failed: ${err.message}`
+                : 'AI parsing failed for an unknown reason',
+          })
         }
       } else {
         logger.info('[profile] Qwen API key not configured — skipping AI parsing')
+        parseStatus = 'not_configured'
+        warnings.push({
+          code: ERROR_CODES.AI_NOT_CONFIGURED,
+          message: 'AI parsing is not configured — resume saved as text only',
+        })
       }
 
       // Step 3: Persist PDF to permanent storage.
@@ -253,6 +270,7 @@ export function createProfileRouter(storage: Storage): Router {
           quality_score: textQuality.score,
           quality_issues: textQuality.issues,
           quality_suggestions: textQuality.suggestions,
+          parse_status: parseStatus,
         },
       } as Profile
 
@@ -266,6 +284,7 @@ export function createProfileRouter(storage: Storage): Router {
         success: true,
         data: saved,
         aiParsed: !!parsedProfile.name,
+        ...(warnings.length > 0 && { warnings }),
       })
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err)
@@ -277,6 +296,88 @@ export function createProfileRouter(storage: Storage): Router {
       }
 
       res.status(500).json({ error: msg })
+    }
+  })
+
+  // POST /api/profile/reparse — re-run AI parsing on stored resume text
+  router.post('/reparse', async (_req: Request, res: Response) => {
+    try {
+      const profiles = await storage.listProfiles()
+      if (profiles.length === 0) {
+        res.status(404).json({ error: 'No profile exists. Upload a resume first.' })
+        return
+      }
+
+      const currentProfile = profiles.reduce((latest, current) =>
+        current.updated_at > latest.updated_at ? current : latest
+      )
+
+      const text = currentProfile.resume?.parsed_text
+      if (!text || !text.trim()) {
+        res.status(400).json({ error: 'No resume text stored — nothing to re-parse.' })
+        return
+      }
+
+      if (!config.qwenApiKey || config.qwenApiKey === 'your-qwen-api-key-here') {
+        res.status(503).json({
+          error: 'AI parsing is not configured — cannot re-parse.',
+        })
+        return
+      }
+
+      logger.info(`[profile] reparse requested for profile ${currentProfile.id}`)
+
+      const parsed = await parseResumeWithQwen(text, {
+        apiKey: config.qwenApiKey,
+        baseUrl: config.qwenApiEndpoint,
+      })
+
+      const updated = await storage.updateProfile(currentProfile.id, {
+        resume: { ...currentProfile.resume, parse_status: 'parsed' as const },
+        name: parsed.name || currentProfile.name,
+        email: parsed.email ?? currentProfile.email,
+        phone: parsed.phone ?? currentProfile.phone,
+        location: parsed.location
+          ? {
+              city: parsed.location.city,
+              state: parsed.location.state,
+              country: parsed.location.country,
+              remote: false,
+            }
+          : currentProfile.location,
+        skills: parsed.skills.map((s) => ({
+          name: s.name,
+          proficiency: inferProficiency(s.years),
+          years: s.years,
+          category: s.category,
+        })) as Skill[],
+        experience: parsed.experience.map((e) => ({
+          company: e.company,
+          title: e.title,
+          start_date: new Date(e.start_date),
+          end_date: e.end_date ? new Date(e.end_date) : undefined,
+          description: e.description,
+          skills_used: e.skills_used,
+        })) as Experience[],
+        education: parsed.education.map((e) => ({
+          institution: e.institution,
+          degree: e.degree,
+          field: e.field,
+          graduation_year: e.graduation_year,
+        })) as Education[],
+      })
+
+      if (!updated) {
+        res.status(404).json({ error: 'Profile vanished during re-parse.' })
+        return
+      }
+
+      logger.info(`[profile] reparse succeeded for profile ${updated.id}`)
+      res.json({ success: true, data: updated, aiParsed: true })
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err)
+      logger.error('[profile] reparse failed', { err: msg })
+      res.status(502).json({ error: `Re-parse failed: ${msg}` })
     }
   })
 

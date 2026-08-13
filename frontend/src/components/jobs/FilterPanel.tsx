@@ -79,11 +79,7 @@ export function FilterPanel() {
         )}
       </div>
 
-      {searchMutation.isError && (
-        <div className="text-sm text-destructive">
-          Search failed: {searchMutation.error.message}
-        </div>
-      )}
+      {/* Search failures toast globally via the MutationCache policy. */}
 
       {searchMutation.isSuccess && searchMutation.data && (
         <div className="text-sm text-muted-foreground">

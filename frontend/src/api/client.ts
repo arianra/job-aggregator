@@ -1,4 +1,5 @@
 import axios from 'axios'
+import { ApiError, fromResponseBody } from './errors'
 import type {
   JobListResponse,
   JobDetailResponse,
@@ -24,18 +25,27 @@ api.interceptors.request.use((config) => {
 })
 
 // ---------------------------------------------------------------------------
-// Response interceptor — normalise errors
+// Response interceptor — normalise every failure into a typed ApiError.
+// Handles both legacy backend shapes: { error: "msg" } and
+// { error: { code, message } }.
 // ---------------------------------------------------------------------------
 
 api.interceptors.response.use(
   (res) => res,
   (error) => {
     if (error.response) {
-      const msg = error.response.data?.error || error.response.statusText
-      return Promise.reject(new Error(msg))
+      return Promise.reject(fromResponseBody(error.response.data, error.response.status))
+    }
+    if (axios.isCancel(error)) {
+      return Promise.reject(error)
+    }
+    if (error.code === 'ECONNABORTED') {
+      return Promise.reject(new ApiError('Request timed out — please try again', 'network_error'))
     }
     if (error.request) {
-      return Promise.reject(new Error('Network error — is the backend running?'))
+      return Promise.reject(
+        new ApiError('Network error — is the backend running?', 'network_error')
+      )
     }
     return Promise.reject(error)
   }
@@ -82,6 +92,16 @@ export async function triggerSearch(query: {
 export async function fetchHealth(): Promise<HealthResponse> {
   const { data } = await api.get<HealthResponse>('/health')
   return data
+}
+
+// ---------------------------------------------------------------------------
+// Profile
+// ---------------------------------------------------------------------------
+
+/** Re-run AI parsing on the stored resume text (degraded-success recovery). */
+export async function reparseProfile() {
+  const { data } = await api.post('/profile/reparse')
+  return data as { success: boolean; data: unknown; aiParsed: boolean }
 }
 
 // ---------------------------------------------------------------------------

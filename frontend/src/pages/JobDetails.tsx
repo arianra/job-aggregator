@@ -27,7 +27,7 @@ import { StatusBadge } from '../components/ui/StatusBadge'
 export function JobDetails() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
-  const { data, isLoading, isError, error } = useJob(id)
+  const { data, isLoading, isError, error, refetch, isFetching } = useJob(id)
   const { data: appData } = useApplications()
   const createApp = useCreateApplication()
   const updateApp = useUpdateApplication()
@@ -50,9 +50,14 @@ export function JobDetails() {
         <p className="text-destructive">
           {error instanceof Error ? error.message : 'Job not found'}
         </p>
-        <Link to="/jobs" className="mt-4 inline-block text-primary hover:underline text-sm">
-          ← Back to jobs
-        </Link>
+        <div className="mt-4 flex items-center justify-center gap-3">
+          <Button variant="outline" size="sm" onClick={() => refetch()} disabled={isFetching}>
+            {isFetching ? 'Retrying…' : 'Retry'}
+          </Button>
+          <Link to="/jobs" className="text-primary hover:underline text-sm">
+            ← Back to jobs
+          </Link>
+        </div>
       </div>
     )
   }
