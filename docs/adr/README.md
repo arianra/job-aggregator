@@ -34,3 +34,4 @@ decided, why, and what remains open** — without re-deriving context from chat 
 - [0002 — ATS Resume Optimization Engine](./0002-ats-resume-optimization-engine.md)
 - [0003 — OpenResume Case Study & Build-Vs-Adapt Cost](./0003-openresume-case-study-and-cost.md)
 - [0004 — DOCX-First Resume Authoring + ATS Lint Along the Flow](./0004-docx-first-resume-authoring-and-ats-flow.md)
+- [0005 — Rezi Case Study: Resume Editing + Job-Search Inspiration](./0005-rezi-case-study.md)

@@ -14,6 +14,7 @@ first; it tells you what is decided, what is open, and where to build from.
 | `docs/adr/0003-openresume-case-study-and-cost.md` | **ADR (case study)** | Deep study of OpenResume; build-vs-adapt cost; borrow list (patterns only, AGPL avoidance). | Why we build our own. |
 | `docs/adr/0004-docx-first-resume-authoring-and-ats-flow.md` | **ADR (accepted)** | **THE build-from for resume authoring:** fixed DOCX format (§2, from user's `cv2026/003`), structured-form→DOCX (Option A), two-tier live preview (§4.1), ATS lint gates §5, phases §7, decisions §9. | The **resume editor + DOCX/PDF + lint-along-flow**. |
 | `docs/adr/0001-docx-authoring-and-pdf-export.md` | ADR (proposed) | DOCX/PDF authoring & export options: wordinweb / CasualOffice / docx.js + LibreOffice; validated per-option facts + open spikes. | The export/render substrate (docx.js + LibreOffice decisions). |
+| `docs/adr/0005-rezi-case-study.md` | **ADR (case study)** | Rezi (commercial) resume-editing + job-search case study; comparison vs OpenResume + us; **borrow list** (fit controls, score dial, keyword targeting, version log). | **Ideas** to fold into the editor + ATS UI + A3/U2. |
 
 ## What is DECIDED (do not re-open)
 
