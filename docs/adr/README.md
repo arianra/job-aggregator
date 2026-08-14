@@ -35,3 +35,6 @@ decided, why, and what remains open** — without re-deriving context from chat 
 - [0003 — OpenResume Case Study & Build-Vs-Adapt Cost](./0003-openresume-case-study-and-cost.md)
 - [0004 — DOCX-First Resume Authoring + ATS Lint Along the Flow](./0004-docx-first-resume-authoring-and-ats-flow.md)
 - [0005 — Rezi Case Study: Resume Editing + Job-Search Inspiration](./0005-rezi-case-study.md)
+- [0006 — Rezi UX Design Case Study](./0006-rezi-ux-design-case-study.md)
+- [0007 — Consolidated DOCX-First Resume UX](./0007-consolidated-docx-first-resume-ux.md)
+- [0008 — Resume as the Scored, Versioned Document](./0008-resume-as-scored-versioned-document.md)
