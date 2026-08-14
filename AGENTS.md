@@ -13,6 +13,20 @@ This project uses **bd** (beads) for issue tracking. Run `bd prime` for full wor
 > source of truth; don't `bd import` during normal operation; don't
 > reach for third-party Dolt hosting before trying the default).
 
+## Agent skills
+
+### Issue tracker
+
+Issues/specs live in the local Beads database (`.beads/`), synced via `bd dolt push/pull`. Use the `bd` CLI (must run inside WSL). See `docs/agents/issue-tracker.md`.
+
+### Triage labels
+
+Five canonical roles, each label string equal to its name: `needs-triage`, `needs-info`, `ready-for-agent`, `ready-for-human`, `wontfix`. See `docs/agents/triage-labels.md`.
+
+### Domain docs
+
+Obsidian Atlas layout — durable domain knowledge/glossary lives in the massiveboi vault as an interlinked KB (`$OBSIDIAN_VAULT_PATH` = `.../obsidian/massiveboi/massiveboi`); ADRs stay in `docs/adr/`. See `docs/agents/domain.md`.
+
 ## Environment: WSL-Native Checkout
 
 The canonical checkout lives on the WSL ext4 filesystem:
