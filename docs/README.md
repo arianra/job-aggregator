@@ -53,6 +53,8 @@ first; it tells you what is decided, what is open, and where to build from.
   isScanned) — that's the engine's **Phase 0** prerequisite (spec §2, §12).
 - **Verification convention (repo-wide):** a phase is **not done** on green tests/log lines/code-reading — it
   must be proved **live**: real HTTP request + DB row + file-on-disk + UI screenshot (spec §13, ADR-0001).
+- **Code intelligence:** the repo is indexed by **GitNexus** (a local code-knowledge graph + MCP tools) — see
+  [`docs/GITNEXUS.md`](GITNEXUS.md); agents get a `gitnexus:` awareness block in `AGENTS.md`/`CLAUDE.md`.
 
 ## Where to START next time (recommended resume path)
 
