@@ -78,6 +78,35 @@ resume card shows the parsed contact block + summary+experience preview + "Edite
 - This is the *"find a job → target my resume → apply"* loop closed in one product — the same loop our
   app can support given it already aggregates jobs and applications.
 
+## 4.5 Rezi Score ⇄ our ATS lint — close look (Experience & Finish Up)
+
+The **Rezi Score is Rezi's ATS-readiness metric** and is the direct product analog of our deterministic
+ATS lint (ADR-0002 / `ats-linting-engine.md`). Observed closely on the two pages the user flagged:
+
+| Where | How it presents | What it communicates |
+|---|---|---|
+| **Every section panel** (Experience, Education, Skills…) | **Persistent header dial**: `93` · “Your Rezi Score” · a label | The goal metric never leaves the screen while editing any section. |
+| **Experience** (inline) | Under the dial: **“11 best practices applied”** + platform-coaching: *“Quantified bullet points — add metrics to each bullet point when possible. Take a look at bullet 1, 2, 4, 6”* | A **best-practices checklist** (their rule set) is surfaced as a live pass-count + issue-specific, content-addressed guidance. |
+| **Finish Up & Preview** | **Large 0–100 dial**, “93 / Excellent”, **“EXPLORE MY REZI SCORE”** (drill-in) | The headline verdict + a path to the breakdown. |
+| **Finish Up** — AI Keyword Targeting | Lists **keywords you rank well for** (SQL, React, HTML, CSS, Web Apps — “see all 8”) and **keywords to consider adding**; “YES – ADD BULLET POINT / NO”; “UPDATE JOB DESCRIPTION”; real-time | The **JD-matching half** of the score (matched/missing keywords vs a target posting). |
+
+**Direct mapping to our ATS engine**
+
+| Rezi Score element | Our equivalent (`ats-linting-engine.md`) |
+|---|---|
+| `0–100` dial + grade | `overall.score` + grade bands (§5.4) |
+| “11 best practices applied” | number of our **rules that passed** (out of the rule set) |
+| Nudge “check bullets 1,2,4,6 — add metrics” | a *content/grammar* rule firing with **evidence** (`ATS-Q-001` quantified, `ATS-Q-002` action verbs → matched bullet indices) |
+| “keywords you rank well for” / “to consider adding” | JD keyword coverage (`ATS-K-003`) — **our deferred A3/U2** (ADR-0002) |
+| “REZI SCORE = X” always visible | our Phase 3 goal: **pin the deterministic score beside the editor** (§5/U1) |
+
+**Where Rezi falls short — and why our deterministic version is stronger (the ADR's point):**
+- **Score is proprietary/opaque** — the user can’t see why 93; each point isn’t attributable. Ours attributes every point to a named rule.
+- **Inconsistent messaging**: the *same* 93 was labeled **“Needs improvement”** (Experience) yet **“Excellent”** (Finish Up) — number and label disagree. Our grade bands are a single, consistent mapping (§5.4) — this is the `ATS` spec §6 anti-pattern we must avoid.
+- The **keyword targeting is the valuable part** — it’s what makes the score actionable and job-aware. That reinforces promoting **A3/U2** (ADR-0002 **R1**) to next-iteration.
+
+**Adopt (UX), improve (engine):** mirror Rezi's *presentation* (persistent dial + best-practices count + targeted nudges + matched/missing-keyword list), but drive it from **our deterministic, grade-consistent, evidence-attributed rules** — never an opaque AI number.
+
 ## 5. Design patterns worth adopting (actionable → our ADRs)
 
 | Pattern (from Rezi) | Adopt? | Where in ours |
