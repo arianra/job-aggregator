@@ -217,8 +217,8 @@ function renderNav(){
   h += `<div class="sb-label">Resume</div>`;
   // create actions (top of the resume subtree)
   h += `<div class="resume-tree" style="margin-left:0;border-left:0;padding-left:0">
-    <button class="act dashed" onclick="createEmpty()" style="margin-bottom:4px">＋ &nbsp;Create new</button>
-    <button class="act dashed" onclick="createUpload()" style="margin-bottom:6px">↑ &nbsp;Create from upload</button>`;
+    <button class="rt-item ${activeResume===null?'active':''}" onclick="goOverview()"><span class="dot ${activeResume===null?'primary':''}"></span><span style="flex:1">Overview</span></button>
+    <button class="act dashed" onclick="createEmpty()" style="margin-top:6px">＋ &nbsp;Create</button>`;
   // list of resumes (each expands into its steps 1–7 + Finish)
   h += `<div class="sb-label" style="padding:6px 4px 4px">My resumes</div>`;
   ordered().forEach(r=>{
@@ -263,10 +263,8 @@ function createEmpty(){
   toast('Created empty resume → DB row (status NEW). Edit sections then Save.');
   render();
 }
-function createUpload(){
-  toast('Open file picker → upload PDF/DOCX → create Resume from parsed data (raw text captured).');
-  setTimeout(createEmpty,600);
-}
+/* create-from-upload folded into the single Create button; the user claims/upload step is 01 · Details (ADR-0008 flow step 2). */
+function goOverview(){ activeResume=null; activeStep='details'; render(); }
 function toggleResume(id){ activeResume = activeResume===id?null:id; activeStep='details'; render(); }
 function goStep(id,key){ activeResume=id; activeStep=key; render(); }
 function goLint(id){ activeResume=id; activeStep='lint'; render(); }
@@ -289,13 +287,50 @@ function toast(m){ const t=document.getElementById('toast'); t.textContent=m; t.
 function render(){
   renderNav();
   const content=document.getElementById('content');
-  if(currentPage!=='/resume'){ content.innerHTML = `<h1>${navLabel(currentPage)}</h1><p class="lead">Jumped to a non-resume page. Resume lives at the "Resume" top-level item.</p>`; hideBar(); return; }
+  if(currentPage!=='/resume'){
+    if(currentPage==='/profile'){ content.innerHTML = profileData ? fullProfileHTML() : profileHeroHTML(); hideBar(); return; }
+    content.innerHTML = `<h1>${navLabel(currentPage)}</h1><p class="lead">Jumped to a non-resume page. Resume lives at the "Resume" top-level item.</p>`; hideBar(); return;
+  }
   // No resumes at all → empty-state hero (Q4)
   if(ordered().length===0){ content.innerHTML=heroHTML(); hideBar(); return; }
   // Resume list view + (if a resume open) the step work area
   content.innerHTML = listHTML() + (activeResume?stepAreaHTML():'');
   showBar();
 }
+let profileData = null // null → Profile shows the empty-state hero (Q4)
+
+function profileHeroHTML(){
+  return `<h1>Profile</h1><p class="lead">Your professional identity across all your resumes.</p>
+  <div class="hero"><div class="hero-inner">
+    <div class="hero-ill">
+      <svg width="76" height="76" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4">
+        <circle cx="12" cy="8" r="3.4" fill="currentColor" stroke="none"/>
+        <path d="M5 20c.6-4 3.4-6 7-6s6.4 2 7 6" stroke="currentColor" stroke-linecap="round"/>
+        <path d="M6.5 8h-2M3.5 10.5v-5M17.5 3.5l.9 2 2 .9-2 .9-.9 2-.9-2-2-.9 2-.9z" stroke="currentColor"/>
+      </svg>
+    </div>
+    <h2>You don't have a profile yet</h2>
+    <p>Create your first resume and we'll build your profile from it — as the primary resume, its structured data feeds your job scoring and applications.</p>
+    <div class="row">
+      <button class="btn primary" onclick="navTo('/resume')">Create your first resume</button>
+      <button class="btn" onclick="profileData={name:'Arian Razi',email:'arian99@gmail.com'};render()">View committed example</button>
+    </div>
+  </div></div>`;
+}
+
+function fullProfileHTML(){
+  return `<h1>Profile</h1><p class="lead">Your professional identity across all your resumes.</p>
+  <div class="panel" style="max-width:640px;margin-top:16px">
+    <h3>${profileData.name}</h3>
+    <p>${profileData.email}</p>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px">
+      <span class="chip">PRIMARY → feeds this profile</span>
+      <span class="chip token">1 resume</span>
+    </div>
+    <p style="margin-top:12px;color:var(--muted)">This profile is <b>derived from the primary resume</b> (ADR-0008). Edit the resume in the Resume studio; the profile stays in sync.</p>
+  </div>`;
+}
+
 function heroHTML(){
   return `<h1>Resume</h1><p class="lead">Peer documents you author per role. The primary resume feeds your Profile & job matching.</p>
   <div class="hero"><div class="hero-inner">
@@ -303,8 +338,7 @@ function heroHTML(){
     <h2>Create your first resume</h2>
     <p>Start from a blank document and fill it in the studio, or upload an existing PDF/DOCX and we'll seed the structured resume from it.</p>
     <div class="row">
-      <button class="btn primary" onclick="createEmpty()">＋ Create new</button>
-      <button class="btn" onclick="createUpload()">↑ Create from upload</button>
+      <button class="btn primary" onclick="createEmpty()">＋ Create</button>
     </div>
   </div></div>`;
 }
@@ -324,8 +358,8 @@ function listHTML(){
   }).join('');
   return `<h1>Resume</h1><p class="lead">Peer documents you author per role. The primary resume feeds your Profile & job scoring.</p>
   <div class="toolrow">
-    <button class="btn primary" onclick="createEmpty()">＋ Create new</button>
-    <button class="btn" onclick="createUpload()">↑ Create from upload</button>
+    <button class="btn primary" onclick="createEmpty()">＋ Create</button>
+    <span style="color:var(--faint);font-size:12.5px">Upload your source PDF/DOCX in step 01 · Details</span>
     <span style="margin-left:auto;color:var(--faint);font-size:12.5px">${ordered().length} resume${ordered().length>1?'s':''}</span>
   </div>
   <div class="resumecards">${list}</div>
