@@ -134,11 +134,32 @@
   .flowrow .node{padding:4px 9px;border:1px solid var(--border);border-radius:6px;background:var(--card2)}
   .flowrow .node.on{border-color:var(--primary);color:var(--primary);font-weight:600}
   .note{border:1px solid var(--warn);background:var(--warn-soft);border-radius:9px;padding:10px 12px;font-size:12.5px;color:var(--warn);margin-top:14px}
+  .metarow{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:13px 2px;border-bottom:1px solid var(--border);}
+  .metarow:last-child{border-bottom:0}
+  .ml .mk{font-size:13.5px;font-weight:600}
+  .ml .mh{font-size:12px;color:var(--muted);margin-top:2px}
+  .mr{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+  .mstrip{display:flex;align-items:center;gap:24px;padding:13px 2px;border-bottom:1px solid var(--border);flex-wrap:wrap}
+  .mstrip .cell .ck{display:block;font-size:10px;text-transform:uppercase;letter-spacing:.05em;color:var(--faint);margin-bottom:2px}
+  .mstrip .cell .cv{font-size:14px;font-weight:600}
 
   @media(max-width:760px){.sidebar{width:60px}.content{padding:16px}.rb .step{display:none}}
 </style>
 </head>
 <body data-theme="light">
+<!-- ======================================================================
+     JOB AGGREGATOR APP-SHELL / INTEGRATION PROTOTYPE (resume-integration-prototype.html)
+     DO NOT MISTAKE THIS FOR THE RESUME STUDIO.
+     This file shows how the Resume studio NAVIGATES inside the app:
+       - Resume top-level nav + Overview + step tree
+       - primary / archive / live status reflected in the list
+       - clicking any resume or step opens a simple 'Details' ENTRY POINT
+     The actual resume EDITING UI (Details form, structured sections, live render,
+     DOCX/PDF export, primary/archive/delete controls) lives in:
+       prototypes/resume-editor-prototype.html   (the Resume Studio)
+     Implementer: wire /resume/:id to open the Resume Studio, not this placeholder.
+     See docs/adr/0008 (Profile -> Resume -> ResumeVersion).
+     ====================================================================== -->
 <div class="proto-tag">RESUME · INTEGRATION PROTOTYPE</div>
 
 <div class="shell">
@@ -150,18 +171,13 @@
   <div class="main">
     <!-- Top bar: contextual Resume bar fills the space; theme toggle pinned right (Q1/header) -->
     <header class="topbar">
-      <div id="resumeBar" style="display:none" class="rb">
-        <span class="name" id="rbName">Lead Frontend Engineer 2026</span>
-        <span class="sep"></span>
-        <span class="step" id="rbStep">Experience</span>
-        <span class="sep"></span>
-        <span class="saved" id="rbSaved"><span class="dot"></span> Saved · v7</span>
-        <button class="tbtn" onclick="toast('Download DOCX (render-on-request from latest version)')">Download DOCX</button>
-        <button class="tbtn" onclick="toast('Download PDF (derived from the DOCX)')">Download PDF</button>
-      </div>
-      <div class="theme-wrap">
-        <button class="icobtn" id="themeBtn" onclick="toggleTheme()" title="Toggle theme">◐</button>
-      </div>
+      <span class="proto-tag">PROTOTYPE</span>
+      <div class="headtitle"><span class="name" id="headDocName">Resume</span><span class="chip" id="headPrimaryChip" style="display:none">PRIMARY</span></div>
+      <div class="spacer" style="flex:1"></div>
+      <span class="saved" id="saveState"><span class="dot"></span></span>
+      <button class="tbtn" id="verBtn" onclick="toast('Version history lives in the Resume studio')">Versions</button>
+      <button class="tbtn" id="saveBtn" onclick="toast('Save lives in the Resume studio')">Save</button>
+      <button class="icobtn" id="themeBtn" onclick="toggleTheme()" title="Toggle theme">◐</button>
     </header>
 
     <main class="content" id="content"></main>
@@ -373,24 +389,39 @@ function listHTML(){
 }
 function stepAreaHTML(){
   const r = RESUMES[activeResume];
-  const step = activeStep==='lint' ? {label:'ATS lint report (Flow)'} : STEPS.find(s=>s.key===activeStep)||STEPS[0];
+  const step = activeStep==='lint' ? {label:'ATS lint'} : (STEPS.find(s=>s.key===activeStep)||STEPS[0]);
+  /* ============================================================
+     AGENT NOTE — do NOT mistake this page for the resume studio.
+     This is the JOB AGGREGATOR app shell (integration prototype).
+     The actual resume editing UI lives in the RESUME STUDIO
+     (prototypes/resume-editor-prototype.html). Here, clicking into
+     any resume or its step links is just the NAVIGATION entry point:
+     it opens a "Details" landing that reflects the studio's first
+     (01 · Details) step and points the implementer at the studio.
+     TODO(implementer): wire /resume/:id to open Resume Studio,
+     not this placeholder. See docs/adr/0008.
+     ============================================================ */
   return `<div style="height:18px"></div>
   <div class="crumb"><b>Resume</b> › ${r.title} › ${step.label}</div>
-  <div class="panel" style="margin-top:0">
-    <h3>${step.label} — <span style="color:var(--muted);font-weight:500">step content placeholder</span></h3>
-    <p>The studio renders this section here from the structured <code>ResumeVersion.data</code>. Live HTML + .docx render on the left, structured form controls on the right — same as the studio prototype.</p>
-    <div style="height:120px;border:1px dashed var(--border2);border-radius:9px;display:grid;place-items:center;color:var(--faint);background:var(--card2);font-size:13px">[ ${step.label} editor lives here — integrated into this page ]</div>
-    <div class="note">This is the <b>integration prototype</b>: the nav tree, top bar, primary logic, and empty state are the new, previously-unprototyped parts. The studio's own editor UI is not re-created here.</div>
+  <div class="note" style="margin-top:0"><b>Resume studio</b> — this screen is the <b>entry point</b>. The actual resume is edited in the <b>Resume Studio</b> (run <code>prototypes/resume-editor-prototype.html</code>). The Details and sections below are a lightweight preview to show how a resume opens in the app.</div>
+  <div class="panel" style="margin-top:12px">
+    <h3>Details</h3>
+    <div class="mstrip">
+      <div class="cell"><span class="ck">Status</span><span class="cv" id="metaStatus">${r.status==='archived'?'Archived':'Live'}</span></div>
+      <div class="cell"><span class="ck">Version</span><span class="cv" id="metaVersion">v${r.rev||0}</span></div>
+      <div class="cell"><span class="ck">Primary</span><span class="cv">${r.primary?'Yes':'No'}</span></div>
+      <div class="cell"><span class="ck">Format</span><span class="cv">${r.format||'compact'}</span></div>
+    </div>
+    <div class="metarow"><div class="ml"><span class="mk">Resume name</span></div><div class="mr"><b>${r.title}</b></div></div>
+    <div class="metarow"><div class="ml"><span class="mk">Opens in</span><div class="mh">Resume Studio · 01 Details (navigation)</div></div><div class="mr"><button class="tbtn" onclick="toast('Open resume studio prototype from this entry point')">Open Resume Studio</button></div></div>
+    <div class="fake" style="margin-top:10px">[ step ${step.label} has no separate screen — every resume step resolves to this entry point in the app shell ]</div>
   </div>`;
 }
-function showBar(){ const r=RESUMES[activeResume]; if(!r){ document.getElementById('resumeBar').style.display='none'; return; }
-  document.getElementById('resumeBar').style.display='flex';
-  document.getElementById('rbName').textContent=r.title;
-  const step = activeStep==='lint'?'ATS lint':(STEPS.find(s=>s.key===activeStep)||STEPS[0]).label;
-  document.getElementById('rbStep').textContent=step;
-  const sv=document.getElementById('rbSaved');
-  if(r.saved==='unsaved'){ sv.innerHTML='<span class="dot"></span> Untouched · NEW'; sv.classList.add('dirty'); }
-  else { sv.innerHTML='<span class="dot"></span> Saved · v'+r.rev; sv.classList.remove('dirty'); }
+function showBar(){ const r=RESUMES[activeResume];
+  const nm=document.getElementById('headDocName'), pk=document.getElementById('headPrimaryChip'), sv=document.getElementById('saveState');
+  if(nm) nm.textContent = r ? (r.title||'Resume') : 'Resume';
+  if(pk) pk.style.display = r && r.primary ? 'inline-block' : 'none';
+  if(sv){ sv.innerHTML = '<span class="dot"></span> '+(r ? (r.saved||'') : ''); sv.classList.toggle('dirty', r && r.saved==='unsaved'); }
 }
 function hideBar(){ document.getElementById('resumeBar').style.display='none'; }
 
