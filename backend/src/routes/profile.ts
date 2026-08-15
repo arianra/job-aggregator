@@ -1,100 +1,72 @@
 import { Router, Request, Response } from 'express'
-import multer from 'multer'
-import path from 'node:path'
-import fs from 'node:fs'
-import os from 'node:os'
-import fsPromises from 'node:fs/promises'
-import { v4 as uuidv4 } from 'uuid'
-import type { Storage } from '@job-aggregator/shared'
-import type { Profile, Skill, Experience, Education } from '@job-aggregator/shared'
-import { ERROR_CODES, type ApiWarning } from '@job-aggregator/shared'
-import { extractText } from '../services/extractor.js'
-import { parseResumeWithQwen } from '../services/qwen-parser.js'
-import { cleanResumeText, getTextQualityScore } from '../services/resume-text.js'
-import { config } from '../config.js'
+import type { Storage, Profile, ResumeMeta } from '@job-aggregator/shared'
+import { buildResumeMeta } from '../services/resume-service.js'
 import logger from '../utils/logger.js'
 
 // ---------------------------------------------------------------------------
-// Storage paths
-// ---------------------------------------------------------------------------
-
-const UPLOAD_DIR = path.join(os.tmpdir(), 'job-aggregator-uploads')
-const RESUME_STORAGE_DIR = path.join(process.cwd(), 'uploads', 'resumes')
-
-// ---------------------------------------------------------------------------
-// Multer setup: accept PDF, DOCX, TXT up to 10MB
-// ---------------------------------------------------------------------------
-
-const upload = multer({
-  storage: multer.diskStorage({
-    destination: (_req, _file, cb) => {
-      // Create lazily per-upload: the dir must exist on the current
-      // platform before multer writes into it.
-      fsPromises
-        .mkdir(UPLOAD_DIR, { recursive: true })
-        .then(() => cb(null, UPLOAD_DIR))
-        .catch((err) => cb(err, UPLOAD_DIR))
-    },
-    filename: (_req, file, cb) => {
-      const ext = path.extname(file.originalname)
-      cb(null, `${uuidv4()}${ext}`)
-    },
-  }),
-  limits: { fileSize: 10 * 1024 * 1024 }, // 10MB
-  fileFilter: (_req, file, cb) => {
-    const allowed = ['.pdf', '.docx', '.txt', '.text']
-    const ext = path.extname(file.originalname).toLowerCase()
-    if (allowed.includes(ext)) {
-      cb(null, true)
-    } else {
-      cb(new Error(`Unsupported file type: ${ext}. Allowed: ${allowed.join(', ')}`))
-    }
-  },
-})
-
-// ---------------------------------------------------------------------------
-// Route factory
+// Profile router (ADR-0008, E2.6): identity + preferences ONLY.
+// Resumes are managed under /api/profile/resumes (createResumesRouter).
+// Legacy PUT /resume-text, GET /resume-pdf, POST /upload, POST /reparse are
+// REMOVED — superseded by the resumes router and E3 export routes.
 // ---------------------------------------------------------------------------
 
 export function createProfileRouter(storage: Storage): Router {
   const router = Router()
 
-  // Ensure upload dirs exist
-  fsPromises.mkdir(RESUME_STORAGE_DIR, { recursive: true }).catch(() => {})
+  /** Single-user app: the current profile is the most recently updated. */
+  async function currentProfile(): Promise<Profile | null> {
+    const profiles = await storage.listProfiles()
+    if (profiles.length === 0) return null
+    return profiles.reduce((latest, current) =>
+      current.updated_at > latest.updated_at ? current : latest
+    )
+  }
 
-  // GET /api/profile — get the current profile
+  /** Attach the resumes list (metas only — no embedded content) to a profile. */
+  async function withResumes(profile: Profile): Promise<Profile & { resumes: ResumeMeta[] }> {
+    const resumes = await storage.listResumes(profile.id)
+    const metas = await Promise.all(
+      resumes.map(async (r) => buildResumeMeta(r, await storage.listResumeVersions(r.id)))
+    )
+    return { ...profile, resumes: metas }
+  }
+
+  // GET /api/profile — identity + preferences + resumes list
   router.get('/', async (_req: Request, res: Response) => {
     try {
-      const profiles = await storage.listProfiles()
-      if (profiles.length === 0) {
+      const profile = await currentProfile()
+      if (!profile) {
         res.json({ success: true, data: null })
         return
       }
-      // Return the most recently updated profile
-      const currentProfile = profiles.reduce((latest, current) =>
-        current.updated_at > latest.updated_at ? current : latest
-      )
-      res.json({ success: true, data: currentProfile })
+      res.json({ success: true, data: await withResumes(profile) })
     } catch (err) {
       logger.error('GET /api/profile failed', { err })
       res.status(500).json({ error: 'Internal server error' })
     }
   })
 
-  // PUT /api/profile — update profile fields
+  // PUT /api/profile — update identity + preferences fields
   router.put('/', async (req: Request, res: Response) => {
     try {
-      const profiles = await storage.listProfiles()
-      if (profiles.length === 0) {
-        res.status(404).json({ error: 'No profile exists. Upload a resume first.' })
+      const profile = await currentProfile()
+      if (!profile) {
+        res.status(404).json({ error: 'No profile exists. Upload or create a resume first.' })
         return
       }
-
-      // Update the most recently updated profile
-      const currentProfile = profiles.reduce((latest, current) =>
-        current.updated_at > latest.updated_at ? current : latest
-      )
-      const updated = await storage.updateProfile(currentProfile.id, req.body)
+      const updates = req.body ?? {}
+      const allowed: Array<keyof Profile> = [
+        'name',
+        'email',
+        'phone',
+        'location',
+        'preferences',
+      ]
+      const patch: Partial<Profile> = {}
+      for (const key of allowed) {
+        if (updates[key] !== undefined) (patch as Record<string, unknown>)[key] = updates[key]
+      }
+      const updated = await storage.updateProfile(profile.id, patch)
       res.json({ success: true, data: updated })
     } catch (err) {
       logger.error('PUT /api/profile failed', { err })
@@ -102,366 +74,5 @@ export function createProfileRouter(storage: Storage): Router {
     }
   })
 
-  // PUT /api/profile/resume-text — update just the resume text
-  router.put('/resume-text', async (req: Request, res: Response) => {
-    try {
-      const profiles = await storage.listProfiles()
-      if (profiles.length === 0) {
-        res.status(404).json({ error: 'No profile exists. Upload a resume first.' })
-        return
-      }
-
-      const currentProfile = profiles.reduce((latest, current) =>
-        current.updated_at > latest.updated_at ? current : latest
-      )
-
-      if (!req.body.text || typeof req.body.text !== 'string') {
-        res.status(400).json({ error: 'text field is required' })
-        return
-      }
-
-      // Update the resume.parsed_text field
-      const updatedProfile = await storage.updateProfile(currentProfile.id, {
-        resume: {
-          ...currentProfile.resume,
-          parsed_text: req.body.text,
-        },
-      })
-
-      res.json({ success: true, data: updatedProfile })
-    } catch (err) {
-      logger.error('PUT /api/profile/resume-text failed', { err })
-      res.status(500).json({ error: 'Internal server error' })
-    }
-  })
-
-  // POST /api/profile/upload — upload resume, extract text, parse with Qwen
-  router.post('/upload', upload.single('resume'), async (req: Request, res: Response) => {
-    try {
-      if (!req.file) {
-        res.status(400).json({ error: 'No file uploaded' })
-        return
-      }
-
-      const filePath = req.file.path
-      const filename = req.file.originalname
-
-      logger.info(`[profile] upload received: ${filename} (${req.file.size} bytes)`)
-
-      // Step 1: Extract text
-      const extracted = await extractText(filePath, filename)
-      logger.info(`[profile] text extracted: ${extracted.charCount} chars`)
-
-      // Clean the extracted text
-      const cleanedText = cleanResumeText(extracted.text)
-      const textQuality = getTextQualityScore(cleanedText)
-      logger.info(
-        `[profile] text cleaned: ${cleanedText.length} chars, quality score: ${textQuality.score}`
-      )
-
-      // Step 2: Parse with Qwen (if API key configured)
-      let parsedProfile: Partial<Profile> = {}
-      const warnings: ApiWarning[] = []
-      let parseStatus: 'parsed' | 'parse_failed' | 'not_configured'
-
-      if (config.qwenApiKey && config.qwenApiKey !== 'your-qwen-api-key-here') {
-        try {
-          const parsed = await parseResumeWithQwen(extracted.text, {
-            apiKey: config.qwenApiKey,
-            baseUrl: config.qwenApiEndpoint,
-          })
-
-          parsedProfile = {
-            name: parsed.name,
-            email: parsed.email,
-            phone: parsed.phone,
-            location: parsed.location
-              ? {
-                  city: parsed.location.city,
-                  state: parsed.location.state,
-                  country: parsed.location.country,
-                  remote: false,
-                }
-              : undefined,
-            skills: parsed.skills.map((s) => ({
-              name: s.name,
-              proficiency: inferProficiency(s.years),
-              years: s.years,
-              category: s.category,
-            })) as Skill[],
-            experience: parsed.experience.map((e) => ({
-              company: e.company,
-              title: e.title,
-              start_date: new Date(e.start_date),
-              end_date: e.end_date ? new Date(e.end_date) : undefined,
-              description: e.description,
-              skills_used: e.skills_used,
-            })) as Experience[],
-            education: parsed.education.map((e) => ({
-              institution: e.institution,
-              degree: e.degree,
-              field: e.field,
-              graduation_year: e.graduation_year,
-            })) as Education[],
-          }
-          parseStatus = 'parsed'
-        } catch (err) {
-          logger.warn(`[profile] Qwen parsing failed, saving as text-only with warning`, { err })
-          parseStatus = 'parse_failed'
-          warnings.push({
-            code: ERROR_CODES.AI_PARSE_FAILED,
-            message:
-              err instanceof Error && err.message
-                ? `AI parsing failed: ${err.message}`
-                : 'AI parsing failed for an unknown reason',
-          })
-        }
-      } else {
-        logger.info('[profile] Qwen API key not configured — skipping AI parsing')
-        parseStatus = 'not_configured'
-        warnings.push({
-          code: ERROR_CODES.AI_NOT_CONFIGURED,
-          message: 'AI parsing is not configured — resume saved as text only',
-        })
-      }
-
-      // Step 3: Persist PDF to permanent storage.
-      // stored_path is saved RELATIVE to RESUME_STORAGE_DIR so rows survive
-      // platform/cwd changes (absolute /mnt/d/... vs D:\... paths broke
-      // serving when the backend moved between WSL and Windows).
-      const ext = path.extname(filename).toLowerCase()
-      const storageFilename = `${uuidv4()}${ext}`
-      const permanentPath = path.join(RESUME_STORAGE_DIR, storageFilename)
-
-      try {
-        await fsPromises.copyFile(filePath, permanentPath)
-        logger.info(`[profile] PDF persisted: ${storageFilename}`)
-      } catch (err) {
-        logger.warn(`[profile] Failed to persist PDF, continuing with temp file`, { err })
-      }
-
-      // Step 4: Save to storage
-      const profile: Profile = {
-        id: uuidv4(),
-        created_at: new Date(),
-        updated_at: new Date(),
-        name: parsedProfile.name || 'Unnamed',
-        email: parsedProfile.email,
-        phone: parsedProfile.phone,
-        location: parsedProfile.location,
-        experience: parsedProfile.experience || [],
-        education: parsedProfile.education || [],
-        certifications: [],
-        skills: parsedProfile.skills || [],
-        preferences: {
-          locations: [],
-          remote_ok: true,
-          hybrid_ok: true,
-          onsite_ok: true,
-          job_types: ['full-time'],
-          seniority_levels: ['mid', 'senior'],
-        },
-        search_queries: [],
-        resume: {
-          filename,
-          mime_type: req.file.mimetype,
-          stored_path: storageFilename,
-          parsed_text: cleanedText,
-          quality_score: textQuality.score,
-          quality_issues: textQuality.issues,
-          quality_suggestions: textQuality.suggestions,
-          parse_status: parseStatus,
-        },
-      } as Profile
-
-      const saved = await storage.saveProfile(profile)
-      logger.info(`[profile] saved: ${saved.id}`)
-
-      // Clean up temp file
-      fsPromises.unlink(filePath).catch(() => {})
-
-      res.json({
-        success: true,
-        data: saved,
-        aiParsed: !!parsedProfile.name,
-        ...(warnings.length > 0 && { warnings }),
-      })
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : String(err)
-      logger.error('[profile] upload failed', { err: msg })
-
-      // Clean up temp file on error
-      if (req.file) {
-        fsPromises.unlink(req.file.path).catch(() => {})
-      }
-
-      res.status(500).json({ error: msg })
-    }
-  })
-
-  // POST /api/profile/reparse — re-run AI parsing on stored resume text
-  router.post('/reparse', async (_req: Request, res: Response) => {
-    try {
-      const profiles = await storage.listProfiles()
-      if (profiles.length === 0) {
-        res.status(404).json({ error: 'No profile exists. Upload a resume first.' })
-        return
-      }
-
-      const currentProfile = profiles.reduce((latest, current) =>
-        current.updated_at > latest.updated_at ? current : latest
-      )
-
-      const text = currentProfile.resume?.parsed_text
-      if (!text || !text.trim()) {
-        res.status(400).json({ error: 'No resume text stored — nothing to re-parse.' })
-        return
-      }
-
-      if (!config.qwenApiKey || config.qwenApiKey === 'your-qwen-api-key-here') {
-        res.status(503).json({
-          error: 'AI parsing is not configured — cannot re-parse.',
-        })
-        return
-      }
-
-      logger.info(`[profile] reparse requested for profile ${currentProfile.id}`)
-
-      const parsed = await parseResumeWithQwen(text, {
-        apiKey: config.qwenApiKey,
-        baseUrl: config.qwenApiEndpoint,
-      })
-
-      const updated = await storage.updateProfile(currentProfile.id, {
-        resume: { ...currentProfile.resume, parse_status: 'parsed' as const },
-        name: parsed.name || currentProfile.name,
-        email: parsed.email ?? currentProfile.email,
-        phone: parsed.phone ?? currentProfile.phone,
-        location: parsed.location
-          ? {
-              city: parsed.location.city,
-              state: parsed.location.state,
-              country: parsed.location.country,
-              remote: false,
-            }
-          : currentProfile.location,
-        skills: parsed.skills.map((s) => ({
-          name: s.name,
-          proficiency: inferProficiency(s.years),
-          years: s.years,
-          category: s.category,
-        })) as Skill[],
-        experience: parsed.experience.map((e) => ({
-          company: e.company,
-          title: e.title,
-          start_date: new Date(e.start_date),
-          end_date: e.end_date ? new Date(e.end_date) : undefined,
-          description: e.description,
-          skills_used: e.skills_used,
-        })) as Experience[],
-        education: parsed.education.map((e) => ({
-          institution: e.institution,
-          degree: e.degree,
-          field: e.field,
-          graduation_year: e.graduation_year,
-        })) as Education[],
-      })
-
-      if (!updated) {
-        res.status(404).json({ error: 'Profile vanished during re-parse.' })
-        return
-      }
-
-      logger.info(`[profile] reparse succeeded for profile ${updated.id}`)
-      res.json({ success: true, data: updated, aiParsed: true })
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : String(err)
-      logger.error('[profile] reparse failed', { err: msg })
-      res.status(502).json({ error: `Re-parse failed: ${msg}` })
-    }
-  })
-
-  // GET /api/profile/resume-pdf — serve the stored resume PDF
-  router.get('/resume-pdf', async (_req: Request, res: Response) => {
-    try {
-      const profiles = await storage.listProfiles()
-      if (profiles.length === 0) {
-        res.status(404).json({ error: 'No profile found' })
-        return
-      }
-
-      const currentProfile = profiles.reduce((latest, current) =>
-        current.updated_at > latest.updated_at ? current : latest
-      )
-
-      if (!currentProfile.resume?.stored_path) {
-        res.status(404).json({ error: 'No resume file stored' })
-        return
-      }
-
-      const filePath = resolveResumePath(currentProfile.resume.stored_path)
-
-      // Check if file exists
-      try {
-        await fsPromises.access(filePath)
-      } catch {
-        res.status(404).json({ error: 'Resume file not found on disk' })
-        return
-      }
-
-      // Determine content type
-      const ext = path.extname(filePath).toLowerCase()
-      const contentType =
-        ext === '.pdf'
-          ? 'application/pdf'
-          : ext === '.docx'
-            ? 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
-            : 'text/plain'
-
-      res.setHeader('Content-Type', contentType)
-      res.setHeader('Content-Disposition', `inline; filename="${currentProfile.resume.filename}"`)
-
-      const fileStream = fs.createReadStream(filePath)
-      fileStream.pipe(res)
-    } catch (err) {
-      logger.error('GET /api/profile/resume-pdf failed', { err })
-      res.status(500).json({ error: 'Internal server error' })
-    }
-  })
-
   return router
-}
-
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
-
-function inferProficiency(years?: number): 'beginner' | 'intermediate' | 'advanced' | 'expert' {
-  if (!years) return 'intermediate'
-  if (years < 1) return 'beginner'
-  if (years < 3) return 'intermediate'
-  if (years < 6) return 'advanced'
-  return 'expert'
-}
-
-/**
- * Resolve a stored resume path to a readable file on the current platform.
- *
- * Handles the three shapes that exist in the DB:
- *  - relative filenames (new rows): joined onto RESUME_STORAGE_DIR
- *  - absolute paths from the current platform (old rows): used as-is
- *  - absolute paths from another platform (e.g. /mnt/d/... written by a WSL
- *    backend, served by a Windows backend): fall back to the basename in
- *    RESUME_STORAGE_DIR
- * Returns the stored value when nothing resolves; the caller 404s.
- */
-function resolveResumePath(storedPath: string): string {
-  if (!path.isAbsolute(storedPath)) {
-    return path.join(RESUME_STORAGE_DIR, storedPath)
-  }
-  if (fs.existsSync(storedPath)) {
-    return storedPath
-  }
-  const fallback = path.join(RESUME_STORAGE_DIR, path.basename(storedPath))
-  return fs.existsSync(fallback) ? fallback : storedPath
 }

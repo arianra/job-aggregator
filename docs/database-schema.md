@@ -230,6 +230,70 @@ Job: "Senior React Developer at Acme Corp"
 
 ---
 
+## Resume Subsystem (ADR-0008)
+
+> The illustrative models above predate ADR-0008. The **real** schema in
+> `backend/prisma/schema.prisma` (source of truth) is below. Profile = the **person**
+> (identity + preferences only); a person authors MANY **Resume** documents; each Resume has
+> many immutable **ResumeVersion** snapshots created on manual Save. The old embedded
+> `experience/education/certifications/skills/resume` columns on Profile were **dropped** in the
+> big-bang migration.
+
+```prisma
+model Profile {
+  id             String   @id @default(cuid())
+  name           String
+  email          String?
+  phone          String?
+  location       Json?        // person-level geo baseline (ADR-0008 N3)
+  preferences    Json     @default("{}")
+  search_queries Json     @default("[]")
+  created_at     DateTime @default(now())
+  updated_at     DateTime @updatedAt
+
+  matches        Match[]
+  resumes        Resume[]      // one person, many documents
+}
+
+model Resume {
+  id                String          @id @default(cuid())
+  profile_id        String
+  title             String          @default("Untitled resume")
+  format            String          @default("compact") // one template for v1
+  status            String          @default("NEW")     // NEW | SAVED | ARCHIVED
+  primary           Boolean         @default(false)     // ≤1 per profile
+  original_raw_text String? // creation seed from upload; NULL if blank; never updated
+  created_at        DateTime        @default(now())
+  updated_at        DateTime        @updatedAt
+
+  profile           Profile         @relation(fields: [profile_id], references: [id], onDelete: Cascade)
+  versions          ResumeVersion[]
+
+  @@index([profile_id])
+  @@index([primary])
+}
+
+model ResumeVersion {
+  id         String   @id @default(cuid())
+  resume_id  String
+  revision   Int         // additive, 0-based; date-primary display w/ revision disambiguation
+  created_at DateTime @default(now())
+  data       Json        // canonical ResumeDoc blob (ADR-0004 §6.5)
+
+  resume     Resume   @relation(fields: [resume_id], references: [id], onDelete: Cascade)
+
+  @@unique([resume_id, revision])
+  @@index([resume_id])
+}
+```
+
+**Relationship summary:** `Profile → Resume` is **1:N**; `Resume → ResumeVersion` is **1:N**
+(cascade delete). Primary enforcement (≤1 `primary=true` per profile) lives at the storage
+layer (`setPrimaryResume`). `Match` belongs to Profile (not a specific resume), so scoring
+reads the **primary** resume's latest `ResumeVersion.data` via `ScoringSource`.
+
+---
+
 ## Prisma Schema File
 
 **File:** `backend/prisma/schema.prisma`

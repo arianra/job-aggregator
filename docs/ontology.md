@@ -7,13 +7,12 @@
 ## Entity Relationship Overview
 
 ```
-┌─────────────┐     derives     ┌─────────────┐
-│   Resume     │───────────────▶│   Profile    │
-│  (raw file)  │                │  (structured)│
-└─────────────┘                └──────┬───────┘
-                                      │
-                                      │ generates
-                                      ▼
+┌─────────────┐  authored /   ┌─────────────┐  1:N    ┌─────────────────┐
+│   Profile   │──has many────▶│    Resume    │────────▶│  ResumeVersion  │
+│  (the person)│               │  (document) │         │ (immutable snap)│
+└──────┬──────┘               └─────────────┘         └─────────────────┘
+       │  one primary resume feeds scoring
+       ▼
 ┌─────────────┐  matches  ┌─────────────────┐
 │     Job      │◀─────────│     Match        │
 │  (canonical) │          │  (score + why)   │
@@ -33,6 +32,11 @@
 │  (entity)    │
 └─────────────┘
 ```
+> **Resume subsystem (ADR-0008):** a Profile (person) authors MANY Resumes (documents),
+> each with many immutable ResumeVersions (saved on manual Save). The **primary** Resume's
+> latest version's structured data is the source of truth feeding the Profile render and job
+> scoring. The old "resume raw file" inside Profile is removed — the upload/parse now produces
+> a Resume + a ResumeVersion.
 
 ---
 
@@ -40,7 +44,10 @@
 
 ### Profile
 
-Derived from a resume via Qwen AI extraction. Represents the candidate as a structured, queryable entity.
+The **person** — identity + preferences. Per ADR-0008, the Profile no longer embeds resume
+content (`experience/education/skills/certifications/resume` were removed). Those live in
+`Resume → ResumeVersion.data`. The Profile is the single-user record whose **primary** Resume
+feeds job scoring.
 
 ```typescript
 interface Profile {
@@ -48,21 +55,13 @@ interface Profile {
   created_at: Date
   updated_at: Date
 
-  // Personal
+  // Identity (the person)
   name: string
   email?: string
   phone?: string
-  location?: Location
+  location?: Location // person-level geo baseline (ADR-0008 N3)
 
-  // Experience
-  experience: Experience[] // work history, ordered by recency
-  education: Education[]
-  certifications: Certification[]
-
-  // Skills
-  skills: Skill[] // with proficiency + years
-
-  // Preferences (inferred from resume + manually adjustable)
+  // Preferences (person-level job intent)
   preferences: {
     locations: Location[] // desired work locations
     remote_ok: boolean
@@ -77,20 +76,77 @@ interface Profile {
     keywords?: string[] // additional search terms
   }
 
-  // Derived search queries
+  // Relations
+  resumes: Resume[] // documents this person authors
+  matches: Match[]
   search_queries: SearchQuery[]
+}
+```
+> No `resume`/`experience`/`skills` fields. `GET /api/profile` returns identity + a resumes
+> list (metas only). Resume content is served under `/api/profile/resumes`.
 
-  // Raw source
-  resume: {
-    filename: string
-    mime_type: string
-    stored_path: string // where the raw file lives
-    parsed_text?: string // extracted plain text
-  }
+### Resume
+
+A **document** the Profile authors (MANY per person). Holds document metadata only; the
+structured content lives in its immutable `ResumeVersion.data` (the `ResumeDoc` shape,
+ADR-0004 §6.5).
+
+```typescript
+interface Resume {
+  id: string
+  profile_id: string // FK → Profile
+  title: string            // default "Untitled resume"
+  format: 'compact'        // one template for v1
+  status: 'NEW' | 'SAVED' | 'ARCHIVED'
+  primary: boolean         // ≤1 primary per profile (storage-enforced)
+  original_raw_text?: string // creation seed from upload; NULL if blank; never updated
+  created_at: Date
+  updated_at: Date
+  data?: ResumeDoc           // latest saved version's structured data (hydrated)
+  versions: ResumeVersion[]  // immutable snapshots
+}
+```
+
+### ResumeVersion
+
+An **immutable** snapshot created on manual Save. `revision` is additive, 0-based;
+`created_at` is date-primary for display with revision to disambiguate. Restoring = copying an
+old version's data into a NEW version (history never rewritten).
+
+```typescript
+interface ResumeVersion {
+  id: string
+  resume_id: string // FK → Resume (cascade delete)
+  revision: number          // additive, 0-based; @@unique([resume_id, revision])
+  created_at: Date
+  data: ResumeDoc           // canonical structured blob
+}
+```
+
+### ResumeDoc
+
+The structured document (the `data` blob; source of truth). Contact (with per-field show
+visibility), summary, experience[], education[], ordered skills categories, certifications[],
+section order/visibility, and long-named CSS-free settings. See `shared/src/types.ts` and
+ADR-0004 §6.5.
+
+```typescript
+interface ResumeDoc {
+  contact: { name; email; phone; linkedin; country; state; city; visibility: Record<string, boolean> }
+  summary: string
+  experience: { role; company; dates; location; bullets: string[] }[]
+  education: { degree; school; location; year }[]
+  skills: Record<string, string[]>  // ordered: category -> skills
+  certifications: { title; issuer; year }[]
+  sections: { order: string[]; visibility: Record<string, boolean> }
+  settings: { fontSize; lineHeight; spacing; typeface: 'serif'|'sans'; paperA4: boolean }
 }
 ```
 
 ### Experience
+
+> Lives in `ResumeVersion.data.experience` (ResumeDoc shape), NOT on the Profile. The
+> `Experience` below is the scorer's input (built from the primary resume) — see `ScoringSource`.
 
 ```typescript
 interface Experience {
@@ -376,7 +432,8 @@ interface SalaryRange {
 
 | Relationship          | Type | Notes                                                      |
 | --------------------- | ---- | ---------------------------------------------------------- |
-| Profile → Resume      | 1:1  | One profile per resume upload                              |
+| Profile → Resume      | 1:N  | A person (Profile) authors many resume documents           |
+| Resume → ResumeVersion| 1:N  | A resume has many immutable saved snapshots                |
 | Profile → SearchQuery | 1:N  | Multiple search strategies per profile                     |
 | Profile → Match       | 1:N  | One profile scored against many jobs                       |
 | Job → Source          | 1:N  | One canonical job, many board observations                 |
