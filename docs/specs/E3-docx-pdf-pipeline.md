@@ -33,7 +33,16 @@ exports stream to the client once; preview artifacts go to a temp dir and are cl
 ## Implementation Decisions
 
 - **`docx.js`** (backend dep) builds from the fixed-format contract (ADR-0004 §2: type scale in half-points, canonical section order, entry rules, format authority). One template ships (`compact` = renamed `rezi-compact`); the template is a pure config object feeding the builder, so later templates are additive.
-- **Pure renderer seam:** `buildDocx(resumeDoc, settings) → Buffer` — no storage, no request context. Golden test: build from the reference resume's data → compare against `golden-resume.docx` (structural comparison: unzip both, diff `word/document.xml` normalization + styles; pixel-diff not required for v1, but page-count must be 1).
+- **Pure renderer seam:** `buildDocx(resumeDoc, settings) → Buffer` — no storage, no request context.
+- **Golden test — deterministic, achievable assertions ONLY** (vs `golden-resume.docx`):
+  1. **Text-content equivalence (primary gate):** extract ordered text runs from both the generated
+     DOCX and the golden (unzip → parse `word/document.xml` text nodes); assert equality modulo whitespace.
+  2. **Structure assertions:** canonical section order present; no tables/images/text-boxes; skills as
+     text lines; bullet counts match.
+  3. **Page count == 1** for the golden data (LibreOffice wrapper or docx page estimator).
+  **DO NOT byte-diff or raw-XML-diff `document.xml`** — the golden was produced by a different
+  toolchain (Word) and will never match docx.js XML even when visually identical. That path burns
+  cycles and tempts test-weakening.
 - **Golden file resolution:** dev: `~/resume-golden/cv2026-003/golden-resume.docx` (WSL); public builds: `<user-documents>/cv2018/cv2026/003/Arian Razi - Lead Front End Engineer 2026.docx` (cross-platform home/documents resolution). Tests SKIP (with warning) when absent — never fail CI on a personal file.
 - **PDF:** `soffice --headless --convert-to pdf` via a thin child-process wrapper; input = the same bytes `buildDocx` produced (in-memory or temp), output streamed to client or temp-rendered. LibreOffice added to `docker-compose.yml` (app service or sidecar — implementer picks the simpler, documented choice).
 - **Endpoints:** `GET /api/profile/resumes/:id/export-docx` · `GET /api/profile/resumes/:id/export-pdf` · `POST /api/profile/resumes/:id/render-preview` (body: ResumeDoc — renders in-flight unsaved data, returns PDF-page images or PDF bytes for the preview pane; temp artifacts disposed after response). All read from the REQUEST body or latest saved version — never from a stored DOCX.

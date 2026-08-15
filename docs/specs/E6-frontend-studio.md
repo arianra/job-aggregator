@@ -41,6 +41,7 @@ The prototype is the pixel-level reference; the backend APIs from E2–E5 replac
 - **Component decomposition (deep modules):** `ResumeStudio` (shell: top bar + section rail content + preview/score columns) · `SectionForm` per section driven by field descriptors (the prototype's SEC_DESC/FORMS pattern) · `GroupList` (the shared organizeable collapsible-card component for experience/education/certs) · `SkillsCategories` · `LivePreview` (HTML render, pure) · `DocxPreviewPane` (manual render trigger, calls E3 preview endpoint, disposable) · `ScorePanel` + `LintDrawer` (E4 report) · `VersionsDrawer` · `ConfirmModal` · `Toasts`. Keep the prototype's interaction semantics exactly.
 - **Profile page:** derives display from primary resume's latest saved version (via E5's source); empty state CTA → Overview.
 - **No new design language:** reuse the app's existing Tailwind + shadcn-style components; the prototype's layout/spacing/copy is the spec.
+- **Prototype data ≠ canonical data.** When porting, map the prototype's DISPLAY vocabulary to canonical types: `status:'live'` → `NEW|SAVED|ARCHIVED` enum; settings shorthand `{fs,lh,typeface:'var(--serif)'}` → `{fontSize,lineHeight,spacing,typeface:'serif'|'sans',paperA4}`; localStorage model → server API. The prototype's LAYOUT and INTERACTION are the spec; its data shapes are not.
 - **Functional discipline:** render components are pure over props/state; data effects live in a thin data layer (fetch/save), never inside render logic.
 
 ## Testing Decisions

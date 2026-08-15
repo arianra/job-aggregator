@@ -29,7 +29,12 @@ deterministic ATS lint engine, and scoring re-wired to the primary resume. The a
    dated+numbered version. Restore = copy old data into a NEW version.
 7. **Scoring reads the PRIMARY resume's latest SAVED version** via the slim ScoringSource
    `{skills, experience, location, preferences}`. No primary → no scoring → empty-state UI.
-8. **Environment:** repo lives on WSL ext4 (`~/projects/job-aggregator`); all commands via
+8. **Prototype ≠ data model.** `prototypes/resume-final-prototype.html` is the UX reference only.
+   Its in-memory data uses DISPLAY vocabulary that you must NOT copy into types or storage:
+   `status:'live'` (canonical enum is `NEW|SAVED|ARCHIVED`), settings shorthand `{fs,lh}` and
+   `typeface:'var(--serif)'` (canonical is `{fontSize,lineHeight,spacing,typeface:'serif'|'sans',paperA4}`),
+   and localStorage-only persistence. Canonical shapes are defined in the specs + shared types.
+9. **Environment:** repo lives on WSL ext4 (`~/projects/job-aggregator`); all commands via
    `wsl bash -lc`. Prisma CLI needs `DATABASE_URL` exported; Docker Desktop must be running for
    Postgres (`docker start job-aggregator-db`). Beads (`bd`) must run under WSL nvm, never the
    Windows npm shim.
@@ -44,6 +49,9 @@ bd update <id> --claim          # claim atomically
 npm run build && npm run test -w backend   # or the workspace under test
 bd close <id> --reason "what shipped + how verified"
 ```
+
+**Epics are containers.** Never claim or close an epic (pbs/c3e/x7o/p11/jy9/dd8) directly —
+they close when their children do. Work leaf tickets only, one at a time, in `bd ready` order.
 
 ## Epic map (specs in docs/specs/)
 
