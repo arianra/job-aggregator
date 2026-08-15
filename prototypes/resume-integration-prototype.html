@@ -1,0 +1,365 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Resume · Job Aggregator — integration prototype</title>
+<style>
+  :root{
+    --bg:#f8f8f6; --card:#ffffff; --card2:#fafaf8; --border:#e4e4df; --border2:#ececea;
+    --fg:#1a1917; --muted:#6f6b64; --faint:#9a968d; --primary:#0f766e; --primary-ink:#fff; --primary-soft:#e4f1ef;
+    --ring:#0f766e; --ok:#147a4f; --warn:#a1620b; --warn-soft:#faf1dd; --danger:#b3261e;
+    --shadow:0 1px 2px rgba(0,0,0,.04),0 10px 30px -18px rgba(0,0,0,.18);
+    --mono:ui-monospace,"SFMono-Regular",Menlo,Consolas,monospace;
+    --sans:"Inter",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  }
+  [data-theme="dark"]{
+    --bg:#0d0e10; --card:#15171a; --card2:#1a1d21; --border:#26292e; --border2:#202328;
+    --fg:#e8e6e2; --muted:#a2a09a; --faint:#6e6c66; --primary:#2ab3a6; --primary-ink:#04201d; --primary-soft:#12332f;
+    --ring:#2ab3a6; --ok:#3dd68c; --warn:#e0a83f; --warn-soft:#3a3018; --danger:#ef6d5f;
+    --shadow:0 1px 2px rgba(0,0,0,.3),0 14px 40px -18px rgba(0,0,0,.6);
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;height:100%}
+  body{font-family:var(--sans);background:var(--bg);color:var(--fg);font-size:14px;line-height:1.45}
+  button{font-family:inherit;cursor:pointer;border:0;background:none;color:inherit}
+  ::selection{background:var(--primary-soft)}
+  .proto-tag{position:fixed;bottom:10px;right:12px;z-index:99;font-family:var(--mono);font-size:10.5px;color:var(--faint);border:1px solid var(--border);background:var(--card);border-radius:99px;padding:3px 10px;letter-spacing:.02em}
+
+  /* ---------- app shell ---------- */
+  .shell{display:flex;min-height:100vh}
+  .sidebar{width:250px;flex:none;border-right:1px solid var(--border);background:var(--card);display:flex;flex-direction:column;height:100vh;position:sticky;top:0}
+  .sb-brand{display:flex;align-items:center;gap:9px;padding:0 16px;height:54px;border-bottom:1px solid var(--border);font-weight:700;font-size:15px;letter-spacing:-.01em}
+  .sb-brand .dot{width:9px;height:9px;border-radius:3px;background:var(--primary);flex:none}
+  .sb-nav{padding:8px;overflow-y:auto;flex:1}
+  .sb-nav::-webkit-scrollbar{width:6px}.sb-nav::-webkit-scrollbar-thumb{background:var(--border2);border-radius:99px}
+  .item{display:flex;align-items:center;gap:10px;width:100%;padding:8px 10px;border-radius:8px;color:var(--muted);font-size:13.5px;text-align:left}
+  .item:hover{background:var(--card2);color:var(--fg)}
+  .item.active{background:var(--primary-soft);color:var(--primary);font-weight:600}
+  .item .ico{width:17px;height:17px;flex:none;display:grid;place-items:center}
+  .item .chev{width:16px;height:16px;margin-left:auto;transition:transform .15s;color:var(--faint);flex:none}
+  .item.open .chev{transform:rotate(90deg)}
+
+  /* --- resume subtree (the NEW pattern) --- */
+  .resume-group{margin-top:2px}
+  .resume-tree{margin-left:12px;border-left:1px solid var(--border);padding-left:8px;margin-top:2px}
+  .rt-item{display:flex;align-items:center;gap:8px;width:100%;padding:6px 8px;border-radius:7px;color:var(--muted);font-size:13px;text-align:left}
+  .rt-item:hover{background:var(--card2);color:var(--fg)}
+  .rt-item.active{background:var(--primary-soft);color:var(--primary);font-weight:600}
+  .rt-item .dot{width:6px;height:6px;border-radius:99px;background:var(--border2);flex:none}
+  .rt-item .dot.primary{background:var(--primary)}
+  .rt-item .chev{margin-left:auto;width:14px;height:14px;color:var(--faint);transition:transform .15s;flex:none}
+  .rt-item.open .chev{transform:rotate(90deg)}
+  .step-links{margin-left:12px;border-left:1px solid var(--border);padding-left:6px;margin-top:1px}
+  .step-link{display:flex;align-items:center;gap:7px;width:100%;padding:4px 8px;border-radius:6px;color:var(--faint);font-size:12px;text-align:left}
+  .step-link:hover{background:var(--card2);color:var(--fg)}
+  .step-link.active{color:var(--primary);font-weight:600}
+  .step-link .n{font-family:var(--mono);font-size:10px;width:13px;color:var(--faint);flex:none}
+  .step-link.fn{color:var(--primary)}
+  .rt-actions{display:flex;flex-direction:column;gap:4px;margin:4px 0 8px;padding:0 4px}
+  .act{display:flex;align-items:center;gap:8px;padding:7px 9px;border-radius:7px;font-size:12.5px;color:var(--fg);background:var(--card2);border:1px dashed var(--border2);width:100%;text-align:left}
+  .act:hover{border-color:var(--primary);color:var(--primary)}
+  .act.dashed.primary{border-style:solid;border-color:var(--primary);background:var(--primary-soft);color:var(--primary)}
+  .sb-label{font-size:10.5px;text-transform:uppercase;letter-spacing:.08em;color:var(--faint);padding:12px 8px 5px;font-weight:650}
+
+  /* ---------- main ---------- */
+  .main{flex:1;min-width:0;display:flex;flex-direction:column}
+  .topbar{position:sticky;top:0;z-index:30;display:flex;align-items:center;gap:12px;height:54px;padding:0 20px;border-bottom:1px solid var(--border);background:var(--card)}
+  /* contextual Resume bar occupies the flex-1 space; theme toggle pinned right */
+  .rb{border:1px solid var(--border);border-radius:9px;padding:0 10px;height:36px;display:flex;align-items:center;gap:9px;background:var(--card2)}
+  .rb .sep{width:1px;height:18px;background:var(--border)}
+  .rb .name{font-weight:650}
+  .rb .step{color:var(--muted);font-size:12.5px}
+  .rb .saved{color:var(--muted);font-size:12px;display:flex;align-items:center;gap:5px}
+  .rb .saved .dot{width:7px;height:7px;border-radius:99px;background:var(--ok)}
+  .rb .saved.dirty .dot{background:var(--warn);box-shadow:0 0 0 3px var(--warn-soft)}
+  .tbtn{border:1px solid var(--border);background:var(--card);color:var(--fg);border-radius:8px;padding:0 11px;height:34px;font-size:13px;font-weight:550}
+  .tbtn.primary{background:var(--primary);border-color:var(--primary);color:var(--primary-ink)}
+  .tbtn:hover{border-color:var(--border2);background:var(--card2)}
+  .theme-wrap{margin-left:auto;display:flex;align-items:center;gap:6px}
+  .icobtn{border:1px solid var(--border);background:var(--card);border-radius:8px;width:34px;height:34px;display:grid;place-items:center;color:var(--muted)}
+  .icobtn:hover{border-color:var(--border2);color:var(--fg)}
+
+  .content{padding:24px 28px;max-width:1100px;width:100%}
+  .crumb{font-size:12px;color:var(--faint);display:flex;align-items:center;gap:6px;margin-bottom:10px}
+  .crumb b{color:var(--primary);font-weight:600}
+  h1{margin:0 0 4px;font-size:24px;font-weight:750;letter-spacing:-.02em}
+  h1 small{font-size:13px;color:var(--muted);font-weight:500;margin-left:8px}
+  .lead{color:var(--muted);margin:0 0 22px;font-size:13.5px}
+
+  /* --- resume list view --- */
+  .toolrow{display:flex;align-items:center;gap:10px;margin-bottom:18px;flex-wrap:wrap}
+  .btn{display:inline-flex;align-items:center;gap:7px;border:1px solid var(--border);background:var(--card);color:var(--fg);border-radius:9px;padding:9px 14px;font-size:13.5px;font-weight:600}
+  .btn:hover{border-color:var(--border2);background:var(--card2)}
+  .btn.primary{background:var(--primary);border-color:var(--primary);color:var(--primary-ink)}
+  .btn.primary:hover{filter:brightness(1.05)}
+  .btn.ghost{border-style:dashed}
+  .seg{display:inline-flex;border:1px solid var(--border);border-radius:9px;overflow:hidden}
+  .seg button{padding:9px 13px;font-size:13px;color:var(--muted)}
+  .seg button.on{background:var(--primary);color:var(--primary-ink);font-weight:600}
+
+  .resumecards{display:flex;flex-direction:column;gap:10px}
+  .rcard{display:flex;align-items:center;gap:14px;border:1px solid var(--border);background:var(--card);border-radius:12px;padding:14px 16px;cursor:pointer;transition:border-color .12s,box-shadow .12s}
+  .rcard:hover{border-color:var(--primary);box-shadow:var(--shadow)}
+  .rcard.primary{border-color:var(--primary)}
+  .rcard .thumb{width:42px;height:54px;flex:none;border:1px solid var(--border);border-radius:7px;background:linear-gradient(150deg,var(--card2),var(--border2));display:grid;place-items:center;color:var(--faint)}
+  .rcard .meta{min-width:0;flex:1}
+  .rcard .mt{font-weight:650;display:flex;align-items:center;gap:9px}
+  .rcard .ms{font-size:12.5px;color:var(--muted);margin-top:2px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+  .chip{display:inline-flex;align-items:center;gap:5px;font-size:10.5px;font-family:var(--mono);color:var(--primary);border:1px solid var(--primary);border-radius:99px;padding:1px 8px;font-weight:600}
+  .chip.token{color:var(--muted);border-color:var(--border)}
+  .rel{color:var(--faint);font-size:12px}
+  .rov{display:flex;align-items:center;gap:8px;flex:none}
+  .hovbtn{opacity:0;transition:opacity .12s}
+  .rcard:hover .hovbtn{opacity:1}
+  .petty{border:1px solid var(--border);border-radius:7px;padding:6px 10px;font-size:12px;color:var(--muted)}
+  .petty:hover{border-color:var(--primary);color:var(--primary)}
+
+  /* --- empty state hero (Q4) --- */
+  .hero{border:1px solid var(--border);border-radius:16px;background:var(--card);overflow:hidden;box-shadow:var(--shadow)}
+  .hero-inner{padding:48px 40px;text-align:center}
+  .hero-ill{width:64px;height:64px;border-radius:16px;margin:0 auto 18px;background:var(--primary-soft);color:var(--primary);display:grid;place-items:center}
+  .hero h2{margin:0 0 8px;font-size:20px;font-weight:750}
+  .hero p{color:var(--muted);max-width:440px;margin:0 auto 22px;font-size:13.5px}
+  .hero .row{display:flex;gap:10px;justify-content:center;flex-wrap:wrap}
+
+  .grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(330px,1fr));gap:16px;margin-top:20px}
+  .panel{border:1px solid var(--border);background:var(--card);border-radius:12px;padding:16px}
+  .panel h3{margin:0 0 6px;font-size:14px;font-weight:700}
+  .panel p{color:var(--muted);font-size:12.5px;margin:0 0 12px}
+  .panel code{font-family:var(--mono);font-size:11px;background:var(--card2);border:1px solid var(--border2);padding:1px 5px;border-radius:5px;color:var(--primary)}
+  .flowrow{display:flex;gap:8px;flex-wrap:wrap;align-items:center;font-family:var(--mono);font-size:11px;color:var(--muted)}
+  .flowrow .st{color:var(--faint)}
+  .flowrow .node{padding:4px 9px;border:1px solid var(--border);border-radius:6px;background:var(--card2)}
+  .flowrow .node.on{border-color:var(--primary);color:var(--primary);font-weight:600}
+  .note{border:1px solid var(--warn);background:var(--warn-soft);border-radius:9px;padding:10px 12px;font-size:12.5px;color:var(--warn);margin-top:14px}
+
+  @media(max-width:760px){.sidebar{width:60px}.content{padding:16px}.rb .step{display:none}}
+</style>
+</head>
+<body data-theme="light">
+<div class="proto-tag">RESUME · INTEGRATION PROTOTYPE</div>
+
+<div class="shell">
+  <aside class="sidebar">
+    <div class="sb-brand"><span class="dot"></span> Job Aggregator</div>
+    <nav class="sb-nav" id="nav"></nav>
+  </aside>
+
+  <div class="main">
+    <!-- Top bar: contextual Resume bar fills the space; theme toggle pinned right (Q1/header) -->
+    <header class="topbar">
+      <div id="resumeBar" style="display:none" class="rb">
+        <span class="name" id="rbName">Lead Frontend Engineer 2026</span>
+        <span class="sep"></span>
+        <span class="step" id="rbStep">Experience</span>
+        <span class="sep"></span>
+        <span class="saved" id="rbSaved"><span class="dot"></span> Saved · v7</span>
+        <button class="tbtn" onclick="toast('Download DOCX (render-on-request from latest version)')">Download DOCX</button>
+        <button class="tbtn" onclick="toast('Download PDF (derived from the DOCX)')">Download PDF</button>
+      </div>
+      <div class="theme-wrap">
+        <button class="icobtn" id="themeBtn" onclick="toggleTheme()" title="Toggle theme">◐</button>
+      </div>
+    </header>
+
+    <main class="content" id="content"></main>
+  </div>
+</div>
+
+<div class="toast" id="toast" style="position:fixed;bottom:18px;left:50%;transform:translateX(-50%);background:#1a1917;color:#fff;border-radius:9px;padding:9px 16px;font-size:13px;opacity:0;transition:.2s;z-index:100"></div>
+
+<script>
+// ======================================================================
+// FAKE DATA — mirrors the app's model (Profile → Resume → ResumeVersion)
+// ======================================================================
+const RESUMES = {
+  cv1: { id:'cv1', title:'Lead Frontend Engineer 2026', format:'compact', primary:true, createdAt:Date.now()-86400000*3, rev:7, saved:'3 days ago', steps:{details:true,contact:true,summary:true,experience:true,education:true,skills:true,certs:true,finish:true} },
+  cv2: { id:'cv2', title:'Staff FE / Platform', format:'compact', primary:false, createdAt:Date.now()-86400000*6, rev:2, saved:'6 days ago', steps:{details:true,contact:true,summary:true,experience:true,education:false,skills:false,certs:false,finish:false} },
+  cv3: { id:'cv3', title:'AI Safety infra resume (draft)', format:'compact', primary:false, createdAt:Date.now()-86400000*1, rev:0, saved:'unsaved', steps:{details:true,contact:false,summary:false,experience:false,education:false,skills:false,certs:false,finish:false} },
+};
+const STEPS = [
+  { key:'details',  n:'01', label:'Details' },
+  { key:'contact',  n:'02', label:'Contact' },
+  { key:'summary',  n:'03', label:'Summary' },
+  { key:'experience',n:'04',label:'Experience' },
+  { key:'education',n:'05',label:'Education' },
+  { key:'skills',   n:'06', label:'Skills' },
+  { key:'certs',    n:'07', label:'Certifications' },
+  { key:'finish',   n:'08', label:'Finish & Export' },
+];
+let activeResume = null;   // currently-open resume (expanded in sidebar + bar)
+let activeStep = 'experience';
+
+function ordered(){ return Object.values(RESUMES).sort((a,b)=>(b.primary?1:0)-(a.primary?1:0)); }
+
+// ======================================================================
+// SIDEBAR — static top-level items + Resume subtree (the NEW pattern)
+// ======================================================================
+function stepLink(r, s){
+  const done = !!r.steps[s.key];
+  return `<button class="step-link ${activeResume===r.id&&activeStep===s.key?'active':''} ${s.key==='finish'?'fn':''}" onclick="goStep('${r.id}','${s.key}')">
+    <span class="n">${s.n}</span><span>${s.label}</span>${done?'<span class="dot primary" style="margin-left:auto"></span>':''}</button>`;
+}
+function resumeTree(r){
+  const open = activeResume === r.id;
+  return `<div class="rt-item ${open?'open':''} ${activeResume===r.id?'active':''}" onclick="toggleResume('${r.id}')">
+    <span class="dot ${r.primary?'primary':''}"></span><span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${r.title}</span>
+    ${r.primary?'<span class="chip" style="font-size:9.5px;padding:0 5px">PRIMARY</span>':''}
+    <svg class="chev" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 3l5 5-5 5"/></svg></div>`;
+}
+function renderNav(){
+  const nav = document.getElementById('nav');
+  let h = '';
+  NV.forEach(it=>{
+    h += `<button class="item ${it.path==='/resume'?'active':''}" onclick="navTo('${it.path}')"><span class="ico">${it.icon}</span><span>${it.label}</span></button>`;
+  });
+  h += `<div class="sb-label">Resume</div>`;
+  // create actions (top of the resume subtree)
+  h += `<div class="resume-tree" style="margin-left:0;border-left:0;padding-left:0">
+    <button class="act dashed" onclick="createEmpty()" style="margin-bottom:4px">＋ &nbsp;Create new</button>
+    <button class="act dashed" onclick="createUpload()" style="margin-bottom:6px">↑ &nbsp;Create from upload</button>`;
+  // list of resumes (each expands into its steps 1–7 + Finish)
+  h += `<div class="sb-label" style="padding:6px 4px 4px">My resumes</div>`;
+  ordered().forEach(r=>{
+    h += resumeTree(r);
+    if(activeResume===r.id){
+      h += `<div class="step-links">` + STEPS.map(s=>stepLink(r,s)).join('') + `<button class="step-link" onclick="goLint('${r.id}')"><span class="n">⎈</span><span>Flow · ATS lint</span></button></div>`;
+    }
+  });
+  h += `</div>`;
+  nav.innerHTML = h;
+}
+
+// ======================================================================
+// NAV
+// ======================================================================
+const NV = [
+  { path:'/', label:'Dashboard', icon:'▦' },
+  { path:'/jobs', label:'Jobs', icon:'◇' },
+  { path:'/applications', label:'Applications', icon:'▤' },
+  { path:'/boards', label:'Boards', icon:'▧' },
+  { path:'/profile', label:'Profile', icon:'●' },
+  { path:'/settings', label:'Settings', icon:'⚙' },
+];
+let currentPage = '/resume';
+function navTo(path){
+  currentPage=path;
+  if(path!=='/resume'){ activeResume=null; }
+  render();
+}
+function navLabel(p){
+  const it=NV.find(n=>n.path===p); return it?it.label:p;
+}
+
+// ======================================================================
+// ACTIONS
+// ======================================================================
+function createEmpty(){
+  const nid='r'+String(Date.now()).slice(-5);
+  RESUMES[nid]={ id:nid,title:'Untitled resume',format:'compact',primary:false,createdAt:Date.now(),rev:0,saved:'unsaved',
+    steps:{details:true,contact:false,summary:false,experience:false,education:false,skills:false,certs:false,finish:false} };
+  activeResume=nid; activeStep='details';
+  toast('Created empty resume → DB row (status NEW). Edit sections then Save.');
+  render();
+}
+function createUpload(){
+  toast('Open file picker → upload PDF/DOCX → create Resume from parsed data (raw text captured).');
+  setTimeout(createEmpty,600);
+}
+function toggleResume(id){ activeResume = activeResume===id?null:id; activeStep='details'; render(); }
+function goStep(id,key){ activeResume=id; activeStep=key; render(); }
+function goLint(id){ activeResume=id; activeStep='lint'; render(); }
+function promote(id){
+  Object.values(RESUMES).forEach(r=>r.primary=false);
+  RESUMES[id].primary=true;
+  toast('Promoted "'+RESUMES[id].title+'" to primary → now feeds Profile + scoring.');
+  render();
+}
+function setPrimary(id){ promote(id); }
+
+function toggleTheme(){ const b=document.body; b.dataset.theme = b.dataset.theme==='dark'?'light':'dark'; document.getElementById('themeBtn').textContent = b.dataset.theme==='dark'?'☀':'☾'; }
+
+let ttm;
+function toast(m){ const t=document.getElementById('toast'); t.textContent=m; t.style.opacity=1; clearTimeout(ttm); ttm=setTimeout(()=>t.style.opacity=0,2600); }
+
+// ======================================================================
+// MAIN CONTENT
+// ======================================================================
+function render(){
+  renderNav();
+  const content=document.getElementById('content');
+  if(currentPage!=='/resume'){ content.innerHTML = `<h1>${navLabel(currentPage)}</h1><p class="lead">Jumped to a non-resume page. Resume lives at the "Resume" top-level item.</p>`; hideBar(); return; }
+  // No resumes at all → empty-state hero (Q4)
+  if(ordered().length===0){ content.innerHTML=heroHTML(); hideBar(); return; }
+  // Resume list view + (if a resume open) the step work area
+  content.innerHTML = listHTML() + (activeResume?stepAreaHTML():'');
+  showBar();
+}
+function heroHTML(){
+  return `<h1>Resume</h1><p class="lead">Peer documents you author per role. The primary resume feeds your Profile & job matching.</p>
+  <div class="hero"><div class="hero-inner">
+    <div class="hero-ill"><svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><path d="M14 3v6h6"/></svg></div>
+    <h2>Create your first resume</h2>
+    <p>Start from a blank document and fill it in the studio, or upload an existing PDF/DOCX and we'll seed the structured resume from it.</p>
+    <div class="row">
+      <button class="btn primary" onclick="createEmpty()">＋ Create new</button>
+      <button class="btn" onclick="createUpload()">↑ Create from upload</button>
+    </div>
+  </div></div>`;
+}
+function listHTML(){
+  const list = ordered().map(r=>{
+    const hoverBtn = r.primary
+      ? `<span class="chip">PRIMARY</span>`
+      : `<button class="petty hovbtn" onclick="event.stopPropagation();promote('${r.id}')">⇧ Make primary</button>`;
+    return `<div class="rcard ${r.primary?'primary':''}" onclick="toggleResume('${r.id}')">
+      <div class="thumb"><span style="font-family:var(--mono);font-size:10px">CV</span></div>
+      <div class="meta">
+        <div class="mt">${r.title} ${r.primary?'<span class="chip">PRIMARY · feeds Profile</span>':''}</div>
+        <div class="ms"><span class="rel">saved ${r.saved}</span><span class="chip token">rev ${r.rev}</span><span class="chip token">${r.format}</span>${r.steps.finish?'':'<span class="rel">in progress</span>'}</div>
+      </div>
+      <div class="rov">${hoverBtn}<span class="chev" style="color:var(--faint)">›</span></div>
+    </div>`;
+  }).join('');
+  return `<h1>Resume</h1><p class="lead">Peer documents you author per role. The primary resume feeds your Profile & job scoring.</p>
+  <div class="toolrow">
+    <button class="btn primary" onclick="createEmpty()">＋ Create new</button>
+    <button class="btn" onclick="createUpload()">↑ Create from upload</button>
+    <span style="margin-left:auto;color:var(--faint);font-size:12.5px">${ordered().length} resume${ordered().length>1?'s':''}</span>
+  </div>
+  <div class="resumecards">${list}</div>
+  <div class="grid2">
+    <div class="panel"><h3>Primary feeds Profile + scoring</h3><p>The highlighted resume is the one used to populate your existing <code>Profile</code> and to drive <code>job matching</code>. Promote a different resume (hover on a card, or the toggle in Details) to switch what scores jobs.</p>
+      <div class="flowrow"><span class="st">scoring reads</span><span class="node on">primary resume · latest version</span><span class="st">→</span><span class="node">Profile data</span><span class="st">→</span><span class="node">Match %</span></div></div>
+    <div class="panel"><h3>Creation-phase vs Save</h3><p>Name, metadata, primary, and file upload are <b>committed immediately</b>. Section edits live in <b>localStorage</b> until you press <b>Save</b>, which appends a dated, numbered revision to the DB.</p>
+      <div class="flowrow"><span class="node">create/upload → NEW</span><span class="st">→</span><span class="node">edit (local)</span><span class="st">→</span><span class="node on">Save = revision</span></div></div>
+  </div>`;
+}
+function stepAreaHTML(){
+  const r = RESUMES[activeResume];
+  const step = activeStep==='lint' ? {label:'ATS lint report (Flow)'} : STEPS.find(s=>s.key===activeStep)||STEPS[0];
+  return `<div style="height:18px"></div>
+  <div class="crumb"><b>Resume</b> › ${r.title} › ${step.label}</div>
+  <div class="panel" style="margin-top:0">
+    <h3>${step.label} — <span style="color:var(--muted);font-weight:500">step content placeholder</span></h3>
+    <p>The studio renders this section here from the structured <code>ResumeVersion.data</code>. Live HTML + .docx render on the left, structured form controls on the right — same as the studio prototype.</p>
+    <div style="height:120px;border:1px dashed var(--border2);border-radius:9px;display:grid;place-items:center;color:var(--faint);background:var(--card2);font-size:13px">[ ${step.label} editor lives here — integrated into this page ]</div>
+    <div class="note">This is the <b>integration prototype</b>: the nav tree, top bar, primary logic, and empty state are the new, previously-unprototyped parts. The studio's own editor UI is not re-created here.</div>
+  </div>`;
+}
+function showBar(){ document.getElementById('resumeBar').style.display='flex';
+  const r=RESUMES[activeResume]; if(!r)return;
+  document.getElementById('rbName').textContent=r.title;
+  const step = activeStep==='lint'?'ATS lint':(STEPS.find(s=>s.key===activeStep)||STEPS[0]).label;
+  document.getElementById('rbStep').textContent=step;
+  const sv=document.getElementById('rbSaved');
+  if(r.saved==='unsaved'){ sv.innerHTML='<span class="dot"></span> Untouched · NEW'; sv.classList.add('dirty'); }
+  else { sv.innerHTML='<span class="dot"></span> Saved · v'+r.rev; sv.classList.remove('dirty'); }
+}
+function hideBar(){ document.getElementById('resumeBar').style.display='none'; }
+
+render();
+</script>
+</body>
+</html>
