@@ -41,7 +41,7 @@ bd ready                        # claimable work
 bd update <id> --claim          # claim atomically
 # read the ticket's spec section + referenced ADR sections
 # write the failing test at the agreed seam -> minimal implementation -> green
-npm run build && npx vitest run -w backend   # or the workspace under test
+npm run build && npm run test -w backend   # or the workspace under test
 bd close <id> --reason "what shipped + how verified"
 ```
 

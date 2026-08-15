@@ -27,6 +27,14 @@ Five canonical roles, each label string equal to its name: `needs-triage`, `need
 
 Obsidian Atlas layout — durable domain knowledge/glossary lives in the massiveboi vault as an interlinked KB (`$OBSIDIAN_VAULT_PATH` = `.../obsidian/massiveboi/massiveboi`); ADRs stay in `docs/adr/`. See `docs/agents/domain.md`.
 
+## Active program: Resume feature (specs + beads, ready-for-agent)
+
+The Resume program is fully specced and ticketed. Before claiming any beads ticket,
+read **`docs/resume-agent-briefing.md`** (ground rules, workflow, golden files), then
+**`docs/resume-implementation-overview.md`**, then the epic's spec in **`docs/specs/`**
+(E1–E6), then the referenced ADRs. Start with **E1** (`job-aggregator-pbs`) — use
+`bd ready` and work tickets in dependency order; do not skip ahead of `bd ready`.
+
 ## Environment: WSL-Native Checkout
 
 The canonical checkout lives on the WSL ext4 filesystem:
