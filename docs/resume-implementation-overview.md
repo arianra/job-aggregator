@@ -128,6 +128,7 @@ weights stay as-is; scoring expansions are later work.
 | Lexicon | curated ~300 terms; extension research → beads l7q | engine §10 Q3 |
 | Categories | consolidate page/seniority rules; avoid sprawl → beads fib | engine §10 |
 | Versioning | manual Save only; additive revision; date-primary display | ADR-0008 |
+| Existing matches | **wiped** in migration — start clean (personal-use data) | product owner (B11) |
 | Paradigm | strictly functional: pure transforms, results over side effects | product owner |
 
 ## 5. Paradigm constraints (apply to every ticket)
@@ -139,7 +140,7 @@ weights stay as-is; scoring expansions are later work.
 - **Deep modules**: small interfaces, heavy implementations behind them (codebase-design vocabulary).
 - **No dead code**: legacy Profile fields deleted, not shimmed.
 
-## 6. Test seams (proposed — pending product-owner confirmation, per TDD skill)
+## 6. Test seams (CONFIRMED 2026-08-15 by product owner, per TDD skill)
 
 1. **HTTP seam** — `/api/profile/resumes/*` via supertest + storage adapter (prior art:
    profile.test.ts). Covers W2 CRUD/versioning + export route contracts.
@@ -150,6 +151,7 @@ weights stay as-is; scoring expansions are later work.
    Covers W6.
 
 Frontend: no test infra exists; the prototype is the visual spec, verified by live-E2E review.
+Note: the migration step also **deletes all existing Match rows** (B11, resolved).
 
 ## 7. Epics & phasing (each independently shippable)
 
