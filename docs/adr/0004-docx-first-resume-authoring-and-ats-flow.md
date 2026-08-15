@@ -227,13 +227,27 @@ the set later (ADR-0007 open item).
 - **O3 — One-page discipline: warn on overflow + optional proportional scale** (shrink-to-fit); never
   silently truncate (§5).
 
+**Resolved (2026-08-14) — rendering & artifact pipeline (product owner):**
+- **O1 — Type scale:** keep `cv2026/003` base sizes; scale only to fit one page. Accepted as default.
+- **O5 — Artifact persistence: NO stored artifacts.** Structured data (`ResumeVersion.data`) is the ONLY
+  stored artifact. The DOCX is generated **on demand**: (a) when the user presses **Export DOCX**
+  (generated then, downloaded once, nothing kept), and (b) for the accurate preview pane, generated
+  on demand and treated as **disposable/temporary** (temp dir, never served public, never persisted).
+  No rotation/history policy needed — there is nothing to rotate.
+- **Render trigger: on-demand, never optimistic.** No auto/keystroke-debounced DOCX rendering. The
+  accurate DOCX preview sits behind a **manual "render" action**, with UI copy noting it is slower
+  than Live HTML and should be used sparingly. Live HTML approximation remains the per-keystroke pane.
+- **DOCX generation is server-side** (`docx.js` in the backend), PDF via **LibreOffice headless in
+  Docker** (add LibreOffice to the app's docker-compose; personal/local posture — AGPL OK).
+- **Golden reference:** `cv2026/003` (`Arian Razi - Lead Front End Engineer 2026.docx/.pdf`) is the
+  golden file for the P1 renderer test. Local dev copy: `~/resume-golden/cv2026-003/golden-resume.{docx,pdf}`
+  (WSL). Public builds resolve it generically at `<user-documents>/cv2018/cv2026/003/` on the user's
+  machine; tests skip gracefully if absent.
+
 **Still open (with defaults):**
-- **O1 — Type scale:** keep `cv2026/003`'s base sizes; expose as the scale/fit control. Confirm whether to
-  bump for legibility (default: keep base, scale only to fit one page).
-- **O2 — Section set:** include **CERTIFICATIONS**; decide whether **PROJECTS / LANGUAGES / AWARDS** ship as
-  off-by-default sections. Field shapes follow the §2 pattern.
-- **O5 — Artifact persistence:** keep the canonical DOCX in `uploads/resumes/` (like today's `stored_path`),
-  regenerate on each save. Decide rotation/history policy (default: overwrite current; keep last N).
+- **O2 — Section set:** include **CERTIFICATIONS**; decide whether **PROJECTS / LANGUAGES / AWARDS** ship
+  as off-by-default sections. Field shapes follow the §2 pattern. *(Deferred to a beads issue — combine
+  into one category to avoid report-category sprawl.)*
 
 ---
 *End of ADR-0004. Build later from §7, with ADR-0003 as the why and ADR-0001/0002 as the substrate.*

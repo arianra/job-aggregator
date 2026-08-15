@@ -1,6 +1,6 @@
 # ATS Linting Engine — Design & Rule-Set Specification
 
-**Status:** Design only — **v0.3 — BASELINE reference** (living document; iterates in place)
+**Status:** Design only — **v0.4 — BASELINE reference** (living document; iterates in place). v0.4: Q2/Q3/Q4 resolved by product owner 2026-08-14.
 **Owner:** job-aggregator
 **Replaces:** shallow `getTextQualityScore()` in `backend/src/services/resume-text.ts`
 **Research baseline:** GitHub ecosystem survey (Aug 2026) → §11
@@ -470,9 +470,9 @@ past conversation. Detailed working notes for each follow the table.
 | # | Decision | Recommendation | Rationale | Status |
 |---|----------|----------------|-----------|--------|
 | Q1 | Cross-reference a live **job description** (from this app's aggregated jobs) for keyword coverage (`ATS-K-003`)? | **Ship without JD first; add as v1.1.** Engine already accepts optional JD; UI JD-picker is the only gap. | Keeps phase 1 self-contained; JD matching is a distinct, later value-add (§11.3). | **Pending** |
-| Q2 | Error-severity failures: **block upload or warn-and-save**? | **Warn-and-save.** A scanned PDF should still persist so the user sees *why* it scored low (matches existing degraded-success pattern). | Non-blocking is consistent with the app's current resume pipeline; blocking adds no value here. | **Pending** (recommend accept) |
-| Q3 | Skill taxonomy for **`ATS-K-001`** keyword coverage: existing taxonomy or ship baseline? | **Ship curated baseline `skill-lexicon.ts` (~300 tech terms); extend over time; no canonical repo taxonomy exists** (§11 survey). | Research found no canonical open taxonomy bundled with the app or the ecosystem. | **Pending** (recommend accept) |
-| Q4 | Page-count caps by seniority for **`ATS-P-011`**? | **Adopt the mild tier: 1 page ≥10yrs, ≤3 senior/exec; single threshold 1–2 for rest.** | Reasonable SWE/profile default; adjustable later. | **Pending** (recommend accept) |
+| Q2 | Error-severity failures: **block upload or warn-and-save**? | **Neither.** Lint findings are advice only — never a warning gate, never a blocker. Save is unconditional; the ATS Lint Report surface *shows the state* of the report. | Product owner (2026-08-14): 'no warning should be shown on saving… this is neither a warn or block, it is always advice.' | **Resolved** (advice-only) |
+| Q3 | Skill taxonomy for **`ATS-K-001`** keyword coverage: existing taxonomy or ship baseline? | **Ship curated baseline `skill-lexicon.ts` (~300 tech terms).** Extension research tracked as a beads issue (research spike: how to extend/curate at scale). | Product owner (2026-08-14): 'curated is good for now, add to beads to extend or spike on researching how to extend this.' | **Resolved** (curated baseline) |
+| Q4 | Page-count caps by seniority for **`ATS-P-011`**? | **Mild tier accepted as-is** (1 page ≥10yrs, ≤3 senior/exec; 1–2 for rest); extension deferred to beads. | Product owner (2026-08-14) accepted the default. | **Resolved** (mild tier) |
 | Q5 | Optional **LLM advisory channel** (Qwen) alongside deterministic score? | **Yes — advice only, never score.** Label "AI advice" in UI. | Ecosystem conflates LLM advice with score; separating keeps the score valid & auditable (§11.4). | **Resolved** (accept) |
 
 ### 10.1 Working notes per question

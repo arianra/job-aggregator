@@ -117,17 +117,25 @@ only `preferences` + `location` as scoring inputs where they are genuinely perso
 - **Con:** a real migration + refactor across `scorer`, storage, parser, and the resume route; the
   scoring pipeline must be re-pointed carefully; any client code reading `Profile.skills` breaks until retargeted.
 
-## Open items (resolve before/while building)
+## Open items — resolution log
 
-- **N1:** ScoringSource shape — does `scoreJob` take a `Resume`-shaped object, or a slim
-  `{skills, experience, location, preferences}`? (Rec: slim group to keep job-scoring decoupled from
-  the editor's doc model.)
-- **N2:** Which Resume does job-scoring use when one exists but the user hasn't picked a "target resume"?
-  (A3/U2 deferral interacts: for now, latest `ResumeVersion.data`; per-job targeting later.)
-- **N3:** `Profile.location` vs `Resume.contact.location` — confirm scoring's geo dimension reads the
-  person-level `Profile.location` (baseline) until a target resume is chosen.
-- **N4:** Resume `title` uniqueness / default naming at creation (e.g. `"My resume"`, then
-  `"<title> (copy)"` on duplicate).
+**Resolved (2026-08-14, product owner):**
+- **N1 — ScoringSource shape:** the **slim group** `{skills, experience, location, preferences}` —
+  `scoreJob` is rewritten **big-bang** to take this (no dual-mode Profile-compat shim). Scoring stays
+  decoupled from the editor's doc model.
+- **N2 — Which resume:** scoring reads the **PRIMARY resume** (latest saved `ResumeVersion.data`;
+  unsaved in-flight edits never score). No primary → scoring cannot run → matches empty (the Profile
+  page shows the create-a-resume empty state). Per-job targeting stays deferred (A3/U2).
+- **N3 — Geo dimension:** person-level `Profile.location` remains the scoring baseline (kept on
+  Profile per the ontology table above).
+- **N4 — Naming:** default title at creation is `"Untitled resume"`; Duplicate names the copy
+  `"<title> (copy)"`. No uniqueness constraint enforced.
+
+**Migration posture (resolved):** **big-bang, no read-compat shim** — the migration moves the old
+`Profile.skills/experience/education/certifications/resume` into one seeded Resume + ResumeVersion,
+drops the columns, and all readers (scorer, storage, parser, profile route, frontend) are retargeted
+in the same change-set. Existing match-scoring dimensions stay as-is for now; scoring expansions
+(ATS-informed, embeddings, etc.) are explicitly later work.
 
 ---
 *End of ADR-0008.*
