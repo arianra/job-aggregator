@@ -562,16 +562,14 @@
         <div class="cell"><span class="ck">Format</span><span class="cv" id="metaFormat">compact</span></div>
       </div>
       <div class="meta-title">Source</div>
-      <div class="field"><label>Source file</label>
-        <div class="hint" style="margin-top:0;margin-bottom:8px">Upload a PDF or DOCX to seed this resume, or continue without data and build from scratch. Re-uploading replaces the source.</div>
-        <div class="fake" id="metaFileState">No source - created blank</div>
-        <div class="rawacc" id="rawAcc" style="display:none">
-          <button type="button" class="rawacc-head" onclick="toggleRaw()"><span>Extracted raw text</span><span class="chev">></span></button>
-          <div class="rawacc-body"><pre id="metaRawText"></pre></div>
-        </div>
-        <div class="rawacc-meta" id="rawAccMeta" style="display:none">Kept as the original this resume was created on - not editable here.</div>
-        <div style="margin-top:10px"><button class="btn" onclick="document.getElementById('metaFile').click()">Upload File</button><input type="file" id="metaFile" accept=".docx,.pdf,.txt" style="display:none"></div>
+      <div style="margin:10px 0 8px"><button class="btn" onclick="document.getElementById('metaFile').click()">Upload File</button><input type="file" id="metaFile" accept=".docx,.pdf,.txt" style="display:none"></div>
+      <div class="hint" style="margin:0 0 10px">Upload a PDF or DOCX to seed this resume, or continue without data and build from scratch. Re-uploading replaces the source.</div>
+      <div class="fake" id="metaFileState">No source - created blank</div>
+      <div class="rawacc" id="rawAcc" style="display:none">
+        <button type="button" class="rawacc-head" onclick="toggleRaw()"><span>Extracted raw text</span><span class="chev">></span></button>
+        <div class="rawacc-body"><pre id="metaRawText"></pre></div>
       </div>
+      <div class="rawacc-meta" id="rawAccMeta" style="display:none">Kept as the original this resume was created on - not editable here.</div>
       <div class="meta-title">Actions</div>
       <div class="metarow"><div class="ml"><span class="mk">Duplicate</span><div class="mh">Create an independent copy you can edit freely.</div></div>
         <div class="mr"><button class="btn" id="dupBtn" onclick="duplicateMeta()">Duplicate</button></div></div>
@@ -832,8 +830,8 @@ function renderSkills(){
   const box=document.getElementById('skillcats'); if(!box)return;
   const skills=R().skills;
   box.innerHTML='';
-  Object.keys(skills).forEach(cat=>{
-    const div=document.createElement('div'); div.className='skcat';
+  Object.keys(skills).forEach((cat,idx)=>{
+    const div=document.createElement('div'); div.className='skcat'+(idx===0?'':' collapsed');
     const chips=skills[cat].map(s=>`<span class="chip sk">${esc(s)}<button class="x" data-cat="${esc(cat)}" data-s="${esc(s)}" aria-label="remove">×</button></span>`).join('');
     div.draggable=true;
     div.innerHTML=`<div class="skhead"><span class="drag">⠿</span><input class="sklabel" data-cat="${esc(cat)}" value="${esc(cat)}" aria-label="category"><span class="skcount-label">${skills[cat].length} skills</span><button class="gl-del cat-del" data-cat="${esc(cat)}" title="delete category">×</button><span class="chev">›</span></div>
