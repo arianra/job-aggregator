@@ -22,6 +22,12 @@
   *{box-sizing:border-box}
   html,body{margin:0;height:100%}
   body{font-family:var(--sans);background:var(--bg);color:var(--ink);font-size:14px;line-height:1.45}
+  [data-theme="dark"]{
+    --bg:#141414;--surface:#1b1b1b;--surface2:#202020;--inset:#171717;
+    --ink:#ece8e2;--muted:#a8a29a;--faint:#6b675f;--line:#2b2b2b;--line2:#262626;
+    --accent:#2dd4bf;--accent-ink:#0a2a27;--accent-soft:#123332;
+    --ok:#34d399;--warn:#fbbf24;--err:#f87171;--warn-soft:#2a2215;--ok-soft:#143028;--err-soft:#2b1715;
+  }
   button{font-family:inherit;cursor:pointer}
   ::selection{background:var(--accent-soft)}
   /* ---------- top bar ---------- */
@@ -29,7 +35,11 @@
   .brand{display:flex;align-items:center;gap:9px;font-weight:650;letter-spacing:-.01em}
   .brand .mark{width:24px;height:24px;border-radius:7px;background:var(--accent);color:var(--accent-ink);display:grid;place-items:center;font-weight:800;font-size:13px}
   .docname{font-weight:600}
-  .docname small{display:block;font-weight:400;color:var(--muted);font-size:11.5px}
+  .icobtn{border:1px solid var(--line);background:var(--surface);color:var(--muted);border-radius:8px;width:30px;height:30px;display:grid;place-items:center;font-size:15px;flex:none}
+  .icobtn:hover{border-color:var(--accent);color:var(--accent)}
+  .headtitle{display:flex;align-items:center;gap:9px;min-width:0}
+  .headtitle .name{font-weight:650;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .headtitle .chip{font-family:var(--mono);font-size:9.5px;color:var(--accent);border:1px solid var(--accent);border-radius:99px;padding:1px 7px;font-weight:600;flex:none}
   .spacer{flex:1}
   .saved{color:var(--muted);font-size:12px;display:flex;align-items:center;gap:6px}
   .saved .dot{width:7px;height:7px;border-radius:99px;background:var(--ok)}
@@ -92,7 +102,27 @@
   .skdrop .opt:hover{background:var(--accent-soft);color:var(--accent)}
   .fk{color:var(--faint);font-size:12px}
   .skcat .skhead .cat-del{margin-left:auto}
-  .detail{border:1px solid var(--accent);border-left-width:3px;border-radius:9px;padding:12px 13px;margin-top:10px;background:var(--surface2)}
+    .detail{border:1px solid var(--accent);border-left-width:3px;border-radius:9px;padding:12px 13px;margin-top:10px;background:var(--surface2)}
+  /* Details (meta): line-separated layout (no boxes) */
+  .metarow{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:13px 2px;border-bottom:1px solid var(--line)}
+  .metarow:last-child{border-bottom:0}
+  .ml{min-width:0}
+  .ml .mk{font-size:13.5px;font-weight:600}
+  .ml .mh{font-size:12px;color:var(--muted);margin-top:2px}
+  .mr{display:flex;align-items:center;gap:10px;flex-wrap:wrap;flex:none}
+  .mstrip{display:flex;align-items:center;gap:24px;padding:13px 2px;border-bottom:1px solid var(--line);flex-wrap:wrap}
+  .mstrip .cell .ck{display:block;font-size:10px;text-transform:uppercase;letter-spacing:.05em;color:var(--faint);margin-bottom:2px}
+  .mstrip .cell .cv{font-size:14px;font-weight:600}
+  .meta-title{font-size:10.5px;text-transform:uppercase;letter-spacing:.09em;color:var(--faint);margin:16px 0 0;font-weight:700}
+  .rawacc{margin-top:12px;border:1px solid var(--line2);border-radius:9px;background:var(--surface2);overflow:hidden}
+  .rawacc-head{display:flex;align-items:center;gap:8px;width:100%;padding:9px 12px;border:0;background:none;font:inherit;font-size:12.5px;font-weight:600;color:#3a3630;text-align:left;cursor:pointer}
+  .rawacc-head:hover{background:var(--inset)}
+  .rawacc-head .chev{margin-left:auto;color:var(--muted);font-size:10px;transition:transform .18s}
+  .rawacc.open .rawacc-head .chev{transform:rotate(90deg)}
+  .rawacc-body{max-height:0;overflow:hidden;transition:max-height .22s ease}
+  .rawacc.open .rawacc-body{max-height:260px;border-top:1px solid var(--line2)}
+  .rawacc-body pre{white-space:pre-wrap;font-family:var(--mono);font-size:11px;background:var(--surface);color:#444;padding:10px 12px;margin:0;border:0}
+  .rawacc-meta{font-size:11px;color:var(--faint);margin-top:6px}
   .detail h4{margin:0 0 8px;font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--accent)}
   .detail .row{display:flex;gap:10px}
   .resumechooser{display:flex;align-items:center;gap:8px}
@@ -222,16 +252,13 @@
 <body>
 
 <div class="topbar">
-  <div class="brand"><span class="mark">R</span> <span>Resume Studio</span></div>
-  <span class="proto-tag">PROTOTYPE · ADR-0007 UX</span>
-  <div class="resumechooser">
-    <select id="resumeSel" aria-label="resume" onchange="switchResume(this.value)"></select>
-    <button class="btn small" onclick="duplicateResume()">Duplicate</button>
-  </div>
+  <span class="proto-tag">PROTOTYPE</span>
+  <div class="headtitle"><span class="name" id="headDocName">Resume</span><span class="chip" id="headPrimaryChip" style="display:none">PRIMARY</span></div>
   <div class="spacer"></div>
   <span class="saved" id="saveState"><span class="dot"></span> Unsaved changes</span>
   <button class="btn" id="verBtn" onclick="openVersions()">Versions</button>
   <button class="btn primary" id="saveBtn" onclick="saveResume()">Save</button>
+  <button class="icobtn" id="themeBtn" onclick="toggleTheme()" title="Toggle theme">◐</button>
 </div>
 
 <div class="work">
@@ -349,29 +376,36 @@
 
   const FORMS={
     meta:`
-      <div class="field"><label>Resume name</label><input class="input" id="metaTitle" placeholder="e.g. Lead Frontend Engineer 2026"><div class="hint">This is how the resume appears in your profile list.</div></div>
-      <div class="field"><label>Source</label>
-        <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
-          <button class="btn" onclick="document.getElementById('metaFile').click()">+ Choose / upload file</button>
-          <input type="file" id="metaFile" accept=".docx,.pdf,.txt" style="display:none">
-          <span class="fake" id="metaFileState">No source — created blank</span>
+      <div class="metarow"><div class="ml"><span class="mk">Resume name</span></div>
+        <div class="mr"><input class="input" id="metaTitle" placeholder="e.g. Lead Frontend Engineer 2026" style="max-width:300px"></div></div>
+      <div class="metarow"><div class="ml"><span class="mk">Primary resume</span><div class="mh">Feeds your Profile and job matching</div></div>
+        <div class="mr"><button class="switch on" id="primaryToggle" onclick="setPrimaryMeta()"></button></div></div>
+      <div class="mstrip">
+        <div class="cell"><span class="ck">Status</span><span class="cv" id="metaStatus">Live</span></div>
+        <div class="cell"><span class="ck">Version</span><span class="cv" id="metaVersion">v0</span></div>
+        <div class="cell"><span class="ck">Created</span><span class="cv" id="metaCreated">-</span></div>
+        <div class="cell"><span class="ck">Last updated</span><span class="cv" id="metaUpdated">-</span></div>
+        <div class="cell"><span class="ck">Format</span><span class="cv" id="metaFormat">compact</span></div>
+      </div>
+      <div class="meta-title">Source</div>
+      <div class="metarow" style="align-items:flex-start"><div class="ml"><span class="mk">Source file</span>
+        <div class="mh">Upload a PDF or DOCX to seed this resume, or continue without data and build from scratch. Re-uploading replaces the source.</div>
+        <div class="fake" id="metaFileState" style="margin-top:8px">No source - created blank</div>
+        <div class="rawacc" id="rawAcc" style="display:none">
+          <button type="button" class="rawacc-head" onclick="toggleRaw()"><span>Extracted raw text</span><span class="chev">></span></button>
+          <div class="rawacc-body"><pre id="metaRawText"></pre></div>
         </div>
-        <div class="hint">Upload a PDF or DOCX to seed this resume, or continue without data and build from scratch. Re-uploading replaces the source.</div>
+        <div class="rawacc-meta" id="rawAccMeta" style="display:none">Kept as the original this resume was created on - not editable here.</div>
       </div>
-      <div style="display:flex;align-items:center;justify-content:space-between;border-top:1px solid #eeeae1;padding-top:14px;margin-top:14px">
-        <div><label style="display:block;font-size:12.5px;font-weight:600;margin-bottom:2px">Primary resume</label>
-          <span style="font-size:11.5px;color:#6f6a61">The primary resume feeds your Profile and job matching.</span></div>
-          <button class="switch on" id="primaryToggle" onchange="setPrimaryMeta()" onclick="setPrimaryMeta()"></button>
+        <div class="mr"><button class="btn" onclick="document.getElementById('metaFile').click()">Upload File</button><input type="file" id="metaFile" accept=".docx,.pdf,.txt" style="display:none"></div>
       </div>
-      <div style="display:flex;gap:8px;margin-top:16px">
-        <button class="btn" id="archiveBtn" onclick="archiveMeta()">Archive</button>
-        <button class="btn danger" id="deleteBtn" onclick="deleteMeta()">Delete</button>
-      </div>
-      <div class="detail" id="metaRawWrap" style="display:none">
-        <h4>Extracted raw text</h4>
-        <p style="font-size:11.5px;color:var(--muted)">Kept as the original this resume was created on. Edit the structured sections, not this.</p>
-        <pre id="metaRawText" style="white-space:pre-wrap;font-family:var(--mono);font-size:11px;background:var(--surface);border:1px solid var(--line2);border-radius:8px;padding:10px;max-height:220px;overflow:auto;color:#444"></pre>
-      </div>`,
+      <div class="meta-title">Actions</div>
+      <div class="metarow"><div class="ml"><span class="mk">Duplicate</span><div class="mh">Create an independent copy you can edit freely.</div></div>
+        <div class="mr"><button class="btn" id="dupBtn" onclick="duplicateMeta()">Duplicate</button></div></div>
+      <div class="metarow"><div class="ml"><span class="mk">Archive</span><div class="mh">Hide from My Resumes - kept in the DB, unarchive anytime.</div></div>
+        <div class="mr"><button class="btn" id="archiveBtn" onclick="archiveMeta()">Archive</button></div></div>
+      <div class="metarow"><div class="ml"><span class="mk">Delete</span><div class="mh">Permanently remove this resume and its versions.</div></div>
+        <div class="mr"><button class="btn danger" id="deleteBtn" onclick="deleteMeta()">Delete</button></div></div>`,
     contact:`
       <div class="field"><label>Full name</label><input class="input" value="Arian Razi"> <div class="showfield"><button class="switch on" onclick="this.classList.toggle('on');event.stopPropagation()"></button> Show on resume</div></div>
       <div class="row">
@@ -422,7 +456,7 @@
 
 // ---------- per-resume model: source of truth (multi-resume supported) ----------
 const RESUMES={ cv2026:{
-  id:'cv2026', title:'Lead Frontend Engineer 2026', format:'compact', primary:true, status:'live',
+  id:'cv2026', title:'Lead Frontend Engineer 2026', format:'compact', primary:true, status:'live', createdAt:'Aug 12, 2026', updatedAt:'6 days ago',
   contact:{name:'Arian Razi',email:'arian99@gmail.com',phone:'+1 (707) 771-6645',linkedin:'linkedin.com/in/arianvala',country:'United States',state:'California',city:'Vallejo'},
   summary:"Lead Frontend Engineer with 10+ years across e-commerce, fintech, and startups. Led the Walmart Search/Browse & Deals frontend and web-performance teams; shipped Core Web Vitals work that halved INP/LCP/CLS and lifted p75 response time 52%.",
   experience:[
@@ -465,6 +499,14 @@ function renderDoc(){
 }
 
 // ---------- render current section ----------
+function refreshHeader(){
+  const r=R(); if(!r) return;
+  const nm=document.getElementById('headDocName'), pk=document.getElementById('headPrimaryChip'), tb=document.getElementById('themeBtn');
+  if(nm) nm.textContent = r.title||'Resume';
+  if(pk) pk.style.display = r.primary?'inline-block':'none';
+  if(tb) tb.textContent = document.body.dataset.theme==='dark' ? '☀' : '◐';
+}
+function toggleTheme(){ const dark = document.body.dataset.theme==='dark'; document.body.dataset.theme = dark?'':'dark'; refreshHeader(); }
 function render(sec){
   curSec=sec;
   document.querySelectorAll('.rail .sect[data-sec]').forEach(b=>b.classList.toggle('active',b.dataset.sec===sec));
@@ -575,20 +617,31 @@ function freshItem(d){ if(d.arr==='experience')return {role:'',company:'',dates:
 
 function renderMeta(){
   const t=document.getElementById('metaTitle');
-  if(t){ t.value=R().title||''; t.oninput=()=>{R().title=t.value; refreshChooser(); evalDirty();}; }
-  const fi=document.getElementById('metaFile'), st=document.getElementById('metaFileState'), wr=document.getElementById('metaRawWrap'), rt=document.getElementById('metaRawText');
+  if(t){ t.value=R().title||''; t.oninput=()=>{ R().title=t.value; refreshHeader(); evalDirty(); }; }
+  const fi=document.getElementById('metaFile'), st=document.getElementById('metaFileState'), ra=document.getElementById('rawAcc'), rm=document.getElementById('rawAccMeta'), rt=document.getElementById('metaRawText');
   if(fi){ fi.onchange=()=>{ const f=fi.files&&fi.files[0]; if(!f)return; R().original_file_name=f.name; const rd=new FileReader();
-      rd.onload=()=>{ R().original_raw_text=String(rd.result||'').slice(0,20000); if(st)st.textContent=f.name+' · parsed'; if(wr)wr.style.display='block'; if(rt)rt.textContent=R().original_raw_text; toast('Uploaded — raw text captured'); };
+      rd.onload=()=>{ R().original_raw_text=String(rd.result||'').slice(0,20000); if(st)st.textContent=f.name+' - parsed'; if(rt)rt.textContent=R().original_raw_text; showRaw(); toast('Uploaded - raw text captured'); };
       rd.readAsText(f); }; }
-  if(R().original_raw_text){ if(st)st.textContent=(R().original_file_name||'source')+' · parsed'; if(wr)wr.style.display='block'; if(rt)rt.textContent=R().original_raw_text; }
-  const pt=document.getElementById('primaryToggle'), ab=document.getElementById('archiveBtn'), db=document.getElementById('deleteBtn');
-  if(pt){ pt.classList.toggle('on', !!R().primary); }
-  if(ab){ ab.textContent = R().status==='archived' ? 'Restore' : 'Archive'; if(R().status==='archived')ab.classList.add('on'); else ab.classList.remove('on'); }
+  if(R().original_raw_text){ if(st)st.textContent=(R().original_file_name||'source')+' - parsed'; if(rt)rt.textContent=R().original_raw_text; showRaw(); }
+  else { if(ra)ra.style.display='none'; if(rm)rm.style.display='none'; }
+  const pt=document.getElementById('primaryToggle');
+  if(pt) pt.classList.toggle('on', !!R().primary);
+  const sv=document.getElementById('metaStatus'), vv=document.getElementById('metaVersion'), cv=document.getElementById('metaCreated'), uv=document.getElementById('metaUpdated'), fv=document.getElementById('metaFormat');
+  if(sv) sv.textContent = R().status==='archived' ? 'Archived' : 'Live';
+  if(vv) vv.textContent = 'v'+(R().versions||[]).length;
+  if(cv) cv.textContent = R().createdAt || '-';
+  if(uv) uv.textContent = R().updatedAt || '-';
+  if(fv) fv.textContent = R().format || 'compact';
+  refreshHeader();
 }
-function setPrimaryMeta(){ R().primary = !R().primary; renderMeta(); toast(R().primary?'Set as primary resume':'Unset primary'); }
-function archiveMeta(){ R().status = R().status==='archived'?'live':'archived'; renderMeta(); toast(R().status==='archived'?'Archived (hidden from the list, kept in DB)':'Restored as live'); }
-function deleteMeta(){ if(!confirm('Delete this resume permanently? This cannot be undone.')) return; destroyResume(); }
-function destroyResume(){ const id=R().id; delete RESUMES[id]; const keys=Object.keys(RESUMES); if(!keys.length){ currentResumeId=null; render(); return; } currentResumeId=RESUMES[keys[0]].id; refreshChooser(); applySettings(); renderDoc(); render(curSec); persist(); toast('Resume deleted'); }
+function showRaw(){ const ra=document.getElementById('rawAcc'), rm=document.getElementById('rawAccMeta'); if(ra)ra.style.display='block'; if(rm)rm.style.display='block'; }
+function toggleRaw(){ const e=document.getElementById('rawAcc'); if(e)e.classList.toggle('open'); }
+function setPrimaryMeta(){ R().primary = !R().primary; renderMeta(); refreshHeader(); persist(); toast(R().primary?'Set as primary resume':'Unset primary'); }
+function duplicateMeta(){ const r=R(); confirmAction('Duplicate "'+(r.title||'Resume')+'"?','Creates an independent copy you can edit freely.','Duplicate',()=>{ duplicateResume(); const c=RESUMES[currentResumeId]; if(c) c.title=(r.title||'Resume')+' (copy)'; renderMeta(); refreshHeader(); persist(); toast('Duplicated'); }); }
+function archiveMeta(){ const r=R(), oi=r.id, t=r.title, isA=r.status==='archived'; confirmAction((isA?'Unarchive':'Archive')+' "'+t+'"?', isA?'Shows this resume again in the live list.':'Hides this resume from My Resumes. It stays in the DB and can be unarchived later.','OK',()=>setStatus(oi,isA?'live':'archived')); }
+function deleteMeta(){ const r=R(); confirmAction('Delete "'+(r.full_title||r.title)+'"?','This permanently removes the resume and its versions. This cannot be undone.','Delete',()=>destroyResume(r.id)); }
+function setStatus(id,st){ if(!RESUMES[id])return; RESUMES[id].status=st; if(st==='archived'&&currentResumeId===id){ currentResumeId=Object.keys(RESUMES).find(k=>k!==id)||null; } render(); renderMeta(); refreshHeader(); persist(); toast(st==='archived'?'Archived - kept in DB':'Live again'); }
+function destroyResume(id){ delete RESUMES[id]; const keys=Object.keys(RESUMES); if(!keys.length){ currentResumeId=null; render(); return; } currentResumeId=RESUMES[keys[0]].id; render(); renderMeta(); refreshHeader(); persist(); toast('Resume deleted'); }
 // ---------- skills token editor (writes to R().skills) ----------
 const SKILL_TAX={Development:['TypeScript','React','Node.js','GraphQL','Next.js','Redux','Node','SQL','HTML & CSS','PromQL','Vite','Webpack','Jest','Playwright'],Process:['Architecture','Unit Testing','Tooling/Automation','UI/UX','Agile','Scrum','Data Analytics','Monitoring','CI/CD','Accessibility','Code Review'],'AI & DX':['LLM Orchestration','Agents','RAG','Prompting','Observability','MCP','Evaluation']};
 function renderSkills(){
@@ -642,7 +695,7 @@ function persist(){try{localStorage.setItem(LS_KEY,JSON.stringify({resumes:RESUM
 function loadPersist(){try{const raw=localStorage.getItem(LS_KEY);if(raw){const p=JSON.parse(raw);if(p.resumes&&Object.keys(p.resumes).length){Object.keys(p.resumes).forEach(id=>RESUMES[id]=p.resumes[id]);if(p.current&&RESUMES[p.current])currentResumeId=p.current;}}}catch(e){}}
 
 // ---------- init ----------
-function init(){loadPersist();lastSnap=R().versions.length?finger(R()):null;refreshChooser();applySettings();renderDoc();render(curSec);best(9);evalDirty();}
+function init(){loadPersist();lastSnap=R().versions.length?finger(R()):null;refreshChooser();applySettings();renderDoc();refreshHeader();render(curSec);best(9);evalDirty();}
 init();
 </script>
 </body>
