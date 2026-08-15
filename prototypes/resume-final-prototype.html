@@ -54,7 +54,7 @@
   .btn:focus-visible,.rail button:focus-visible,.ctrl:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
   .proto-tag{font-family:var(--mono);font-size:10.5px;color:var(--accent);border:1px solid var(--accent);border-radius:99px;padding:2px 8px;letter-spacing:.02em}
   /* ---------- workspace grid ---------- */
-  .work{display:grid;grid-template-columns:232px 1fr;gap:14px;padding:14px;height:calc(100vh - 52px)}
+  .work{display:grid;grid-template-columns:1fr;gap:14px;padding:14px;height:calc(100vh - 52px)}
   .rail{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:10px;display:flex;flex-direction:column;gap:2px;overflow:auto}
   .rail h6{margin:10px 12px 6px;font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--faint);font-weight:650}
   .rail .sect{display:flex;align-items:center;gap:10px;width:100%;border:0;background:transparent;border-radius:7px;padding:9px 11px;text-align:left;font-size:13.5px;color:var(--ink)}
@@ -298,7 +298,29 @@
  .rcard .ms{font-size:12.5px;color:var(--muted);margin-top:2px;display:flex;gap:8px;flex-wrap:wrap}
  .chip{display:inline-flex;align-items:center;gap:5px;font-family:var(--mono);font-size:9.5px;color:var(--accent);border:1px solid var(--accent);border-radius:99px;padding:1px 7px}
  .chip.grey{color:var(--muted);border-color:var(--line2)}
- .rcard .go{margin-left:auto;color:var(--faint)}
+ .rcard .go{margin-left:10px;color:var(--faint);flex:none}
+ /* overview: right-aligned primary label / hover make-primary */
+ .rcright{margin-left:auto;display:flex;align-items:center;flex:none}
+ .mkprim{opacity:0;border:1px solid var(--line);background:var(--surface2);color:var(--muted);border-radius:99px;padding:3px 10px;font-size:11.5px;font-weight:600;cursor:pointer;transition:.15s;white-space:nowrap}
+ .rcard:hover .mkprim{opacity:1}
+ .mkprim:hover{border-color:var(--accent);color:var(--accent);background:var(--accent-soft)}
+ /* refined create button */
+ .create-btn{padding:9px 20px;font-size:13.5px;font-weight:600;border-radius:9px;display:inline-flex;align-items:center;gap:8px;box-shadow:0 1px 3px rgba(0,0,0,.10)}
+ .create-btn .plus{font-size:15px;line-height:1;font-weight:600}
+ /* sidebar flow icon */
+ .steplink .flico{width:12px;height:12px;flex:none;color:var(--accent)}
+ /* finish: export buttons 50/50 */
+ .exprow{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px}
+ .expbtn{width:100%;padding:9px 12px;text-align:center}
+ /* profile view */
+ .pempty{max-width:460px;margin:0 auto;padding:84px 24px 40px;display:flex;flex-direction:column;align-items:center;text-align:center}
+ .pempty h2{margin:16px 0 6px;font-size:20px;font-weight:700}
+ .pempty p{color:var(--muted);font-size:13.5px;margin:0 0 20px}
+ .create-xl{padding:10px 22px;font-size:14px;display:inline-flex;align-items:center;gap:8px}
+ .create-xl .plus{font-size:16px;line-height:1;font-weight:600}
+ .pderived{max-width:760px;padding:28px}
+ .pderived h1{margin:0 0 8px;font-size:24px;font-weight:750;letter-spacing:-.02em}
+ .pderived .lead{color:var(--muted);font-size:14px;margin:0 0 16px}
 </style></head>
 
 <body data-theme="light">
@@ -371,11 +393,19 @@
       <div class="ov-head"><h1>Resume</h1><span class="chip">resumes</span></div>
       <p style="color:var(--muted);font-size:13.5px;margin:0">Documents you author per role. The <b>primary</b> resume feeds your Profile and job scoring.</p>
       <div class="ov-tools">
-        <button class="btn primary" onclick="createResume()">&plus; Create</button>
+        <button class="btn primary create-btn" onclick="createResume()"><span class="plus">+</span> Create resume</button>
         <span style="color:var(--faint);font-size:12.5px">Upload your source in 01 &middot; Details inside the studio</span>
         <span style="margin-left:auto;color:var(--faint);font-size:12.5px" id="ovCount"></span>
       </div>
       <div class="rcards" id="ovCards"></div>
+    </section>
+
+    <!-- ============ VIEW: PROFILE (derived from primary resume) ============ -->
+    <!-- AGENT NOTE: Profile is DERIVED from the PRIMARY resume (ADR-0008).
+         Empty state = no primary resume yet -> prompt to create one.
+         Full profile UI is out of scope for this prototype. -->
+    <section class="view" id="viewProfile">
+      <div id="profileWrap"></div>
     </section>
 
     <!-- ============ VIEW: RESUME STUDIO (the full editor) ============ -->
@@ -395,19 +425,7 @@
 
 <div class="work">
   <!-- RAIL -->
-  <aside class="rail">
-    <h6>Sections</h6>
-    <button class="sect" data-sec="meta"><span class="n">01</span> Details</button>
-    <button class="sect" data-sec="contact"><span class="n">02</span> Contact</button>
-    <button class="sect" data-sec="summary"><span class="n">03</span> Summary</button>
-    <button class="sect" data-sec="experience"><span class="n">04</span> Experience <span class="vis show">●</span></button>
-    <button class="sect" data-sec="education"><span class="n">05</span> Education</button>
-    <button class="sect" data-sec="skills"><span class="n">06</span> Skills</button>
-    <button class="sect" data-sec="certs"><span class="n">07</span> Certifications <span class="vis show">+</span></button>
-    <button class="sect" data-sec="finish"><span class="n">08</span> Finish &amp; Export</button>
-    <h6 style="margin-top:16px">Flow</h6>
-    <button class="sect" onclick="openLint()"><span class="n" style="color:var(--accent)">ATS</span> Lint report</button>
-  </aside>
+  
 
   <div class="cols">
     <!-- CENTER : active section form -->
@@ -465,7 +483,7 @@
 
     <!-- body-level overlays (drawers / modal / toast) from the studio -->
 <!-- LINT DRAWER -->
-<div class="mask" id="mask" onclick="closeLint()"></div>
+<div class="mask" id="mask" onclick="closeAnyDrawer()"></div>
 <aside class="drawer" id="drawer">
   <div class="head"><h3>ATS lint report</h3><button class="btn small" onclick="closeLint()">Close</button></div>
   <div class="body">
@@ -514,10 +532,15 @@
 
   const FORMS={
     meta:`
-      <div class="metarow"><div class="ml"><span class="mk">Resume name</span></div>
-        <div class="mr"><input class="input" id="metaTitle" placeholder="e.g. Lead Frontend Engineer 2026" style="max-width:300px"></div></div>
-      <div class="metarow"><div class="ml"><span class="mk">Primary resume</span><div class="mh">Feeds your Profile and job matching</div></div>
-        <div class="mr"><button class="switch on" id="primaryToggle" onclick="setPrimaryMeta()"></button></div></div>
+      <div class="field"><label>Resume name</label>
+        <input class="input" id="metaTitle" placeholder="e.g. Lead Frontend Engineer 2026" style="max-width:480px">
+        <div class="hint">This is how the resume appears in your list and exports.</div></div>
+      <div class="field"><label>Primary resume</label>
+        <div style="display:flex;align-items:center;gap:10px">
+          <button class="switch on" id="primaryToggle" onclick="setPrimaryMeta()"></button>
+          <span class="hint" style="margin:0">Feeds your Profile and job matching. One primary at a time.</span>
+        </div></div>
+      <div class="meta-title">Metadata</div>
       <div class="mstrip">
         <div class="cell"><span class="ck">Status</span><span class="cv" id="metaStatus">Live</span></div>
         <div class="cell"><span class="ck">Version</span><span class="cv" id="metaVersion">v0</span></div>
@@ -526,16 +549,15 @@
         <div class="cell"><span class="ck">Format</span><span class="cv" id="metaFormat">compact</span></div>
       </div>
       <div class="meta-title">Source</div>
-      <div class="metarow" style="align-items:flex-start"><div class="ml"><span class="mk">Source file</span>
-        <div class="mh">Upload a PDF or DOCX to seed this resume, or continue without data and build from scratch. Re-uploading replaces the source.</div>
-        <div class="fake" id="metaFileState" style="margin-top:8px">No source - created blank</div>
+      <div class="field"><label>Source file</label>
+        <div class="hint" style="margin-top:0;margin-bottom:8px">Upload a PDF or DOCX to seed this resume, or continue without data and build from scratch. Re-uploading replaces the source.</div>
+        <div class="fake" id="metaFileState">No source - created blank</div>
         <div class="rawacc" id="rawAcc" style="display:none">
           <button type="button" class="rawacc-head" onclick="toggleRaw()"><span>Extracted raw text</span><span class="chev">></span></button>
           <div class="rawacc-body"><pre id="metaRawText"></pre></div>
         </div>
         <div class="rawacc-meta" id="rawAccMeta" style="display:none">Kept as the original this resume was created on - not editable here.</div>
-      </div>
-        <div class="mr"><button class="btn" onclick="document.getElementById('metaFile').click()">Upload File</button><input type="file" id="metaFile" accept=".docx,.pdf,.txt" style="display:none"></div>
+        <div style="margin-top:10px"><button class="btn" onclick="document.getElementById('metaFile').click()">Upload File</button><input type="file" id="metaFile" accept=".docx,.pdf,.txt" style="display:none"></div>
       </div>
       <div class="meta-title">Actions</div>
       <div class="metarow"><div class="ml"><span class="mk">Duplicate</span><div class="mh">Create an independent copy you can edit freely.</div></div>
@@ -545,15 +567,15 @@
       <div class="metarow"><div class="ml"><span class="mk">Delete</span><div class="mh">Permanently remove this resume and its versions.</div></div>
         <div class="mr"><button class="btn danger" id="deleteBtn" onclick="deleteMeta()">Delete</button></div></div>`,
     contact:`
-      <div class="field"><label>Full name</label><input class="input" value="Arian Razi"> <div class="showfield"><button class="switch on" onclick="this.classList.toggle('on');event.stopPropagation()"></button> Show on resume</div></div>
+      <div class="field"><label>Full name</label><input class="input" value="Arian Razi" placeholder="Jane Doe"> <div class="showfield"><button class="switch on" onclick="this.classList.toggle('on');event.stopPropagation()"></button> Show on resume</div></div>
       <div class="row">
-        <div class="field"><label>Email</label><input class="input" value="arian99@gmail.com"></div>
-        <div class="field"><label>Phone</label><input class="input" value="+1 (707) 771-6645"></div>
+        <div class="field"><label>Email</label><input class="input" value="arian99@gmail.com" placeholder="jane@example.com"></div>
+        <div class="field"><label>Phone</label><input class="input" value="+1 (707) 771-6645" placeholder="+1 (555) 000-0000"></div>
       </div>
-      <div class="field"><label>LinkedIn</label><input class="input" value="linkedin.com/in/arianvala"></div>
+      <div class="field"><label>LinkedIn</label><input class="input" value="linkedin.com/in/arianvala" placeholder="linkedin.com/in/you"></div>
       <div class="row">
-        <div class="field"><label>Country</label><input class="input" value="United States"><div class="showfield"><button class="switch on" onclick="this.classList.toggle('on');event.stopPropagation()"></button> Show</div></div>
-        <div class="field"><label>City</label><input class="input" value="Vallejo"><div class="showfield"><button class="switch on" onclick="this.classList.toggle('on');event.stopPropagation()"></button> Show</div></div>
+        <div class="field"><label>Country</label><input class="input" value="United States" placeholder="United States"><div class="showfield"><button class="switch on" onclick="this.classList.toggle('on');event.stopPropagation()"></button> Show</div></div>
+        <div class="field"><label>City</label><input class="input" value="Vallejo" placeholder="City"><div class="showfield"><button class="switch on" onclick="this.classList.toggle('on');event.stopPropagation()"></button> Show</div></div>
       </div>
       <p class="footer-hint">Per-field “Show on resume” toggles (Rezi borrow) — kept only on Contact, not every field, per ADR-0007 simplification.</p>`,
     summary:`
@@ -586,7 +608,7 @@
         </select>
       </div><div class="hint" style="margin-top:6px">One format for now; more later. The DOCX/PDF always match this.</div></div>
       <div style="height:12px"></div>
-      <div class="stat"><div class="k">Export</div><div style="margin-top:8px"><button class="btn primary" onclick="toast('Canonical .docx via docx.js — fixed format, in uploads/resumes/')">Export DOCX</button> <button class="btn" onclick="toast('PDF from that DOCX via LibreOffice headless')">Export PDF</button></div><div class="hint" style="margin-top:6px">DOCX is the artifact; PDF is derived from it — they always match.</div></div>
+      <div class="stat"><div class="k">Export</div><div class="exprow"><button class="btn primary expbtn" onclick="exportDocx()">Export DOCX</button><button class="btn expbtn" onclick="exportPdf()">Export PDF</button></div><div class="hint" style="margin-top:6px">DOCX is the artifact; PDF is derived from it — they always match.</div></div>
       <div style="height:12px"></div>
       <div class="nudge"><b>One-page gate</b> — Warn on overflow + optional Auto-fit (shrink-to-fit). Never silently truncates.</div>`,
   };
@@ -676,6 +698,7 @@ function setView(m){const l=document.getElementById('vtl'),r=document.getElement
 // lint drawer
 function openLint(){document.getElementById('drawer').classList.add('open');document.getElementById('mask').classList.add('on');}
 function closeLint(){document.getElementById('drawer').classList.remove('open');document.getElementById('mask').classList.remove('on');}
+function closeAnyDrawer(){ if(document.getElementById('verDrawer').classList.contains('open')) closeVersions(); else closeLint(); }
 
 // toast
 let ttm;function toast(m){const t=document.getElementById('toast');t.textContent=m;t.classList.add('on');clearTimeout(ttm);ttm=setTimeout(()=>t.classList.remove('on'),2400);}
@@ -825,6 +848,8 @@ const LS_KEY='resumePrototype_v2';
 function finger(r){const x=JSON.parse(JSON.stringify(r));delete x.versions;delete x.savedAt;return JSON.stringify(x);}
 function verLabel(){return R().versions.length?'v'+R().versions.length:'—';}
 function evalDirty(){const f=finger(R());const dirty=lastSnap===null||f!==lastSnap;const st=document.getElementById('saveState');if(st){st.innerHTML=(dirty?'<span class="dot"></span> Unsaved changes':'<span class="dot"></span> Saved · '+verLabel());st.classList.toggle('dirty',dirty);}const vb=document.getElementById('verBtn');if(vb)vb.textContent='Versions ('+(R().versions||[]).length+')';return dirty;}
+function exportDocx(){ toast('Exported DOCX - rendered on request from the latest saved version'); }
+function exportPdf(){ toast('Exported PDF - derived from the DOCX'); }
 function saveResume(){const r=R();r.versions=r.versions||[];const snap=JSON.parse(JSON.stringify(r));delete snap.versions;delete snap.savedAt;r.versions.push({ts:Date.now(),label:'v'+(r.versions.length+1),data:snap});r.savedAt=Date.now();lastSnap=finger(r);persist();evalDirty();renderDoc();toast('Saved → '+verLabel()+' persisted (local)');}
 function openVersions(){const t=document.getElementById('verTitle');if(t)t.textContent=R().title;const b=document.getElementById('verList'),vs=R().versions||[];b.innerHTML=vs.length?[...vs.slice().reverse()].map(v=>{const real=vs.indexOf(v);return `<div class="ver"><div><b>${esc(v.label)}</b><div class="vts">${new Date(v.ts).toLocaleString()}</div></div><button class="btn small" onclick="restoreVersion(${real})">Restore</button></div>`;}).join(''):`<p class="footer-hint">No saved versions yet. Edit this resume, then press Save.</p>`;document.getElementById('verDrawer').classList.add('open');document.getElementById('mask').classList.add('on');}
 function closeVersions(){document.getElementById('verDrawer').classList.remove('open');document.getElementById('mask').classList.remove('on');}
@@ -843,7 +868,7 @@ init();
 // The heavy lifting (section renders, Save, versions, drawings, ATS,
 // scoring, finish+export) lives in the studio script ABOVE this one.
 // =====================================================================
-const VIEWS=['viewBlank','viewOverview','viewStudio'];
+const VIEWS=['viewBlank','viewOverview','viewStudio','viewProfile'];
 
 // ---- small helpers + demo seed (keep in sync with the editor's RESUMES model) ----
 // ordered(): live resumes first, primary on top (mirrors the app's list semantics).
@@ -930,7 +955,6 @@ function renderSidebar(){
     h+='<button class="sbitem" onclick="goBlank(\''+it.id+'\',\''+it.label+'\')"><span class="ico">'+it.icon+'</span><span>'+it.label+'</span></button>';
   }
   h+='<div class="sb-label">Resume</div>';
-  h+='<button class="sb-create" onclick="createResume()">+ Create</button>';
   h+='<button class="rtt '+(activeResume===null?'active':'')+'" onclick="goOverview()"><span class="sw '+(activeResume===null?'prim':'')+'"></span><span>Overview</span></button>';
   h+='<div class="sb-label" style="padding-top:6px">My resumes</div>';
   var list=ordered();
@@ -947,7 +971,7 @@ function renderSidebar(){
         var st=STEPS[s];
         h+='<button class="steplink '+(curSec===st.key?'active':'')+'" onclick="goStep(\''+r.id+'\',\''+st.key+'\')"><span class="n">'+st.n+'</span><span>'+st.label+'</span></button>';
       }
-      h+='<button class="steplink flow" onclick="goLint(\''+r.id+'\')"><span class="n">flow</span><span>ATS lint</span></button></div>';
+      h+='<button class="steplink flow" onclick="goLint(\''+r.id+'\')"><svg class="flico" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"><path d="M8.6 1.6 3.4 9h3.3l-.8 5.4L11.4 7H8.1l.5-5.4Z"/></svg><span>ATS lint</span></button></div>';
     }
   }
   nav.innerHTML=h;
@@ -959,6 +983,7 @@ function navTitle(id){
 }
 function goBlank(id,label){
   activeResume=null;
+  if(id==='profile'){ renderProfile(); showView('viewProfile'); renderSidebar(); return; }
   var t=document.getElementById('blankTitle');
   if(t) t.textContent=label||navTitle(id);
   showView('viewBlank');
@@ -975,8 +1000,26 @@ function toggleResume(id){
   if(activeResume) openStudio(id,'meta'); else goOverview();
 }
 function goStep(id,key){ openStudio(id,key); }
-function goLint(id){ openStudio(id,'lint'); }
+function goLint(id){ var s=(typeof curSec==='string'&&typeof TITLES!=='undefined'&&TITLES[curSec])?curSec:'meta'; openStudio(id,s); openLint(); }
 function createResume(){ var id=createEmpty(); openStudio(id,'meta'); }
+function makePrimary(id){ if(!RESUMES[id])return; for(var k in RESUMES) RESUMES[k].primary=false; RESUMES[id].primary=true; toast('Primary resume set'); renderOverview(); renderSidebar(); refreshHeader(); }
+function hasPrimary(){ for(var k in RESUMES){ if(RESUMES[k].primary && RESUMES[k].status!=='archived') return RESUMES[k]; } return null; }
+function renderProfile(){
+  var w=document.getElementById('profileWrap'); if(!w) return;
+  var p=hasPrimary();
+  if(!p){
+    w.innerHTML='<div class="pempty">'
+      +'<svg width="52" height="52" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" style="color:var(--faint)"><circle cx="12" cy="8" r="3.6"/><path d="M4.5 20c1.2-3.4 4-5.2 7.5-5.2s6.3 1.8 7.5 5.2"/></svg>'
+      +'<h2>No profile yet</h2>'
+      +'<p>Your profile is derived from your <b>primary resume</b> - name, contact, skills, and experience flow into it and feed job scoring. Create a resume and set it as primary to build your profile.</p>'
+      +'<button class="btn primary create-xl" onclick="goOverview()"><span class="plus">+</span> Create your first resume</button>'
+      +'</div>';
+  } else {
+    w.innerHTML='<div class="pderived"><h1>Profile</h1>'
+      +'<p class="lead">Derived from your primary resume: <b>'+escR(p.title)+'</b>. Name, contact, skills, and experience shown to scoring come from it.</p>'
+      +'<span class="intentional">full profile UI is out of scope for this prototype</span></div>';
+  }
+}
 function openStudio(id,step){
   if(!RESUMES[id]) return;
   currentResumeId=id; activeResume=id; curSec=step||'meta';
@@ -996,10 +1039,11 @@ function renderOverview(){
     var r=list[i];
     h+='<div class="rcard '+(r.primary?'prim':'')+'" onclick="openStudio(\''+r.id+'\',\'meta\')">'
       +'<div class="thumb">CV</div>'
-      +'<div style="flex:1"><div class="mt">'+escR(r.title)+'</div>'
-      +'<div class="ms"><span>saved '+escR(r.saved)+'</span>'
-      +'<span class="chip '+(r.primary?'':'grey')+'">'+(r.primary?'PRIMARY':'rev '+(r.rev||0))+'</span>'
+      +'<div style="flex:1;min-width:0"><div class="mt">'+escR(r.title)+'</div>'
+      +'<div class="ms"><span>updated '+escR(r.updatedAt||r.saved||'-')+'</span>'
+      +'<span class="chip grey">rev '+(r.rev||0)+'</span>'
       +'<span class="chip grey">'+escR(r.format||'compact')+'</span></div></div>'
+      +'<div class="rcright">'+(r.primary?'<span class="chip">PRIMARY</span>':'<button class="mkprim" onclick="event.stopPropagation();makePrimary(\''+r.id+'\')">Make primary</button>')+'</div>'
       +'<span class="go">'+String.fromCharCode(0x203A)+'</span></div>';
   }
   cards.innerHTML=h||'<p style="color:var(--muted)">No resumes yet. Create one to get started.</p>';
