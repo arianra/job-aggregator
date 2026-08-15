@@ -74,7 +74,7 @@ function experienceToResume(ex: Profile['experience'][number] | Record<string, u
     role: String(e.title ?? e.role ?? ''),
     company: String(e.company ?? ''),
     dates: formatDates(e.start_date as string | Date | undefined, e.end_date as string | Date | undefined),
-    location: String(e.location?.city ?? e.city ?? ''),
+    location: String((e.location as { city?: string } | undefined)?.city ?? (e.city as string | undefined) ?? ''),
     bullets: splitBullets(e.description as string | undefined),
   }
 }

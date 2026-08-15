@@ -37,9 +37,9 @@ function sampleProfile(partial: Partial<Profile> = {}): Profile {
     ],
     certifications: [{ name: 'AWS SysOps', issuer: 'Amazon', year: 2020 }],
     skills: [
-      { name: 'react', category: 'Development' },
-      { name: 'typescript', category: 'Development' },
-      { name: 'figma', category: 'Design' },
+      { name: 'react', category: 'Development', proficiency: 'expert' },
+      { name: 'typescript', category: 'Development', proficiency: 'expert' },
+      { name: 'figma', category: 'Design', proficiency: 'intermediate' },
     ],
     preferences: { locations: [], remote_ok: true, hybrid_ok: true, onsite_ok: false, job_types: [], seniority_levels: [] },
     search_queries: [],
@@ -91,7 +91,7 @@ describe('legacyProfileToResumeDoc', () => {
 
   it('buckets skills without a category under "Skills"', () => {
     const p = sampleProfile()
-    p.skills = [{ name: 'git' }, { name: 'docker' }]
+    p.skills = [{ name: 'git', proficiency: 'expert' }, { name: 'docker', proficiency: 'expert' }]
     const doc = legacyProfileToResumeDoc(p)
     expect(doc.skills).toEqual({ Skills: ['git', 'docker'] })
   })
