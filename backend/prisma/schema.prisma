@@ -127,6 +127,38 @@ model Profile {
   updated_at     DateTime @updatedAt
 
   matches        Match[]
+  resumes        Resume[]
+}
+
+model Resume {
+  id                String          @id @default(cuid())
+  profile_id        String
+  title             String          @default("Untitled resume")
+  format            String          @default("compact")
+  status            String          @default("NEW") // NEW | SAVED | ARCHIVED
+  primary           Boolean         @default(false)
+  original_raw_text String? // NULL if created blank; never updated after creation (ADR-0008)
+  created_at        DateTime        @default(now())
+  updated_at        DateTime        @updatedAt
+
+  profile           Profile         @relation(fields: [profile_id], references: [id], onDelete: Cascade)
+  versions          ResumeVersion[]
+
+  @@index([profile_id])
+  @@index([primary])
+}
+
+model ResumeVersion {
+  id         String   @id @default(cuid())
+  resume_id  String
+  revision   Int // additive, 0-based; DATE-primary display with revision disambiguation
+  created_at DateTime @default(now())
+  data       Json // canonical ResumeDoc blob (ADR-0004 §6.5)
+
+  resume     Resume   @relation(fields: [resume_id], references: [id], onDelete: Cascade)
+
+  @@unique([resume_id, revision])
+  @@index([resume_id])
 }
 
 model Match {
