@@ -1,0 +1,18 @@
+{
+  "source": "saved",
+  "recipe": {
+    "name": "job-aggregator (WSL-native monorepo)",
+    "kind": "node",
+    "bootstrap": [],
+    "build": ["wsl bash -lc \"cd ~/projects/job-aggregator && npm run build\""],
+    "test": ["wsl bash -lc \"cd ~/projects/job-aggregator && npm run lint && npm run test -w backend\""],
+    "start": "wsl bash -lc \"cd ~/projects/job-aggregator && npm run dev\"",
+    "port": 5173,
+    "readinessPath": "/",
+    "evidence": [
+      "Monorepo workspaces: shared/backend/frontend; repo lives on WSL ext4 (UNC cwd unsupported by cmd, so phases are wrapped in wsl bash -lc)",
+      "vitest backend suite (25 files, 457 tests)",
+      "Vite dev server on 5173 proxies /api to backend on 3000"
+    ]
+  }
+}
