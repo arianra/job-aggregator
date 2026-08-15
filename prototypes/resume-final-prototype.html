@@ -120,7 +120,7 @@
   .rawacc-head .chev{margin-left:auto;color:var(--muted);font-size:10px;transition:transform .18s}
   .rawacc.open .rawacc-head .chev{transform:rotate(90deg)}
   .rawacc-body{max-height:0;overflow:hidden;transition:max-height .22s ease}
-  .rawacc.open .rawacc-body{max-height:260px;border-top:1px solid var(--line2)}
+  .rawacc.open .rawacc-body{max-height:320px;overflow-y:auto;border-top:1px solid var(--line2)}
   .rawacc-body pre{white-space:pre-wrap;font-family:var(--mono);font-size:11px;background:var(--surface);color:#444;padding:10px 12px;margin:0;border:0}
   .rawacc-meta{font-size:11px;color:var(--faint);margin-top:6px}
   .detail h4{margin:0 0 8px;font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--accent)}
@@ -218,7 +218,20 @@
   .gl-item .gl-t{font-weight:600;font-size:13.5px}
   .gl-item .gl-m{font-size:12px;color:var(--muted);margin-top:1px}
   .gl-item.glcard{display:block;padding:11px 12px}
-  .gl-head{display:flex;align-items:center;gap:8px;margin-bottom:8px}
+  .gl-head{display:flex;align-items:center;gap:8px;margin-bottom:0;cursor:pointer}
+  .gl-head .gl-twrap{flex:1;min-width:0}
+  .gl-head .gl-sub{font-size:11.5px;color:var(--muted);margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .gl-head .chev{color:var(--faint);font-size:10px;transition:transform .18s;flex:none}
+  .glcard.collapsed .gl-head{margin-bottom:0}
+  .glcard.collapsed .gl-body{display:none}
+  .glcard:not(.collapsed) .gl-head{margin-bottom:8px}
+  .glcard:not(.collapsed) .chev{transform:rotate(90deg)}
+  .skcat .chev{color:var(--faint);font-size:10px;transition:transform .18s;flex:none}
+  .skcat.collapsed .skhead{margin-bottom:0}
+  .skcat.collapsed .skchips,.skcat.collapsed .skadd{display:none}
+  .skcat:not(.collapsed) .skhead{margin-bottom:7px}
+  .skcat:not(.collapsed) .chev{transform:rotate(90deg)}
+  .skhead .skcount{font-size:11.5px;color:var(--muted)}
   .gl-head .gl-t{font-weight:650;font-size:13.5px;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   .gl-head .gl-del{margin-left:auto}
   .cardbody .cfields{display:grid;grid-template-columns:1fr 1fr;gap:0 12px}
@@ -715,15 +728,24 @@ document.addEventListener('keydown',e=>{if(e.key==='Escape'&&dModal.classList.co
 
 // ---------- shared organizeable group component (writes to the model) ----------
 let glDrag=null, skDragIdx=null;
-function renderGroupList(sec){
+function cardSubtitle(sec,it){
+  const d=SEC_DESC[sec];
+  if(sec==='experience') return [it.company,it.dates].filter(Boolean).join(' · ');
+  if(sec==='education') return [it.school,it.year].filter(Boolean).join(' · ');
+  if(sec==='certs') return [it.issuer,it.year].filter(Boolean).join(' · ');
+  return '';
+}
+function renderGroupList(sec,openIdx){
   const d=SEC_DESC[sec], arr=R()[d.arr]||(R()[d.arr]=[]);
   const box=document.getElementById('gl_'+sec); if(!box) return;
   box.classList.add('gl-list');
   box.innerHTML=arr.map((it,idx)=>`
-    <div class="gl-item glcard" draggable="true" data-idx="${idx}">
-      <div class="gl-head"><span class="drag" title="drag to reorder">⠿</span><span class="gl-t">${esc(it[d.select]||('New '+d.select))}</span><button class="gl-del" data-idx="${idx}" title="delete">×</button></div>
+    <div class="gl-item glcard ${idx===openIdx?'':'collapsed'}" draggable="true" data-idx="${idx}">
+      <div class="gl-head"><span class="drag" title="drag to reorder">⠿</span><div class="gl-twrap"><div class="gl-t">${esc(it[d.select]||('New '+d.select))}</div><div class="gl-sub">${esc(cardSubtitle(sec,it))}</div></div><button class="gl-del" data-idx="${idx}" title="delete">×</button><span class="chev">›</span></div>
       <div class="gl-body cardbody">${cardBody(sec,it,idx)}</div>
     </div>`).join('')+`<button class="btn small gl-add" id="glAdd_${sec}">+ ${esc(d.addLabel)}</button>`;
+  // collapse/expand toggle
+  box.querySelectorAll('.gl-head').forEach(h=>{ h.addEventListener('click',e=>{ if(e.target.closest('.gl-del')||e.target.closest('.drag'))return; h.parentElement.classList.toggle('collapsed'); }); });
   // live model writes — no per-entry save (edits feed the model + both renders)
   box.querySelectorAll('[data-k]').forEach(el=>{
     el.addEventListener('input',()=>{
@@ -731,6 +753,7 @@ function renderGroupList(sec){
       if(el.dataset.k==='bullets'){it.bullets=el.value.split('\n').map(s=>s.trim()).filter(Boolean);const s=box.querySelector('.gl-item[data-idx="'+el.dataset.i+'"] .cardlint');if(s)s.outerHTML=cardLintHTML(it);}
       else it[el.dataset.k]=el.value;
       if(el.dataset.k===d.select){const t=box.querySelector('.gl-item[data-idx="'+el.dataset.i+'"] .gl-t');if(t)t.textContent=el.value||('New '+d.select);}
+      const sub=box.querySelector('.gl-item[data-idx="'+el.dataset.i+'"] .gl-sub'); if(sub) sub.textContent=cardSubtitle(sec,it);
       renderDoc();
     });
   });
@@ -741,7 +764,7 @@ function renderGroupList(sec){
     el.addEventListener('drop',e=>{e.preventDefault();const from=glDrag,to=+el.dataset.idx;if(from!==null&&from!==to){arr.splice(to,0,arr.splice(from,1)[0]);renderGroupList(sec);renderDoc();}glDrag=null;});
   });
   box.querySelectorAll('.gl-del').forEach(b=>b.onclick=()=>{const idx=+b.dataset.idx,it=arr[idx],nm=it[d.select]||it.title||('this '+d.select);confirmAction('Delete "'+nm+'"?','This entry will be removed from this resume.','Delete',()=>{arr.splice(idx,1);renderGroupList(sec);renderDoc();});});
-  const ab=document.getElementById('glAdd_'+sec); if(ab) ab.onclick=()=>{arr.push(freshItem(d));renderGroupList(sec);renderDoc();};
+  const ab=document.getElementById('glAdd_'+sec); if(ab) ab.onclick=()=>{arr.push(freshItem(d));renderGroupList(sec,arr.length-1);renderDoc();};
 }
 function cardLint(it){
   const res=[], bs=it.bullets||[];
@@ -813,7 +836,7 @@ function renderSkills(){
     const div=document.createElement('div'); div.className='skcat';
     const chips=skills[cat].map(s=>`<span class="chip sk">${esc(s)}<button class="x" data-cat="${esc(cat)}" data-s="${esc(s)}" aria-label="remove">×</button></span>`).join('');
     div.draggable=true;
-    div.innerHTML=`<div class="skhead"><span class="drag">⠿</span><input class="sklabel" data-cat="${esc(cat)}" value="${esc(cat)}" aria-label="category"><button class="gl-del cat-del" data-cat="${esc(cat)}" title="delete category">×</button></div>
+    div.innerHTML=`<div class="skhead"><span class="drag">⠿</span><input class="sklabel" data-cat="${esc(cat)}" value="${esc(cat)}" aria-label="category"><span class="skcount">${skills[cat].length}</span><button class="gl-del cat-del" data-cat="${esc(cat)}" title="delete category">×</button><span class="chev">›</span></div>
       <div class="skchips">${chips||'<span class="fk">no skills yet</span>'}</div>
       <div class="skadd"><input class="input skinput" data-cat="${esc(cat)}" placeholder="+ add to ${esc(cat)} — type to search" autocomplete="off"><div class="skdrop"></div></div>`;
     box.appendChild(div);
@@ -824,6 +847,7 @@ function renderSkills(){
     el.addEventListener('dragover',e=>e.preventDefault());
     el.addEventListener('drop',e=>{e.preventDefault();reorderSkillCat(skDragIdx,Object.keys(skills).indexOf(el.querySelector('.sklabel').dataset.cat));el.classList.remove('dragging');});
   });
+  box.querySelectorAll('.skhead').forEach(h=>{ h.addEventListener('click',e=>{ if(e.target.closest('.cat-del')||e.target.closest('.drag')||e.target.closest('.sklabel'))return; h.parentElement.classList.toggle('collapsed'); }); });
   box.querySelectorAll('.cat-del').forEach(b=>b.onclick=()=>{const c=b.dataset.cat;confirmAction('Delete the "'+c+'" category?','The skills under this category will be removed from this resume.','Delete',()=>{delete R().skills[c];renderSkills();renderDoc();});});
   box.querySelectorAll('.sk .x').forEach(b=>b.onclick=()=>{R().skills[b.dataset.cat]=R().skills[b.dataset.cat].filter(x=>x!==b.dataset.s);renderSkills();renderDoc();});
   box.querySelectorAll('.skinput').forEach(inp=>{
