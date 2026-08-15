@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import request from 'supertest'
+import type { Response } from 'superagent'
 import express from 'express'
 import fs from 'node:fs/promises'
 import path from 'node:path'
@@ -14,7 +15,26 @@ vi.mock('../../services/qwen-parser.js', () => ({
   parseResumeWithQwen: vi.fn(),
 }))
 
+// LibreOffice store conversion — mocked so tests don't need a host install;
+// the E3.4 wrapper is unit-tested separately and live-E2E'd in CI.
+vi.mock('../../services/pdf-deriver.js', () => ({
+  convertDocxToPdf: vi.fn(async () => Buffer.from('%PDF-1.4 test')),
+  isLibreOfficeAvailable: vi.fn(async () => true),
+}))
+
 const configState = { key: 'test-qwen', endpoint: 'http://qwen.test' }
+
+/**
+ * supertest response parser that always yields a Buffer from the raw stream —
+ * needed for binary content-types (OOXML/PDF) that superagent won't buffer.
+ */
+function binaryParser(res: Response, callback: (err: Error | null, body: Buffer) => void): void {
+  const chunks: Buffer[] = []
+  const stream = res as unknown as NodeJS.ReadableStream
+  stream.on('data', (c: Buffer) => chunks.push(Buffer.from(c)))
+  stream.on('end', () => callback(null, Buffer.concat(chunks)))
+  stream.on('error', (err: Error) => callback(err, Buffer.alloc(0)))
+}
 vi.mock('../../config.js', () => ({
   config: {
     get qwenApiKey() {
@@ -337,6 +357,63 @@ describe('Resumes API (E2)', () => {
       const res = await request(app).post(`/api/profile/resumes/${id}/reparse`)
       expect(res.status).toBe(200)
       expect(res.body.data.revision).toBe(0)
+    })
+  })
+
+  describe('E3 export & preview', () => {
+    it('export-docx streams the latest saved version as an attachment', async () => {
+      const profile = await seedProfile(storage)
+      const id = (await storage.createResume(profile.id, { title: 'Lead FE 2026' })).id
+      await storage.saveResumeVersion(id, FULL_DOC())
+      const res = await request(app)
+        .get(`/api/profile/resumes/${id}/export-docx`)
+        .buffer(true)
+        .parse(binaryParser)
+      expect(res.status).toBe(200)
+      expect(res.headers['content-type']).toBe(
+        'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+      )
+      expect(res.headers['content-disposition']).toContain('attachment')
+      expect(res.headers['content-disposition']).toContain('Lead FE 2026')
+      // DOCX = PK zip
+      expect(res.body.subarray(0, 2).toString('utf8')).toBe('PK')
+    })
+
+    it('export-pdf derives a PDF via LibreOffice wrapper (mocked)', async () => {
+      const profile = await seedProfile(storage)
+      const id = (await storage.createResume(profile.id, { title: 'PDF Resume' })).id
+      await storage.saveResumeVersion(id, FULL_DOC())
+      const res = await request(app)
+        .get(`/api/profile/resumes/${id}/export-pdf`)
+        .buffer(true)
+        .parse(binaryParser)
+      expect(res.status).toBe(200)
+      expect(res.headers['content-type']).toBe('application/pdf')
+      expect(res.headers['content-disposition']).toContain('PDF Resume.pdf')
+      expect(res.body.subarray(0, 5).toString('utf8')).toContain('%PDF')
+    })
+
+    it('export endpoints 404 for unknown resume', async () => {
+      const res = await request(app).get('/api/profile/resumes/nope/export-docx')
+      expect(res.status).toBe(404)
+    })
+
+    it('render-preview renders in-flight ResumeDoc and returns PDF, no-store', async () => {
+      const profile = await seedProfile(storage)
+      const id = (await storage.createResume(profile.id)).id
+      const res = await request(app)
+        .post(`/api/profile/resumes/${id}/render-preview`)
+        .send(FULL_DOC())
+      expect(res.status).toBe(200)
+      expect(res.headers['content-type']).toBe('application/pdf')
+      expect(res.headers['cache-control']).toBe('no-store')
+      expect(Buffer.from(res.body).subarray(0, 5).toString('utf8')).toContain('%PDF')
+    })
+
+    it('render-preview 400 when body missing', async () => {
+      const id = await createBlank(storage)
+      const res = await request(app).post(`/api/profile/resumes/${id}/render-preview`).send({})
+      expect(res.status).toBe(400)
     })
   })
 })

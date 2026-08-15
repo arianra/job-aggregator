@@ -23,6 +23,8 @@ import {
   emptyResumeDoc,
   parseResultToResumeDoc,
 } from '../services/resume-service.js'
+import { buildDocx } from '../services/docx-builder.js'
+import { convertDocxToPdf } from '../services/pdf-deriver.js'
 
 // ---------------------------------------------------------------------------
 // Multer: accept PDF, DOCX, TXT up to 10MB (same policy as the legacy upload)
@@ -367,5 +369,99 @@ export function createResumesRouter(storage: Storage): Router {
     }
   })
 
+  // ---------------------------------------------------------------------------
+  // E3.5 / E3.6 — on-demand DOCX/PDF export + accurate preview (zero stored)
+  // ---------------------------------------------------------------------------
+
+  // GET /api/profile/resumes/:id/export-docx — stream the latest saved version
+  router.get('/:id/export-docx', async (req: Request, res: Response) => {
+    try {
+      const resume = await storage.getResume(req.params.id)
+      if (!resume) {
+        res.status(404).json({ error: 'Resume not found' })
+        return
+      }
+      const data = resume.data ?? emptyResumeDoc()
+      const opts = settingsFromDoc(data)
+      const { bytes } = await buildDocx(data, opts)
+      const ext = '.docx'
+      res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document')
+      res.setHeader('Content-Disposition', `attachment; filename="${safeFilename(resume.title)}${ext}"`)
+      res.send(Buffer.from(bytes))
+    } catch (err) {
+      logger.error('GET /api/profile/resumes/:id/export-docx failed', { err })
+      res.status(500).json({ error: 'Internal server error' })
+    }
+  })
+
+  // GET /api/profile/resumes/:id/export-pdf — derive from the same DOCX bytes
+  router.get('/:id/export-pdf', async (req: Request, res: Response) => {
+    try {
+      const resume = await storage.getResume(req.params.id)
+      if (!resume) {
+        res.status(404).json({ error: 'Resume not found' })
+        return
+      }
+      const data = resume.data ?? emptyResumeDoc()
+      const opts = settingsFromDoc(data)
+      const { bytes } = await buildDocx(data, opts)
+      const pdf = await convertDocxToPdf(Buffer.from(bytes))
+      res.setHeader('Content-Type', 'application/pdf')
+      res.setHeader('Content-Disposition', `attachment; filename="${safeFilename(resume.title)}.pdf"`)
+      res.send(Buffer.from(pdf))
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err)
+      logger.error('GET /api/profile/resumes/:id/export-pdf failed', { err: msg })
+      res.status(503).json({ error: `PDF export unavailable: ${msg}` })
+    }
+  })
+
+  // POST /api/profile/resumes/:id/render-preview — render in-flight (unsaved)
+  // ResumeDoc from the request body, return PDF bytes for the accurate pane.
+  // Manual trigger only (never optimistic). Temp artifacts disposed after.
+  router.post('/:id/render-preview', async (req: Request, res: Response) => {
+    try {
+      const resume = await storage.getResume(req.params.id)
+      if (!resume) {
+        res.status(404).json({ error: 'Resume not found' })
+        return
+      }
+      const data = (req.body as ResumeDoc) ?? null
+      if (!data || typeof data !== 'object' || typeof data.contact !== 'object') {
+        res.status(400).json({ error: 'A valid ResumeDoc body (with contact) is required for preview' })
+        return
+      }
+      const opts = settingsFromDoc(data)
+      const { bytes } = await buildDocx(data, opts)
+      const pdf = await convertDocxToPdf(Buffer.from(bytes))
+      res.setHeader('Content-Type', 'application/pdf')
+      res.setHeader('Cache-Control', 'no-store')
+      res.send(Buffer.from(pdf))
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err)
+      logger.error('POST /api/profile/resumes/:id/render-preview failed', { err: msg })
+      res.status(503).json({ error: `Preview render unavailable: ${msg}` })
+    }
+  })
+
   return router
+}
+
+// ---------------------------------------------------------------------------
+// E3 helpers
+// ---------------------------------------------------------------------------
+
+/** Map a ResumeDoc's canonical settings onto the docx builder options. */
+function settingsFromDoc(data: ResumeDoc): { fontSize?: number; lineHeight?: number } {
+  const s = data.settings
+  return {
+    fontSize: typeof s?.fontSize === 'number' ? s.fontSize : 6.5,
+    lineHeight: typeof s?.lineHeight === 'number' ? s.lineHeight : 1.42,
+  }
+}
+
+/** Sanitize a resume title into a safe download filename. */
+function safeFilename(title: string): string {
+  const cleaned = title.replace(/[^\w\s-]/g, '').replace(/\s+/g, ' ').trim()
+  return cleaned || 'resume'
 }

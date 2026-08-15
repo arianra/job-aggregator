@@ -18,6 +18,13 @@ services:
       timeout: 5s
       retries: 5
 
+  # LibreOffice headless (E3.4) — reference renderer for DOCX→PDF.
+  # SIMPLEST documented choice: install LibreOffice on the host (WSL: `sudo apt
+  # install libreoffice-writer libreoffice-core`) and set SOFFICE_BIN=soffice.
+  # The backend wrapper (backend/src/services/pdf-deriver.ts) shells out to it.
+  # A containerized LibreOffice is supported via SOFFICE_BIN pointing at any
+  # headless soffice binary (host or container) — see that file.
+
 volumes:
   postgres_data:
     driver: local
