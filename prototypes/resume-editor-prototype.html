@@ -154,6 +154,7 @@
   .drawer .body{flex:1;overflow:auto;padding:14px 16px}
   .catBox{margin-bottom:16px}
   .catBox .ct{display:flex;justify-content:space-between;font-size:12px;color:var(--muted);margin-bottom:5px}
+  .catBox .catex{font-size:11px;color:#6f6a61;margin:-3px 0 7px;line-height:1.4}
   .bar{height:6px;border-radius:99px;background:var(--line2);overflow:hidden}
   .bar i{display:block;height:100%;background:var(--accent);border-radius:99px}
   .rule{display:flex;gap:9px;padding:8px 0;border-bottom:1px solid var(--line2);font-size:12.5px}
@@ -227,11 +228,6 @@
     <button class="btn small" onclick="duplicateResume()">+ Duplicate</button>
   </div>
   <div class="spacer"></div>
-  <label class="ctrl" style="gap:6px;white-space:nowrap">Format
-    <select class="fontsel" id="fmtSel" onchange="setFormat(this.value)">
-      <option value="rezi-compact" selected>rezi-compact</option>
-    </select>
-  </label>
   <span class="saved" id="saveState"><span class="dot"></span> Unsaved changes</span>
   <button class="btn" id="verBtn" onclick="openVersions()">Versions</button>
   <button class="btn primary" id="saveBtn" onclick="saveResume()">Save</button>
@@ -241,13 +237,14 @@
   <!-- RAIL -->
   <aside class="rail">
     <h6>Sections</h6>
-    <button class="sect active" data-sec="contact"><span class="n">01</span> Contact</button>
-    <button class="sect" data-sec="summary"><span class="n">02</span> Summary</button>
-    <button class="sect" data-sec="experience"><span class="n">03</span> Experience <span class="vis show">●</span></button>
-    <button class="sect" data-sec="education"><span class="n">04</span> Education</button>
-    <button class="sect" data-sec="skills"><span class="n">05</span> Skills</button>
-    <button class="sect" data-sec="certs"><span class="n">06</span> Certifications <span class="vis show">+</span></button>
-    <button class="sect" data-sec="finish"><span class="n">07</span> Finish &amp; Export</button>
+    <button class="sect" data-sec="meta"><span class="n">01</span> Details</button>
+    <button class="sect" data-sec="contact"><span class="n">02</span> Contact</button>
+    <button class="sect" data-sec="summary"><span class="n">03</span> Summary</button>
+    <button class="sect" data-sec="experience"><span class="n">04</span> Experience <span class="vis show">●</span></button>
+    <button class="sect" data-sec="education"><span class="n">05</span> Education</button>
+    <button class="sect" data-sec="skills"><span class="n">06</span> Skills</button>
+    <button class="sect" data-sec="certs"><span class="n">07</span> Certifications <span class="vis show">+</span></button>
+    <button class="sect" data-sec="finish"><span class="n">08</span> Finish &amp; Export</button>
     <h6 style="margin-top:16px">Flow</h6>
     <button class="sect" onclick="openLint()"><span class="n" style="color:var(--accent)">ATS</span> Lint report</button>
   </aside>
@@ -270,7 +267,7 @@
           <div class="bpcount">best practices <b id="bpN">9</b>/11 applied</div>
         </div>
         <div style="flex:1"></div>
-        <button class="btn small" onclick="openLint()">Breakdown</button>
+        <button class="btn small" onclick="openLint()">View ATS Report</button>
       </div>
 
       <div class="fittools">
@@ -311,10 +308,10 @@
   <div class="head"><h3>ATS lint report</h3><button class="btn small" onclick="closeLint()">Close</button></div>
   <div class="body">
     <p style="font-size:12px;color:var(--muted)">Deterministic, every point attributed to a rule. No LLM moves the score. <b>78 / 100 — Good</b>.</p>
-    <div class="catBox"><div class="ct"><span>Parseability</span><span>92%</span></div><div class="bar"><i style="width:92%"></i></div></div>
-    <div class="catBox"><div class="ct"><span>Structure</span><span>85%</span></div><div class="bar"><i style="width:85%"></i></div></div>
-    <div class="catBox"><div class="ct"><span>Content &amp; impact</span><span>64%</span></div><div class="bar"><i style="width:64%"></i></div></div>
-    <div class="catBox"><div class="ct"><span>Grammar &amp; style</span><span>80%</span></div><div class="bar"><i style="width:80%"></i></div></div>
+    <div class="catBox"><div class="ct"><span>Parseability</span><span>92%</span></div><div class="catex">Will ATS software extract your text cleanly? Hit by tables, columns, scanned pages, unusual fonts, or missing section headers.</div><div class="bar"><i style="width:92%"></i></div></div>
+    <div class="catBox"><div class="ct"><span>Structure</span><span>85%</span></div><div class="catex">How clearly content is organized: standard section headings, order, and clear separation of sections.</div><div class="bar"><i style="width:85%"></i></div></div>
+    <div class="catBox"><div class="ct"><span>Content &amp; impact</span><span>64%</span></div><div class="catex">Strength of the writing: quantified achievements, strong action verbs, substance per bullet.</div><div class="bar"><i style="width:64%"></i></div></div>
+    <div class="catBox"><div class="ct"><span>Grammar &amp; style</span><span>80%</span></div><div class="catex">Spelling, punctuation, and consistent professional style.</div><div class="bar"><i style="width:80%"></i></div></div>
 
     <div class="rule"><span class="sev e"></span><div class="rbody"><div class="rt">ATS-L-003 &nbsp;<span class="rev">missing_metric_bullets</span></div><div class="rm">Add a quantified metric to bullets 2 and 5.</div><div class="rx">evidence · 2 bullets lack numbers</div></div></div>
     <div class="rule"><span class="sev w"></span><div class="rbody"><div class="rt">ATS-C-004 &nbsp;<span class="rev">action_verb_openers</span></div><div class="rm">“Functioned as” is weak; prefer ‘Led’, ‘Shipped’, ‘Built’.</div><div class="rx">evidence · 3 bullets start with weak verbs</div></div></div>
@@ -350,6 +347,21 @@
   function esc(s){return s.replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]))}
 
   const FORMS={
+    meta:`
+      <div class="field"><label>Resume name</label><input class="input" id="metaTitle" placeholder="e.g. Lead Frontend Engineer 2026"><div class="hint">This is how the resume appears in your profile list.</div></div>
+      <div class="field"><label>Source</label>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+          <button class="btn" onclick="document.getElementById('metaFile').click()">+ Choose / upload file</button>
+          <input type="file" id="metaFile" accept=".docx,.pdf,.txt" style="display:none">
+          <span class="fake" id="metaFileState">No source — created blank</span>
+        </div>
+        <div class="hint">Upload a PDF or DOCX to seed this resume, or continue without data and build from scratch. Re-uploading replaces the source.</div>
+      </div>
+      <div class="detail" id="metaRawWrap" style="display:none">
+        <h4>Extracted raw text</h4>
+        <p style="font-size:11.5px;color:var(--muted)">Kept as the original this resume was created on. Edit the structured sections, not this.</p>
+        <pre id="metaRawText" style="white-space:pre-wrap;font-family:var(--mono);font-size:11px;background:var(--surface);border:1px solid var(--line2);border-radius:8px;padding:10px;max-height:220px;overflow:auto;color:#444"></pre>
+      </div>`,
     contact:`
       <div class="field"><label>Full name</label><input class="input" value="Arian Razi"> <div class="showfield"><button class="switch on" onclick="this.classList.toggle('on');event.stopPropagation()"></button> Show on resume</div></div>
       <div class="row">
@@ -386,15 +398,21 @@
         <div class="stat"><div class="k">ATS score</div><div class="v">78 · Good</div></div>
       </div>
       <div style="height:12px"></div>
+      <div class="stat"><div class="k">Template</div><div style="margin-top:8px">
+        <select class="fontsel" id="fmtSelFinish" onchange="setFormat(this.value)">
+          <option value="compact">compact</option>
+        </select>
+      </div><div class="hint" style="margin-top:6px">One format for now; more later. The DOCX/PDF always match this.</div></div>
+      <div style="height:12px"></div>
       <div class="stat"><div class="k">Export</div><div style="margin-top:8px"><button class="btn primary" onclick="toast('Canonical .docx via docx.js — fixed format, in uploads/resumes/')">Export DOCX</button> <button class="btn" onclick="toast('PDF from that DOCX via LibreOffice headless')">Export PDF</button></div><div class="hint" style="margin-top:6px">DOCX is the artifact; PDF is derived from it — they always match.</div></div>
       <div style="height:12px"></div>
       <div class="nudge"><b>One-page gate</b> — Warn on overflow + optional Auto-fit (shrink-to-fit). Never silently truncates.</div>`,
   };
-  const TITLES={contact:["Contact","Name, contact details, and visibility"],summary:["Summary","Professional summary"],experience:["Experience","Roles, companies, dates, and achievement bullets"],education:["Education","Degrees and credentials"],skills:["Skills","Categorized skill rows"],certs:["Certifications","Optional section"],finish:["Finish & Export","One-page fit, score, and export" ]};
+  const TITLES={meta:["Details","Name, source file, and raw text"],contact:["Contact","Name, contact details, and visibility"],summary:["Summary","Professional summary"],experience:["Experience","Roles, companies, dates, and achievement bullets"],education:["Education","Degrees and credentials"],skills:["Skills","Categorized skill rows"],certs:["Certifications","Optional section"],finish:["Finish & Export","One-page fit, score, and export" ]};
 
 // ---------- per-resume model: source of truth (multi-resume supported) ----------
 const RESUMES={ cv2026:{
-  id:'cv2026', title:'Lead Frontend Engineer 2026', format:'rezi-compact',
+  id:'cv2026', title:'Lead Frontend Engineer 2026', format:'compact',
   contact:{name:'Arian Razi',email:'arian99@gmail.com',phone:'+1 (707) 771-6645',linkedin:'linkedin.com/in/arianvala',country:'United States',state:'California',city:'Vallejo'},
   summary:"Lead Frontend Engineer with 10+ years across e-commerce, fintech, and startups. Led the Walmart Search/Browse & Deals frontend and web-performance teams; shipped Core Web Vitals work that halved INP/LCP/CLS and lifted p75 response time 52%.",
   experience:[
@@ -445,6 +463,8 @@ function render(sec){
   document.getElementById('pBody').innerHTML=FORMS[sec]||'<p class="fake">prototype section</p>';
   if(sec==='summary'){const si=document.getElementById('summaryInput');if(si){si.value=R().summary;si.oninput=()=>{R().summary=si.value;renderDoc();};}}
   if(sec==='contact'){const c=R().contact,fields=['name','email','phone','linkedin','country','city'];document.querySelectorAll('#pBody .input').forEach((inp,i)=>{if(fields[i]){inp.value=c[fields[i]]||'';inp.onchange=()=>{c[fields[i]]=inp.value;renderDoc();};}});}
+  if(sec==='meta'){renderMeta();}
+  if(sec==='finish'){const ff=document.getElementById('fmtSelFinish');if(ff)ff.value=R().format||'compact';}
   if(sec==='skills') renderSkills();
   else if(sec==='experience'||sec==='education'||sec==='certs') renderGroupList(sec);
   setScore(ATSscore(R()));
@@ -457,7 +477,7 @@ function setScore(n){const arc=document.getElementById('dialArc');const C=150.8;
 function best(count){document.getElementById('bpN').textContent=count;}
 
 // ---------- fit controls (persisted to model.settings) ----------
-function applySettings(){const s=R().settings;document.documentElement.style.setProperty('--fs',(s.fs||11.5)+'px');document.documentElement.style.setProperty('--lh',s.lh||1.42);if(s.typeface)setFont(s.typeface);const f=document.getElementById('fsShow'),l=document.getElementById('lhShow');if(f)f.textContent=(s.fs||11.5); if(l)l.textContent=((s.lh||1.42)).toFixed(2);const fs=document.getElementById('fmtSel');if(fs)fs.value=R().format||'rezi-compact';}
+function applySettings(){const s=R().settings;document.documentElement.style.setProperty('--fs',(s.fs||11.5)+'px');document.documentElement.style.setProperty('--lh',s.lh||1.42);if(s.typeface)setFont(s.typeface);const f=document.getElementById('fsShow'),l=document.getElementById('lhShow');if(f)f.textContent=(s.fs||11.5); if(l)l.textContent=((s.lh||1.42)).toFixed(2);}
 function step(v,delta){const s=R().settings;if(v==='--fs'){s.fs=Math.min(16,Math.max(8,(s.fs||11.5)+delta));applySettings();}else{s.lh=Math.min(2,Math.max(1,(s.lh||1.42)+delta));applySettings();}}
 function setFont(v){R().settings.typeface=v;document.documentElement.style.setProperty('--docfont',v);}
 function setFormat(v){R().format=v;renderDoc();toast('Template: '+v);}
@@ -543,6 +563,15 @@ function cardBody(sec,it,idx){
 }
 function freshItem(d){ if(d.arr==='experience')return {role:'',company:'',dates:'',location:'',bullets:[]}; if(d.arr==='education')return {degree:'',school:'',location:'',year:''}; return {title:'',issuer:'',year:''}; }
 
+function renderMeta(){
+  const t=document.getElementById('metaTitle');
+  if(t){ t.value=R().title||''; t.oninput=()=>{R().title=t.value; refreshChooser(); evalDirty();}; }
+  const fi=document.getElementById('metaFile'), st=document.getElementById('metaFileState'), wr=document.getElementById('metaRawWrap'), rt=document.getElementById('metaRawText');
+  if(fi){ fi.onchange=()=>{ const f=fi.files&&fi.files[0]; if(!f)return; R().original_file_name=f.name; const rd=new FileReader();
+      rd.onload=()=>{ R().original_raw_text=String(rd.result||'').slice(0,20000); if(st)st.textContent=f.name+' · parsed'; if(wr)wr.style.display='block'; if(rt)rt.textContent=R().original_raw_text; toast('Uploaded — raw text captured'); };
+      rd.readAsText(f); }; }
+  if(R().original_raw_text){ if(st)st.textContent=(R().original_file_name||'source')+' · parsed'; if(wr)wr.style.display='block'; if(rt)rt.textContent=R().original_raw_text; }
+}
 // ---------- skills token editor (writes to R().skills) ----------
 const SKILL_TAX={Development:['TypeScript','React','Node.js','GraphQL','Next.js','Redux','Node','SQL','HTML & CSS','PromQL','Vite','Webpack','Jest','Playwright'],Process:['Architecture','Unit Testing','Tooling/Automation','UI/UX','Agile','Scrum','Data Analytics','Monitoring','CI/CD','Accessibility','Code Review'],'AI & DX':['LLM Orchestration','Agents','RAG','Prompting','Observability','MCP','Evaluation']};
 function renderSkills(){
