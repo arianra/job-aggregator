@@ -297,6 +297,142 @@ export interface ApplicationCount {
 }
 
 // ============================================================================
+// Resume (multi-document authoring — ADR-0008)
+// ============================================================================
+//
+// Profile = the person. Resume = one document (many per Profile).
+// ResumeVersion = an immutable snapshot of the structured `data`, appended on
+// manual Save only. Structured data (ResumeDoc) is the ONLY stored artifact;
+// DOCX/PDF are derived on demand and never persisted.
+
+export type ResumeStatus = 'NEW' | 'SAVED' | 'ARCHIVED'
+
+export type ResumeFormat = 'compact'
+
+export type ResumeTypeface = 'serif' | 'sans'
+
+/** Structured document data — the single source of truth (ADR-0004 §6.5). */
+export interface ResumeDoc {
+  contact: {
+    name: string
+    email: string
+    phone: string
+    linkedin: string
+    country: string
+    state: string
+    city: string
+    /** Per-field "show on resume" toggles. */
+    visibility: {
+      email: boolean
+      phone: boolean
+      linkedin: boolean
+      [key: string]: boolean
+    }
+  }
+  summary: string
+  experience: ResumeExperience[]
+  education: ResumeEducation[]
+  /** Ordered skills map: category name -> skill strings. */
+  skills: Record<string, string[]>
+  certifications: ResumeCertification[]
+  sections: {
+    order: string[]
+    visibility: Record<string, boolean>
+  }
+  settings: ResumeSettings
+}
+
+export interface ResumeExperience {
+  role: string
+  company: string
+  dates: string
+  location: string
+  bullets: string[]
+}
+
+export interface ResumeEducation {
+  degree: string
+  school: string
+  location: string
+  year: string
+}
+
+export interface ResumeCertification {
+  title: string
+  issuer: string
+  year: string
+}
+
+/** Canonical settings shape — long-named, CSS-free (not the prototype shorthand). */
+export interface ResumeSettings {
+  fontSize: number // pt
+  lineHeight: number
+  spacing: number
+  typeface: ResumeTypeface
+  paperA4: boolean
+}
+
+/** The document: DB row (meta) + its latest saved data. */
+export interface Resume {
+  id: string
+  profile_id: string
+  title: string
+  format: ResumeFormat
+  status: ResumeStatus
+  primary: boolean
+  /** Original upload raw text (creation seed); NULL if created blank; never updated. */
+  original_raw_text?: string | null
+  created_at: Date
+  updated_at: Date
+  /** Latest saved version's structured data, if any. */
+  data?: ResumeDoc | null
+}
+
+export interface ResumeVersion {
+  id: string
+  resume_id: string
+  revision: number // additive, 0-based; date-primary display with revision to disambiguate
+  created_at: Date
+  data: ResumeDoc
+}
+
+export interface ResumeMeta {
+  id: string
+  profile_id: string
+  title: string
+  format: ResumeFormat
+  status: ResumeStatus
+  primary: boolean
+  created_at: Date
+  updated_at: Date
+  revision: number // latest version revision, or -1 if none saved yet
+}
+
+export interface ResumeVersionSummary {
+  id: string
+  revision: number
+  created_at: Date
+}
+
+/** Loose partial input used by the creation/duplicate flows. */
+export interface ResumeCreateInput {
+  title?: string
+  format?: ResumeFormat
+  original_raw_text?: string | null
+}
+
+// ============================================================================
+// Scoring Source (ADR-0008 N1 — slim input to job scoring)
+// ============================================================================
+
+export interface ScoringSource {
+  skills: Skill[]
+  experience: Experience[]
+  location?: Location
+  preferences: ProfilePreferences
+}
+
+// ============================================================================
 // Search Query
 // ============================================================================
 
