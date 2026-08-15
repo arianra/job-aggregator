@@ -8,6 +8,11 @@ import {
   Application,
   ApplicationCount,
   BoardCompany,
+  Resume,
+  ResumeVersion,
+  ResumeCreateInput,
+  ResumeDoc,
+  ResumeVersionSummary,
 } from '@job-aggregator/shared'
 import logger from '../utils/logger.js'
 
@@ -213,6 +218,130 @@ export class MockStorage implements Storage {
       logger.debug('Deleted profile and related matches', { profileId: id })
     }
     return deleted
+  }
+
+  // Resumes (ADR-0008)
+  private resumes: Map<string, Resume> = new Map()
+  private resumeVersions: Map<string, ResumeVersion[]> = new Map()
+  private nextRevision: Map<string, number> = new Map()
+
+  async listResumes(profileId: string, opts?: { includeArchived?: boolean }): Promise<Resume[]> {
+    return Array.from(this.resumes.values())
+      .filter((r) => r.profile_id === profileId)
+      .filter((r) => opts?.includeArchived || r.status !== 'ARCHIVED')
+      .map((r) => this.withLatestData(r))
+  }
+
+  async getResume(id: string): Promise<Resume | null> {
+    const r = this.resumes.get(id)
+    return r ? this.withLatestData(r) : null
+  }
+
+  async createResume(profileId: string, input?: ResumeCreateInput): Promise<Resume> {
+    const id = `rm_${Math.random().toString(36).slice(2, 10)}`
+    const now = new Date()
+    const resume: Resume = {
+      id,
+      profile_id: profileId,
+      title: input?.title ?? 'Untitled resume',
+      format: (input?.format ?? 'compact') as Resume['format'],
+      status: 'NEW',
+      primary: this.primaryCount(profileId) === 0,
+      original_raw_text: input?.original_raw_text ?? null,
+      created_at: now,
+      updated_at: now,
+      data: null,
+    }
+    this.resumes.set(id, resume)
+    this.nextRevision.set(id, 0)
+    logger.debug('Created resume', { resumeId: id })
+    return resume
+  }
+
+  async updateResumeMeta(id: string, updates: { title?: string; format?: string }): Promise<Resume | null> {
+    const r = this.resumes.get(id)
+    if (!r) return null
+    if (updates.title !== undefined) r.title = updates.title
+    if (updates.format !== undefined) r.format = updates.format as Resume['format']
+    r.updated_at = new Date()
+    return this.withLatestData(r)
+  }
+
+  async setPrimaryResume(profileId: string, resumeId: string): Promise<Resume | null> {
+    const target = this.resumes.get(resumeId)
+    if (!target || target.profile_id !== profileId) return null
+    for (const r of this.resumes.values()) {
+      if (r.profile_id === profileId) r.primary = r.id === resumeId
+    }
+    return this.withLatestData(target)
+  }
+
+  async saveResumeVersion(resumeId: string, data: ResumeDoc): Promise<{ revision: number; created_at: Date }> {
+    const r = this.resumes.get(resumeId)
+    if (!r) throw new Error(`Resume not found: ${resumeId}`)
+    const revision = this.nextRevision.get(resumeId) ?? 0
+    const created_at = new Date()
+    const versions = this.resumeVersions.get(resumeId) ?? []
+    const version: ResumeVersion = { id: `rv_${Math.random().toString(36).slice(2, 10)}`, resume_id: resumeId, revision, created_at, data }
+    versions.push(version)
+    this.resumeVersions.set(resumeId, versions)
+    this.nextRevision.set(resumeId, revision + 1)
+    r.status = 'SAVED'
+    r.updated_at = created_at
+    logger.debug('Saved resume version', { resumeId, revision })
+    return { revision, created_at }
+  }
+
+  async listResumeVersions(resumeId: string): Promise<ResumeVersionSummary[]> {
+    return (this.resumeVersions.get(resumeId) ?? [])
+      .slice()
+      .sort((a, b) => a.revision - b.revision)
+      .map((v) => ({ id: v.id, revision: v.revision, created_at: v.created_at }))
+  }
+
+  async getResumeVersion(resumeId: string, revision: number): Promise<ResumeVersion | null> {
+    return (this.resumeVersions.get(resumeId) ?? []).find((v) => v.revision === revision) ?? null
+  }
+
+  async setResumeArchived(id: string, archived: boolean): Promise<Resume | null> {
+    const r = this.resumes.get(id)
+    if (!r) return null
+    if (archived && r.primary) await this.setPrimaryResume(r.profile_id, id) // no-op if none else
+    r.status = archived ? 'ARCHIVED' : 'SAVED'
+    r.updated_at = new Date()
+    return this.withLatestData(r)
+  }
+
+  async deleteResume(id: string): Promise<boolean> {
+    return this.resumes.delete(id)
+  }
+
+  async duplicateResume(profileId: string, resumeId: string): Promise<Resume | null> {
+    const src = this.resumes.get(resumeId)
+    if (!src) return null
+    const copy = await this.createResume(profileId, { title: `${src.title} (copy)`, format: src.format, original_raw_text: src.original_raw_text })
+    const latest = this.latestVersion(resumeId)
+    if (latest) await this.saveResumeVersion(copy.id, latest.data)
+    return this.getResume(copy.id)
+  }
+
+  async getPrimaryResume(profileId: string): Promise<Resume | null> {
+    const p = Array.from(this.resumes.values()).find((r) => r.profile_id === profileId && r.primary && r.status !== 'ARCHIVED')
+    return p ? this.withLatestData(p) : null
+  }
+
+  private primaryCount(profileId: string): number {
+    return Array.from(this.resumes.values()).filter((r) => r.profile_id === profileId && r.primary).length
+  }
+
+  private latestVersion(resumeId: string): ResumeVersion | null {
+    const v = this.resumeVersions.get(resumeId) ?? []
+    return v.length ? v.slice().sort((a, b) => a.revision - b.revision).at(-1)! : null
+  }
+
+  private withLatestData(r: Resume): Resume {
+    const latest = this.latestVersion(r.id)
+    return { ...r, data: latest?.data ?? null }
   }
 
   // Matches

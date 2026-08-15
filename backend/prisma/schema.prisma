@@ -116,13 +116,8 @@ model Profile {
   email          String?
   phone          String?
   location       Json?
-  experience     Json     @default("[]")
-  education      Json     @default("[]")
-  certifications Json     @default("[]")
-  skills         Json     @default("[]")
   preferences    Json     @default("{}")
   search_queries Json     @default("[]")
-  resume         Json
   created_at     DateTime @default(now())
   updated_at     DateTime @updatedAt
 

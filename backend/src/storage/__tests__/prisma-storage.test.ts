@@ -1,7 +1,11 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest'
 import { PrismaClient } from '@prisma/client'
 import { PrismaStorage } from '../prisma-storage.js'
-import type { Job, Source, Company, Profile, Match, Application } from '@job-aggregator/shared'
+import type { Job, Source, Company, Profile, Match, Application, ResumeExperience } from '@job-aggregator/shared'
+
+function makeResumeExperience(company: string, role: string): ResumeExperience {
+  return { role, company, dates: '2020 – 2024', location: 'SF', bullets: ['Built stuff'] }
+}
 
 // Use a test-specific database
 const testDatabaseUrl =
@@ -400,15 +404,38 @@ describe('PrismaStorage', () => {
   // -------------------------------------------------------------------------
 
   describe('Profiles', () => {
-    it('saves and retrieves a profile', async () => {
+    it('saves and retrieves a profile (person-level data)', async () => {
       const profile = makeProfile()
       await storage.saveProfile(profile)
 
       const retrieved = await storage.getProfile('profile-1')
       expect(retrieved).not.toBeNull()
       expect(retrieved!.name).toBe('Test User')
-      expect(retrieved!.skills).toHaveLength(1)
-      expect(retrieved!.skills[0].name).toBe('TypeScript')
+      // Person-level fields survive; skills are derived from the primary resume.
+      expect(retrieved!.skills).toHaveLength(0)
+      expect(retrieved!.location?.city).toBe('SF')
+    })
+
+    it('derives resume content from the primary resume latest version (ADR-0008)', async () => {
+      const profile = makeProfile()
+      await storage.saveProfile(profile)
+
+      const resume = await storage.createResume(profile.id, { title: 'My resume' })
+      await storage.saveResumeVersion(resume.id, {
+        contact: { name: 'Test User', email: 'test@example.com', phone: '', linkedin: '', country: 'USA', state: 'CA', city: 'SF', visibility: { email: true, phone: true, linkedin: true } },
+        summary: '',
+        experience: [makeResumeExperience('OldCorp', 'Engineer')],
+        education: [],
+        skills: { Development: ['TypeScript'] },
+        certifications: [],
+        sections: { order: ['contact', 'summary', 'experience', 'education', 'skills', 'certifications'], visibility: {} },
+        settings: { fontSize: 11, lineHeight: 1.3, spacing: 1, typeface: 'serif', paperA4: true },
+      })
+
+      const hydrated = await storage.getProfile(profile.id)
+      expect(hydrated!.experience).toHaveLength(1)
+      expect(hydrated!.experience[0].company).toBe('OldCorp')
+      expect(hydrated!.skills).toContainEqual(expect.objectContaining({ name: 'TypeScript', category: 'Development' }))
     })
 
     it('lists profiles', async () => {

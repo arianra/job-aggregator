@@ -15,6 +15,12 @@ import type {
   ApplicationCount,
   ApplicationNote,
   BoardCompany,
+  Resume,
+  ResumeVersion,
+  ResumeVersionSummary,
+  ResumeCreateInput,
+  ResumeDoc,
+  ResumeMeta,
 } from '@job-aggregator/shared'
 import logger from '../utils/logger.js'
 
@@ -354,26 +360,16 @@ export class PrismaStorage implements Storage {
         email: profile.email,
         phone: profile.phone,
         location: (profile.location ?? null) as any,
-        experience: (profile.experience ?? []) as any,
-        education: (profile.education ?? []) as any,
-        certifications: (profile.certifications ?? []) as any,
-        skills: (profile.skills ?? []) as any,
         preferences: (profile.preferences ?? {}) as any,
         search_queries: (profile.search_queries ?? []) as any,
-        resume: profile.resume as any,
       },
       update: {
         name: profile.name,
         email: profile.email,
         phone: profile.phone,
         location: (profile.location ?? null) as any,
-        experience: (profile.experience ?? []) as any,
-        education: (profile.education ?? []) as any,
-        certifications: (profile.certifications ?? []) as any,
-        skills: (profile.skills ?? []) as any,
         preferences: (profile.preferences ?? {}) as any,
         search_queries: (profile.search_queries ?? []) as any,
-        resume: profile.resume as any,
       },
     })
     return profile
@@ -387,7 +383,7 @@ export class PrismaStorage implements Storage {
 
   async listProfiles(): Promise<Profile[]> {
     const rows = await this.prisma.profile.findMany()
-    return rows.map((r) => this.hydrateProfile(r))
+    return Promise.all(rows.map((r) => this.hydrateProfile(r)))
   }
 
   async updateProfile(id: string, updates: Partial<Profile>): Promise<Profile | null> {
@@ -396,13 +392,8 @@ export class PrismaStorage implements Storage {
     if (updates.email !== undefined) data.email = updates.email
     if (updates.phone !== undefined) data.phone = updates.phone
     if (updates.location !== undefined) data.location = updates.location as any
-    if (updates.experience !== undefined) data.experience = updates.experience as any
-    if (updates.education !== undefined) data.education = updates.education as any
-    if (updates.certifications !== undefined) data.certifications = updates.certifications as any
-    if (updates.skills !== undefined) data.skills = updates.skills as any
     if (updates.preferences !== undefined) data.preferences = updates.preferences as any
     if (updates.search_queries !== undefined) data.search_queries = updates.search_queries as any
-    if (updates.resume !== undefined) data.resume = updates.resume as any
 
     const row = await this.prisma.profile
       .update({
@@ -421,6 +412,163 @@ export class PrismaStorage implements Storage {
       return true
     } catch {
       return false
+    }
+  }
+
+  // -------------------------------------------------------------------------
+  // Resumes (ADR-0008)
+  // -------------------------------------------------------------------------
+
+  async listResumes(profileId: string, opts?: { includeArchived?: boolean }): Promise<Resume[]> {
+    const rows = await this.prisma.resume.findMany({
+      where: {
+        profile_id: profileId,
+        ...(opts?.includeArchived ? {} : { status: { not: 'ARCHIVED' } }),
+      },
+      orderBy: [{ primary: 'desc' }, { updated_at: 'desc' }],
+      include: { versions: { orderBy: { revision: 'desc' }, take: 1 } },
+    })
+    return rows.map((r) => this.hydrateResume(r))
+  }
+
+  async getResume(id: string): Promise<Resume | null> {
+    const row = await this.prisma.resume.findUnique({
+      where: { id },
+      include: { versions: { orderBy: { revision: 'desc' }, take: 1 } },
+    })
+    return row ? this.hydrateResume(row) : null
+  }
+
+  async createResume(profileId: string, input?: ResumeCreateInput): Promise<Resume> {
+    const primaryCount = await this.prisma.resume.count({
+      where: { profile_id: profileId, primary: true, status: { not: 'ARCHIVED' } },
+    })
+    const row = await this.prisma.resume.create({
+      data: {
+        profile_id: profileId,
+        title: input?.title ?? 'Untitled resume',
+        format: input?.format ?? 'compact',
+        status: 'NEW',
+        primary: primaryCount === 0,
+        original_raw_text: input?.original_raw_text ?? null,
+      },
+      include: { versions: true },
+    })
+    return this.hydrateResume(row)
+  }
+
+  async updateResumeMeta(id: string, updates: { title?: string; format?: string }): Promise<Resume | null> {
+    const row = await this.prisma.resume.update({ where: { id }, data: updates as any }).catch(() => null)
+    if (!row) return null
+    return this.getResume(id)
+  }
+
+  async setPrimaryResume(profileId: string, resumeId: string): Promise<Resume | null> {
+    // enforce <=1 primary per profile (transactionally)
+    const target = await this.prisma.resume.findUnique({ where: { id: resumeId } })
+    if (!target || target.profile_id !== profileId) return null
+    await this.prisma.$transaction([
+      this.prisma.resume.updateMany({ where: { profile_id: profileId, primary: true }, data: { primary: false } }),
+      this.prisma.resume.update({ where: { id: resumeId }, data: { primary: true } }),
+    ])
+    return this.getResume(resumeId)
+  }
+
+  async saveResumeVersion(resumeId: string, data: ResumeDoc): Promise<{ revision: number; created_at: Date }> {
+    const last = await this.prisma.resumeVersion.findFirst({
+      where: { resume_id: resumeId },
+      orderBy: { revision: 'desc' },
+      select: { revision: true },
+    })
+    const revision = (last?.revision ?? -1) + 1
+    const created_at = new Date()
+    await this.prisma.$transaction([
+      this.prisma.resumeVersion.create({ data: { resume_id: resumeId, revision, data: data as any } }),
+      this.prisma.resume.update({
+        where: { id: resumeId },
+        data: { status: 'SAVED', updated_at: created_at },
+      }),
+    ])
+    return { revision, created_at }
+  }
+
+  async listResumeVersions(resumeId: string): Promise<ResumeVersionSummary[]> {
+    const rows = await this.prisma.resumeVersion.findMany({
+      where: { resume_id: resumeId },
+      orderBy: { revision: 'asc' },
+      select: { id: true, revision: true, created_at: true },
+    })
+    return rows.map((r) => ({ id: r.id, revision: r.revision, created_at: r.created_at }))
+  }
+
+  async getResumeVersion(resumeId: string, revision: number): Promise<ResumeVersion | null> {
+    const row = await this.prisma.resumeVersion.findUnique({
+      where: { resume_id_revision: { resume_id: resumeId, revision } },
+    })
+    return row ? this.hydrateResumeVersion(row) : null
+  }
+
+  async setResumeArchived(id: string, archived: boolean): Promise<Resume | null> {
+    const row = await this.prisma.resume
+      .update({ where: { id }, data: { status: archived ? 'ARCHIVED' : 'SAVED' } })
+      .catch(() => null)
+    if (!row) return null
+    return this.getResume(id)
+  }
+
+  async deleteResume(id: string): Promise<boolean> {
+    try {
+      await this.prisma.resume.delete({ where: { id } })
+      return true
+    } catch {
+      return false
+    }
+  }
+
+  async duplicateResume(profileId: string, resumeId: string): Promise<Resume | null> {
+    const src = await this.getResume(resumeId)
+    if (!src) return null
+    const copy = await this.createResume(profileId, {
+      title: `${src.title} (copy)`,
+      format: src.format,
+      original_raw_text: src.original_raw_text ?? null,
+    })
+    const latest = src.data as ResumeDoc | undefined
+    if (latest) await this.saveResumeVersion(copy.id, latest)
+    return this.getResume(copy.id)
+  }
+
+  async getPrimaryResume(profileId: string): Promise<Resume | null> {
+    const row = await this.prisma.resume.findFirst({
+      where: { profile_id: profileId, primary: true, status: { not: 'ARCHIVED' } },
+      include: { versions: { orderBy: { revision: 'desc' }, take: 1 } },
+    })
+    return row ? this.hydrateResume(row) : null
+  }
+
+  private hydrateResume(row: any): Resume {
+    const latest = row.versions?.[0]
+    return {
+      id: row.id,
+      profile_id: row.profile_id,
+      title: row.title,
+      format: row.format as Resume['format'],
+      status: row.status as Resume['status'],
+      primary: row.primary,
+      original_raw_text: row.original_raw_text ?? null,
+      created_at: row.created_at,
+      updated_at: row.updated_at,
+      data: (latest?.data as ResumeDoc) ?? null,
+    }
+  }
+
+  private hydrateResumeVersion(row: any): ResumeVersion {
+    return {
+      id: row.id,
+      resume_id: row.resume_id,
+      revision: row.revision,
+      created_at: row.created_at,
+      data: row.data as ResumeDoc,
     }
   }
 
@@ -871,23 +1019,49 @@ export class PrismaStorage implements Storage {
     }
   }
 
-  private hydrateProfile(row: any): Profile {
+  private async hydrateProfile(row: any): Promise<Profile> {
+    // Resume-derived fields now come from the PRIMARY resume's latest saved
+    // version (ADR-0008). If none exists, the profile has no resume content.
+    const primary = await this.prisma.resume.findFirst({
+      where: { profile_id: row.id, primary: true, status: { not: 'ARCHIVED' } },
+      orderBy: { created_at: 'asc' },
+      include: { versions: { orderBy: { revision: 'desc' }, take: 1 } },
+    })
+    const data = primary?.versions?.[0]?.data as ResumeDoc | undefined
+
     return {
       id: row.id,
       name: row.name,
       email: row.email ?? undefined,
       phone: row.phone ?? undefined,
       location: (row.location ?? undefined) as Profile['location'],
-      experience: (row.experience ?? []) as Profile['experience'],
-      education: (row.education ?? []) as Profile['education'],
-      certifications: (row.certifications ?? []) as Profile['certifications'],
-      skills: (row.skills ?? []) as Profile['skills'],
+      experience: (data?.experience ?? []) as unknown as Profile['experience'],
+      education: (data?.education ?? []) as unknown as Profile['education'],
+      certifications: (data?.certifications ?? []) as unknown as Profile['certifications'],
+      skills: this.docToSkills(data),
       preferences: (row.preferences ?? {}) as Profile['preferences'],
       search_queries: (row.search_queries ?? []) as Profile['search_queries'],
-      resume: row.resume as Profile['resume'],
+      resume: {
+        filename: '',
+        mime_type: '',
+        stored_path: '',
+        parsed_text: primary?.original_raw_text ?? undefined,
+        parse_status: primary?.original_raw_text ? ('parsed' as const) : undefined,
+      },
       created_at: row.created_at,
       updated_at: row.updated_at,
     }
+  }
+
+  private docToSkills(data?: ResumeDoc): Profile['skills'] {
+    if (!data) return []
+    const out: Profile['skills'] = []
+    for (const [category, names] of Object.entries(data.skills ?? {})) {
+      for (const name of names) {
+        out.push({ name, category, proficiency: 'advanced' })
+      }
+    }
+    return out
   }
 
   private hydrateMatch(row: any): Match {

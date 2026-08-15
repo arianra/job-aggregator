@@ -16,6 +16,12 @@ import type {
   ApplicationCount,
   BoardCompany,
   BoardCompanyFilter,
+  Resume,
+  ResumeMeta,
+  ResumeVersion,
+  ResumeDoc,
+  ResumeCreateInput,
+  ResumeVersionSummary,
 } from './types.js'
 
 export interface Storage {
@@ -43,6 +49,20 @@ export interface Storage {
   listProfiles(): Promise<Profile[]>
   updateProfile(id: string, updates: Partial<Profile>): Promise<Profile | null>
   deleteProfile(id: string): Promise<boolean>
+
+  // Resumes (ADR-0008: Profile = person; Resume = document, many per Profile)
+  listResumes(profileId: string, opts?: { includeArchived?: boolean }): Promise<Resume[]>
+  getResume(id: string): Promise<Resume | null>
+  createResume(profileId: string, input?: ResumeCreateInput): Promise<Resume>
+  updateResumeMeta(id: string, updates: { title?: string; format?: string }): Promise<Resume | null>
+  setPrimaryResume(profileId: string, resumeId: string): Promise<Resume | null>
+  saveResumeVersion(resumeId: string, data: ResumeDoc): Promise<{ revision: number; created_at: Date }>
+  listResumeVersions(resumeId: string): Promise<ResumeVersionSummary[]>
+  getResumeVersion(resumeId: string, revision: number): Promise<ResumeVersion | null>
+  setResumeArchived(id: string, archived: boolean): Promise<Resume | null>
+  deleteResume(id: string): Promise<boolean>
+  duplicateResume(profileId: string, resumeId: string): Promise<Resume | null>
+  getPrimaryResume(profileId: string): Promise<Resume | null>
 
   // Matches
   saveMatch(match: Match): Promise<Match>
