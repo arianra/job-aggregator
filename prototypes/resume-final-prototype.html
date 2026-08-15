@@ -221,17 +221,17 @@
   .gl-head{display:flex;align-items:center;gap:8px;margin-bottom:0;cursor:pointer}
   .gl-head .gl-twrap{flex:1;min-width:0}
   .gl-head .gl-sub{font-size:11.5px;color:var(--muted);margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-  .gl-head .chev{color:var(--faint);font-size:10px;transition:transform .18s;flex:none}
+  .gl-head .chev{color:var(--faint);font-size:16px;font-weight:700;transition:transform .18s;flex:none;line-height:1}
   .glcard.collapsed .gl-head{margin-bottom:0}
   .glcard.collapsed .gl-body{display:none}
   .glcard:not(.collapsed) .gl-head{margin-bottom:8px}
   .glcard:not(.collapsed) .chev{transform:rotate(90deg)}
-  .skcat .chev{color:var(--faint);font-size:10px;transition:transform .18s;flex:none}
+  .skcat .chev{color:var(--faint);font-size:16px;font-weight:700;transition:transform .18s;flex:none;line-height:1}
   .skcat.collapsed .skhead{margin-bottom:0}
   .skcat.collapsed .skchips,.skcat.collapsed .skadd{display:none}
   .skcat:not(.collapsed) .skhead{margin-bottom:7px}
   .skcat:not(.collapsed) .chev{transform:rotate(90deg)}
-  .skhead .skcount{font-size:11.5px;color:var(--muted)}
+  .skhead .skcount-label{font-size:11.5px;color:var(--muted);margin-left:auto;padding-right:4px}
   .gl-head .gl-t{font-weight:650;font-size:13.5px;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   .gl-head .gl-del{margin-left:auto}
   .cardbody .cfields{display:grid;grid-template-columns:1fr 1fr;gap:0 12px}
@@ -740,7 +740,7 @@ function renderGroupList(sec,openIdx){
   const box=document.getElementById('gl_'+sec); if(!box) return;
   box.classList.add('gl-list');
   box.innerHTML=arr.map((it,idx)=>`
-    <div class="gl-item glcard ${idx===openIdx?'':'collapsed'}" draggable="true" data-idx="${idx}">
+    <div class="gl-item glcard ${(idx===openIdx||idx===0)?'':'collapsed'}" draggable="true" data-idx="${idx}">
       <div class="gl-head"><span class="drag" title="drag to reorder">⠿</span><div class="gl-twrap"><div class="gl-t">${esc(it[d.select]||('New '+d.select))}</div><div class="gl-sub">${esc(cardSubtitle(sec,it))}</div></div><button class="gl-del" data-idx="${idx}" title="delete">×</button><span class="chev">›</span></div>
       <div class="gl-body cardbody">${cardBody(sec,it,idx)}</div>
     </div>`).join('')+`<button class="btn small gl-add" id="glAdd_${sec}">+ ${esc(d.addLabel)}</button>`;
@@ -836,7 +836,7 @@ function renderSkills(){
     const div=document.createElement('div'); div.className='skcat';
     const chips=skills[cat].map(s=>`<span class="chip sk">${esc(s)}<button class="x" data-cat="${esc(cat)}" data-s="${esc(s)}" aria-label="remove">×</button></span>`).join('');
     div.draggable=true;
-    div.innerHTML=`<div class="skhead"><span class="drag">⠿</span><input class="sklabel" data-cat="${esc(cat)}" value="${esc(cat)}" aria-label="category"><span class="skcount">${skills[cat].length}</span><button class="gl-del cat-del" data-cat="${esc(cat)}" title="delete category">×</button><span class="chev">›</span></div>
+    div.innerHTML=`<div class="skhead"><span class="drag">⠿</span><input class="sklabel" data-cat="${esc(cat)}" value="${esc(cat)}" aria-label="category"><span class="skcount-label">${skills[cat].length} skills</span><button class="gl-del cat-del" data-cat="${esc(cat)}" title="delete category">×</button><span class="chev">›</span></div>
       <div class="skchips">${chips||'<span class="fk">no skills yet</span>'}</div>
       <div class="skadd"><input class="input skinput" data-cat="${esc(cat)}" placeholder="+ add to ${esc(cat)} — type to search" autocomplete="off"><div class="skdrop"></div></div>`;
     box.appendChild(div);
