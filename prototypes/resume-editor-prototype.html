@@ -358,6 +358,15 @@
         </div>
         <div class="hint">Upload a PDF or DOCX to seed this resume, or continue without data and build from scratch. Re-uploading replaces the source.</div>
       </div>
+      <div style="display:flex;align-items:center;justify-content:space-between;border-top:1px solid #eeeae1;padding-top:14px;margin-top:14px">
+        <div><label style="display:block;font-size:12.5px;font-weight:600;margin-bottom:2px">Primary resume</label>
+          <span style="font-size:11.5px;color:#6f6a61">The primary resume feeds your Profile and job matching.</span></div>
+          <button class="switch on" id="primaryToggle" onchange="setPrimaryMeta()" onclick="setPrimaryMeta()"></button>
+      </div>
+      <div style="display:flex;gap:8px;margin-top:16px">
+        <button class="btn" id="archiveBtn" onclick="archiveMeta()">Archive</button>
+        <button class="btn danger" id="deleteBtn" onclick="deleteMeta()">Delete</button>
+      </div>
       <div class="detail" id="metaRawWrap" style="display:none">
         <h4>Extracted raw text</h4>
         <p style="font-size:11.5px;color:var(--muted)">Kept as the original this resume was created on. Edit the structured sections, not this.</p>
@@ -413,7 +422,7 @@
 
 // ---------- per-resume model: source of truth (multi-resume supported) ----------
 const RESUMES={ cv2026:{
-  id:'cv2026', title:'Lead Frontend Engineer 2026', format:'compact',
+  id:'cv2026', title:'Lead Frontend Engineer 2026', format:'compact', primary:true, status:'live',
   contact:{name:'Arian Razi',email:'arian99@gmail.com',phone:'+1 (707) 771-6645',linkedin:'linkedin.com/in/arianvala',country:'United States',state:'California',city:'Vallejo'},
   summary:"Lead Frontend Engineer with 10+ years across e-commerce, fintech, and startups. Led the Walmart Search/Browse & Deals frontend and web-performance teams; shipped Core Web Vitals work that halved INP/LCP/CLS and lifted p75 response time 52%.",
   experience:[
@@ -572,7 +581,14 @@ function renderMeta(){
       rd.onload=()=>{ R().original_raw_text=String(rd.result||'').slice(0,20000); if(st)st.textContent=f.name+' · parsed'; if(wr)wr.style.display='block'; if(rt)rt.textContent=R().original_raw_text; toast('Uploaded — raw text captured'); };
       rd.readAsText(f); }; }
   if(R().original_raw_text){ if(st)st.textContent=(R().original_file_name||'source')+' · parsed'; if(wr)wr.style.display='block'; if(rt)rt.textContent=R().original_raw_text; }
+  const pt=document.getElementById('primaryToggle'), ab=document.getElementById('archiveBtn'), db=document.getElementById('deleteBtn');
+  if(pt){ pt.classList.toggle('on', !!R().primary); }
+  if(ab){ ab.textContent = R().status==='archived' ? 'Restore' : 'Archive'; if(R().status==='archived')ab.classList.add('on'); else ab.classList.remove('on'); }
 }
+function setPrimaryMeta(){ R().primary = !R().primary; renderMeta(); toast(R().primary?'Set as primary resume':'Unset primary'); }
+function archiveMeta(){ R().status = R().status==='archived'?'live':'archived'; renderMeta(); toast(R().status==='archived'?'Archived (hidden from the list, kept in DB)':'Restored as live'); }
+function deleteMeta(){ if(!confirm('Delete this resume permanently? This cannot be undone.')) return; destroyResume(); }
+function destroyResume(){ const id=R().id; delete RESUMES[id]; const keys=Object.keys(RESUMES); if(!keys.length){ currentResumeId=null; render(); return; } currentResumeId=RESUMES[keys[0]].id; refreshChooser(); applySettings(); renderDoc(); render(curSec); persist(); toast('Resume deleted'); }
 // ---------- skills token editor (writes to R().skills) ----------
 const SKILL_TAX={Development:['TypeScript','React','Node.js','GraphQL','Next.js','Redux','Node','SQL','HTML & CSS','PromQL','Vite','Webpack','Jest','Playwright'],Process:['Architecture','Unit Testing','Tooling/Automation','UI/UX','Agile','Scrum','Data Analytics','Monitoring','CI/CD','Accessibility','Code Review'],'AI & DX':['LLM Orchestration','Agents','RAG','Prompting','Observability','MCP','Evaluation']};
 function renderSkills(){

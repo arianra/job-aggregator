@@ -56,6 +56,7 @@
   .step-link.active{color:var(--primary);font-weight:600}
   .step-link .n{font-family:var(--mono);font-size:10px;width:13px;color:var(--faint);flex:none}
   .step-link.fn{color:var(--primary)}
+  .step-link.flowLink{background:var(--card2);margin-top:2px;border:1px solid var(--border2);border-radius:7px}
   .rt-actions{display:flex;flex-direction:column;gap:4px;margin:4px 0 8px;padding:0 4px}
   .act{display:flex;align-items:center;gap:8px;padding:7px 9px;border-radius:7px;font-size:12.5px;color:var(--fg);background:var(--card2);border:1px dashed var(--border2);width:100%;text-align:left}
   .act:hover{border-color:var(--primary);color:var(--primary)}
@@ -133,27 +134,6 @@
   .flowrow .node{padding:4px 9px;border:1px solid var(--border);border-radius:6px;background:var(--card2)}
   .flowrow .node.on{border-color:var(--primary);color:var(--primary);font-weight:600}
   .note{border:1px solid var(--warn);background:var(--warn-soft);border-radius:9px;padding:10px 12px;font-size:12.5px;color:var(--warn);margin-top:14px}
-  .frow{display:flex;align-items:center;gap:10px;justify-content:space-between;border-bottom:1px solid var(--border2);padding:12px 0}
-  .frow:last-child{border-bottom:0}
-  .frow .fl{font-size:13.5px;font-weight:600}
-  .frow .fd{font-size:12px;color:var(--muted);margin-top:1px}
-  .switch{position:relative;width:38px;height:22px;border-radius:99px;background:#d9d4ca;border:0;cursor:pointer;transition:.15s;flex:none}
-  .switch::after{content:"";position:absolute;top:2px;left:2px;width:18px;height:18px;border-radius:99px;background:#fff;transition:.15s;box-shadow:0 1px 2px rgba(0,0,0,.2)}
-  [data-theme="dark"] .switch{background:#3a3f47}
-  .switch.on{background:var(--primary)}
-  .switch.on::after{transform:translateX(16px)}
-  .btn.danger{background:#fff;border-color:var(--danger);color:var(--danger)}
-  [data-theme="dark"] .btn.danger{background:none}
-  .btn.danger:hover{background:var(--danger);color:#fff}
-  .btn.small{padding:4px 9px;font-size:12px}
-  .meta-src{font-size:12.5px;color:var(--muted);display:flex;align-items:center;gap:7px}
-  .pf-sep{display:flex;align-items:center;gap:8px;margin:14px 4px 6px;font-size:10px;text-transform:uppercase;letter-spacing:.09em;color:var(--faint);font-weight:650}
-  .pf-sep span{flex:1;height:1px;background:var(--border2)}
-  .pf-item{display:flex;align-items:center;gap:8px;width:100%;padding:7px 9px;border-radius:8px;border:1px dashed var(--border2);background:var(--card2);color:var(--fg);font-size:12.5px;text-align:left}
-  .pf-item:hover{border-color:var(--primary);color:var(--primary)}
-  .pf-item.active{border-color:var(--primary);background:var(--primary-soft);color:var(--primary);border-style:solid}
-  .pf-item .pfico{width:16px;height:16px;flex:none;display:grid;place-items:center;color:var(--primary)}
-  .pf-item .pfmeta{margin-left:auto;font-family:var(--mono);font-size:9.5px;color:var(--faint)}
 
   @media(max-width:760px){.sidebar{width:60px}.content{padding:16px}.rb .step{display:none}}
 </style>
@@ -245,10 +225,7 @@ function renderNav(){
     h += resumeTree(r);
     if(activeResume===r.id){
       h += `<div class="step-links">` + STEPS.map(s=>stepLink(r,s)).join('');
-      h += `</div><div class="pf-sep"><span></span>Profile functions<span></span></div>`;
-      h += `<button class="pf-item ${activeStep==='lint'?'active':''}" onclick="goLint('${r.id}')">
-        <span class="pfico"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 3v18M15 3v18M3 9h18M3 15h18"/></svg></span>
-        <span>Flow · ATS lint</span><span class="pfmeta">module</span></button>`;
+      h += `<button class="step-link flowLink ${activeStep==='lint'?'active':''}" onclick="goLint('${r.id}')"><span class="n">⎈</span><span>Flow · ATS lint</span></button></div>`;
     }
   });
   h += `</div>`;
@@ -394,35 +371,8 @@ function listHTML(){
       <div class="flowrow"><span class="node">create/upload → NEW</span><span class="st">→</span><span class="node">edit (local)</span><span class="st">→</span><span class="node on">Save = revision</span></div></div>
   </div>`;
 }
-function detailsHTML(r){
-  return `<div style="height:18px"></div>
-  <div class="crumb"><b>Resume</b> › ${r.title} › 01 · Details</div>
-  <div class="panel" style="margin-top:0;max-width:760px">
-    <h3>Details — creation phase</h3>
-    <p style="color:var(--muted)">Name, primary status, source, and lifecycle. These commit immediately to the DB (ADR-0008 flow steps 1–2); section edits are what Save writes.</p>
-    <div class="frow"><div><div class="fl">Resume name</div><div class="fd">Shown in your resume list and URL.</div></div>
-      <input class="input" style="width:250px;padding:8px 10px;border:1px solid var(--border);border-radius:8px;background:var(--card);color:var(--fg);font-family:inherit;font-size:13px" value="${r.title}" onchange="rename('${r.id}','${r.title}')" id="resumeTitleInput">
-    </div>
-    <div class="frow"><div><div class="fl">Primary resume</div><div class="fd">The primary resume feeds your Profile and job matching.</div></div>
-      <button class="switch ${r.primary?'on':''}" onclick="promote('${r.id}');render()" title="${r.primary?'Is primary — click to demote':'Make primary'}"></button>
-    </div>
-    <div class="frow"><div><div class="fl">Source file</div><div class="fd">Upload a PDF/DOCX to seed this resume. Raw text is captured as the original.</div></div>
-      <span class="meta-src">${r.original_file_name||'No source — created blank'} · <button class="btn small" onclick="toast('Open file picker (prototype)')">Upload</button></span>
-    </div>
-    <div class="frow" style="border-bottom:0"><div><div class="fl">Lifecycle</div><div class="fd">Archive hides this resume from My Resumes but keeps it in the DB. Delete removes it entirely.</div></div>
-      <div style="display:flex;gap:8px">
-        <button class="btn ${r.status==='archived'?'':'ghost'}" onclick="archive('${r.id}')">${r.status==='archived'?'Restore':'Archive'}</button>
-        <button class="btn danger" onclick="del('${r.id}')">Delete</button>
-      </div>
-    </div>
-  </div>`;
-}
-function rename(id,label){ const el=document.getElementById('resumeTitleInput'); if(el) RESUMES[id].title=el.value||label; showBar(); renderNav(); render(); }
-function archive(id){ RESUMES[id].status = RESUMES[id].status==='archived'?'live':'archived'; if(RESUMES[id].status==='archived')activeResume=null; render(); }
-function del(id){ if(!confirm('Delete "'+RESUMES[id].title+'" permanently? This cannot be undone.')) return; delete RESUMES[id]; activeResume=null; render(); }
 function stepAreaHTML(){
   const r = RESUMES[activeResume];
-  if(activeStep==='details') return detailsHTML(r);
   const step = activeStep==='lint' ? {label:'ATS lint report (Flow)'} : STEPS.find(s=>s.key===activeStep)||STEPS[0];
   return `<div style="height:18px"></div>
   <div class="crumb"><b>Resume</b> › ${r.title} › ${step.label}</div>
