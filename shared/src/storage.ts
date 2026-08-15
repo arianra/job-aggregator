@@ -17,7 +17,6 @@ import type {
   BoardCompany,
   BoardCompanyFilter,
   Resume,
-  ResumeMeta,
   ResumeVersion,
   ResumeDoc,
   ResumeCreateInput,

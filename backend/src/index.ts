@@ -6,6 +6,7 @@ import { errorHandler } from './middleware/errorHandler.js'
 import { createHealthRouter } from './routes/health.js'
 import { createJobsRouter } from './routes/jobs.js'
 import { createProfileRouter } from './routes/profile.js'
+import { createResumesRouter } from './routes/resumes.js'
 import { createApplicationsRouter } from './routes/applications.js'
 import { createDashboardRouter } from './routes/dashboard.js'
 import { createBoardsRouter } from './routes/boards.js'
@@ -104,6 +105,7 @@ const orchestrator = new Orchestrator(adapters, storage, rateLimiter)
 app.use('/health', createHealthRouter(adapters, rateLimiter, config.hasDatabase))
 app.use('/api/jobs', createJobsRouter(orchestrator, storage))
 app.use('/api/profile', createProfileRouter(storage))
+app.use('/api/profile/resumes', createResumesRouter(storage))
 app.use('/api/applications', createApplicationsRouter(storage))
 app.use('/api/dashboard', createDashboardRouter(storage))
 app.use('/api/boards', createBoardsRouter(storage))
