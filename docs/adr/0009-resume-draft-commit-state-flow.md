@@ -1,7 +1,6 @@
 # ADR-0009 — Resume Draft/Commit State Flow (save & restore integrity; export matches live)
 
-- **Status:** In review — codifies the target implementation for the save/restore + export-live
-  fidelity fixes. Accepted on completion of the state-flow work (bead `resume-draft-commit-flow`).
+- **Status:** Accepted — implemented + E2E-verified + regression-tested (bead `resume-draft-commit-flow`).
 - **Date:** 2026-08-16
 - **Owner:** job-aggregator
 - **Scope:** The frontend Resume Studio's in-memory editor state and its lifecycle vs. the backend's
@@ -108,6 +107,14 @@ Root causes were confirmed by reading the live code: `frontend/src/pages/ResumeS
 export), `backend/src/routes/resumes.ts` (GET export reads server `resume.data`; upload POST has no update path),
 `backend/src/services/docx-builder.ts` + `docx-fit.ts` (crude paragraph-count page estimate; hardcoded "Fits" in the
 Finish section). ADR-0008 §step-3 is the contract this restores.
+
+## Implementation note (2026-08-16)
+
+Implemented in `frontend/lib/resume-draft.ts` (pure draft/commit state machine) and consumed by
+`ResumeStudioPage` via a single `draft` state. A frontend vitest seam was added
+(`frontend/vitest.config.ts`, `npm run test -w frontend`) and the `hermes verify` recipe now runs the
+frontend suite. `resume-draft.test.ts` (9 tests, TDD RED→GREEN) locks in the anti-clobber contract
+(a `hydrateResume` call after the first load is a no-op, so a post-Save refetch can never wipe edits).
 
 ## Open items
 
