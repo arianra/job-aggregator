@@ -443,5 +443,22 @@ describe('Resumes API (E2)', () => {
       expect(res.status).toBe(200)
       expect(res.body.data.overall.score).toBeLessThanOrEqual(100)
     })
+
+    it('lint from the editor SCORES parseability from the structured doc (not 0%)', async () => {
+      // Bug 11: the lint route passed no meta, so every parseability rule was
+      // 'skipped' and the category read 0% even though a structured ResumeDoc IS
+      // a parseable artifact. The route must synthesize meta from the doc.
+      const profile = await seedProfile(storage)
+      const id = (await storage.createResume(profile.id, { title: 'Lint Parseability' })).id
+      const res = await request(app).post(`/api/profile/resumes/${id}/lint`).send(FULL_DOC())
+      expect(res.status).toBe(200)
+      const parse = res.body.data.byCategory.find(
+        (c: { category: string }) => c.category === 'parseability'
+      )
+      expect(parse).toBeDefined()
+      expect(parse.percent).toBeGreaterThan(0)
+      const p001 = res.body.data.rules.find((r: { code: string }) => r.code === 'ATS-P-001')
+      expect(p001?.status).not.toBe('skipped') // scanned-image check evaluated, not skipped
+    })
   })
 })

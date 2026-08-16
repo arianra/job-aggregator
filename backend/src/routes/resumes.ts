@@ -482,7 +482,11 @@ export function createResumesRouter(storage: Storage): Router {
       }
       // Flatten the structured doc to plain text for the lint engine.
       const text = resumeDocToText(data)
-      const report = lintResume({ text, skillLexicon: [] })
+      // Bug 11: a ResumeDoc is, by construction, a structured parseable artifact
+      // (authored as text-layer DOCX). Synthesize an honest meta so parseability
+      // is SCORED rather than "skipped" (which made it always 0% in the editor).
+      const meta = { format: 'docx' as const, isScanned: false, hasTextLayer: true }
+      const report = lintResume({ text, skillLexicon: [], meta })
       const advice = await atsAdvice(text, report)
       res.json({ success: true, data: { ...report, advice } })
     } catch (err) {
