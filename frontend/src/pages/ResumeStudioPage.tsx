@@ -227,18 +227,9 @@ export function ResumeStudioPage() {
     setTimeout(() => setAutoFitting(false), 300)
   }
 
-  if (isLoading) {
-    return (
-      <div className="flex h-64 items-center justify-center">
-        <Loader2 className="h-6 w-6 animate-spin" />
-      </div>
-    )
-  }
-
-  const stepMeta = STEPS.find((s) => s.key === activeSection) ?? STEPS[0]
-
   // Item 24: the resume header (name / primary / versions / save) lives in the
-  // shared top banner, left of the theme button.
+  // shared top banner, left of the theme button. MUST be declared before the
+  // early return so the hook order is stable across the loading transition.
   useEffect(() => {
     setTopBarHeader(
       <div className="flex min-w-0 items-center gap-3">
@@ -259,6 +250,16 @@ export function ResumeStudioPage() {
     )
     return () => setTopBarHeader(null)
   }, [title, dirty, resume?.primary, resume?.revision, saveResume.isPending])
+
+  if (isLoading) {
+    return (
+      <div className="flex h-64 items-center justify-center">
+        <Loader2 className="h-6 w-6 animate-spin" />
+      </div>
+    )
+  }
+
+  const stepMeta = STEPS.find((s) => s.key === activeSection) ?? STEPS[0]
 
   return (
     <div className="flex h-[calc(100vh)] flex-col">
