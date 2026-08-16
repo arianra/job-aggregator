@@ -393,6 +393,73 @@ export function createResumesRouter(storage: Storage): Router {
     }
   })
 
+  // POST /api/profile/resumes/:id/upload — re-parse an uploaded file INTO the
+  // existing resume (append a new version with the parsed content). Bug 2: an
+  // upload on the open resume updates IT instead of creating a fresh one. The
+  // title is preserved (rename stays independent of the uploaded filename); the
+  // original_raw_text seed is left untouched per ADR-0008 (it is the creation source).
+  router.post('/:id/upload', upload.single('resume'), async (req: Request, res: Response) => {
+    try {
+      const resume = await storage.getResume(req.params.id)
+      if (!resume) {
+        res.status(404).json({ error: 'Resume not found' })
+        return
+      }
+      if (!req.file) {
+        res.status(400).json({ error: 'No file uploaded' })
+        return
+      }
+      const filePath = req.file.path
+      const filename = req.file.originalname
+      const warnings: ApiWarning[] = []
+      let parsedProfile: Awaited<ReturnType<typeof parseResumeWithQwen>> | null = null
+
+      try {
+        const extracted = await extractText(filePath, filename)
+        const cleanedText = cleanResumeText(extracted.text)
+
+        if (config.qwenApiKey && config.qwenApiKey !== 'your-qwen-api-key-here') {
+          try {
+            parsedProfile = await parseResumeWithQwen(cleanedText, {
+              apiKey: config.qwenApiKey,
+              baseUrl: config.qwenApiEndpoint,
+            })
+          } catch (err) {
+            logger.warn('[resumes] Qwen parse failed on re-upload', { err })
+            warnings.push({
+              code: ERROR_CODES.AI_PARSE_FAILED,
+              message: err instanceof Error && err.message ? `AI parsing failed: ${err.message}` : 'AI parsing failed',
+            })
+          }
+        } else {
+          warnings.push({
+            code: ERROR_CODES.AI_NOT_CONFIGURED,
+            message: 'AI parsing is not configured — resume updated with raw text only',
+          })
+        }
+
+        const data = parsedProfile ? parseResultToResumeDoc(parsedProfile) : emptyResumeDoc()
+        const { revision } = await storage.saveResumeVersion(resume.id, data)
+        const updated = (await storage.getResume(resume.id))!
+        const meta = buildResumeMeta(updated, await storage.listResumeVersions(resume.id))
+        res.json({
+          success: true,
+          data: { ...meta, data },
+          aiParsed: !!parsedProfile,
+          revision,
+          ...(warnings.length > 0 && { warnings }),
+        })
+      } finally {
+        fsPromises.unlink(filePath).catch(() => {})
+      }
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err)
+      logger.error(`POST /api/profile/resumes/:id/upload failed`, { err: msg })
+      if (req.file) fsPromises.unlink(req.file.path).catch(() => {})
+      res.status(500).json({ error: msg })
+    }
+  })
+
   // ---------------------------------------------------------------------------
   // E3.5 / E3.6 — on-demand DOCX/PDF export + accurate preview (zero stored)
   // ---------------------------------------------------------------------------

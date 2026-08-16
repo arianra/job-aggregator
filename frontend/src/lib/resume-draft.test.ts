@@ -8,6 +8,7 @@ import {
   commitTitle,
   markSaved,
   applyRestore,
+  applyUpload,
 } from './resume-draft'
 
 // ADR-0009: the Studio's draft/commit lifecycle as a pure state machine.
@@ -103,5 +104,18 @@ describe('applyRestore', () => {
     expect(s.dirty).toBe(true)
     expect(s.committedRevision).toBe(2) // still the last committed rev until Save
     expect(s.doc !== old).toBe(true)
+  })
+})
+
+describe('applyUpload', () => {
+  it('replaces the draft with freshly-parsed upload content and marks it committed (title kept)', () => {
+    let s = hydrateResume(createDraftState(), { data: resume({ summary: 'old' }), title: 'B', revision: 2 })
+    s = editDoc(s, (d) => void (d.summary = 'unsaved edit')) // in-flight edits to be replaced
+    const parsed = resume({ summary: 'freshly parsed upload' })
+    s = applyUpload(s, parsed, 3)
+    expect((s.doc as unknown as { summary: string }).summary).toBe('freshly parsed upload')
+    expect(s.dirty).toBe(false) // server already committed a version with this content
+    expect(s.committedRevision).toBe(3)
+    expect(s.title).toBe('B') // the resume name is preserved across a re-upload
   })
 })

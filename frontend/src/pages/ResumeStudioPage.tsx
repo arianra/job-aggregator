@@ -3,10 +3,10 @@ import { useParams, useNavigate, useSearchParams } from 'react-router-dom'
 import {
   Save, History, Loader2, Upload, Sparkles, X, ChevronUp, ChevronDown, GripVertical, Plus, RotateCcw,
 } from 'lucide-react'
-import { useResume, useSaveResume, useUpdateMeta, useLint, useResumeVersions, useDuplicateResume, useArchiveResume, useDeleteResume, useCreateFromUpload } from '../hooks/useResumes'
+import { useResume, useSaveResume, useUpdateMeta, useLint, useResumeVersions, useDuplicateResume, useArchiveResume, useDeleteResume, useUploadIntoResume } from '../hooks/useResumes'
 import * as resumeApi from '../api/resumes'
 import { renderResumeHtml, previewStyle } from '../lib/resume-render'
-import { createDraftState, hydrateResume, editDoc, editTitle, commitTitle, markSaved, applyRestore } from '../lib/resume-draft'
+import { createDraftState, hydrateResume, editDoc, editTitle, commitTitle, markSaved, applyRestore, applyUpload } from '../lib/resume-draft'
 import { notify } from '../lib/notify'
 import { Button } from '../components/ui/button'
 import { Badge } from '../components/ui/badge'
@@ -86,7 +86,7 @@ export function ResumeStudioPage() {
   const duplicate = useDuplicateResume()
   const archive = useArchiveResume()
   const deleteResume = useDeleteResume(id)
-  const upload = useCreateFromUpload()
+  const upload = useUploadIntoResume(id)
   const [confirm, setConfirm] = useState<'delete' | 'archive' | 'duplicate' | null>(null)
   const [lifecycleBusy, setLifecycleBusy] = useState(false)
   const [uploading, setUploading] = useState(false)
@@ -203,8 +203,9 @@ export function ResumeStudioPage() {
     setUploading(true)
     try {
       const res = await upload.mutateAsync(file)
-      notify.success('Uploaded — parsed resume content')
-      void res
+      const parsedDoc = res.data?.data
+      setDraft((prev) => applyUpload(prev, parsedDoc ?? prev.doc, res.revision ?? prev.committedRevision + 1))
+      notify.success('Uploaded — this resume updated with the parsed content')
       navigate(`/resume/${id}/meta`)
     } finally {
       setUploading(false)

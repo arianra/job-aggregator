@@ -89,3 +89,10 @@ export function markSaved(state: DraftCommitState, revision: number): DraftCommi
 export function applyRestore(state: DraftCommitState, versionData: ResumeDoc): DraftCommitState {
   return { ...state, doc: clone(versionData), dirty: true }
 }
+
+/** Apply a freshly-parsed upload into an existing resume: replace the draft with
+ * the server-committed content (it already saved a new version) and sync the
+ * baseline. The name (title) is preserved. */
+export function applyUpload(state: DraftCommitState, parsedDoc: ResumeDoc, revision: number): DraftCommitState {
+  return { ...state, doc: clone(parsedDoc), committedRevision: revision, dirty: false }
+}

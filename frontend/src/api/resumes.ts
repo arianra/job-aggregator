@@ -39,6 +39,21 @@ export async function createFromUpload(file: File): Promise<{ data: ResumeWithDa
   return res.data
 }
 
+/** Re-parse an uploaded file INTO an existing resume (bug 2): appends a new
+ * version with the parsed content, never creates a new resume. */
+export async function uploadIntoResume(
+  id: string,
+  file: File
+): Promise<{ data: ResumeWithData; aiParsed: boolean; revision: number }> {
+  const form = new FormData()
+  form.append('resume', file)
+  const res = await api.post<{ data: ResumeWithData; aiParsed: boolean; revision: number }>(
+    `/profile/resumes/${id}/upload`,
+    form
+  )
+  return res.data
+}
+
 export async function updateResumeMeta(
   id: string,
   updates: { title?: string; format?: string; primary?: boolean }

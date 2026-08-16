@@ -326,6 +326,34 @@ describe('Resumes API (E2)', () => {
       expect(resume!.original_raw_text).toContain('John Doe')
     })
 
+    it('upload into an existing resume updates IT (new version) — no new resume created', async () => {
+      // Bug 2: the Details-page upload must re-parse INTO the open resume, not
+      // spin up a fresh one. Assert same id, list length unchanged, content
+      // replaced via a new version, and the original title preserved.
+      await seedProfile(storage)
+      const profile = (await storage.listProfiles())[0]
+      const created = await storage.createResume(profile.id, { title: 'In Progress' })
+      await storage.saveResumeVersion(created.id, emptyResumeDoc())
+      const { parseResumeWithQwen } = await import('../../services/qwen-parser.js')
+      vi.mocked(parseResumeWithQwen).mockResolvedValue({
+        name: 'Parsed',
+        skills: [{ name: 'React', category: 'Development' }],
+        experience: [{ company: 'Co', title: 'Eng', start_date: '2020-01', description: ['A bullet', 'B bullet'], skills_used: [] }],
+        education: [],
+      })
+      const uploaded = await fs.readFile(realPdfPath)
+      const res = await request(app)
+        .post(`/api/profile/resumes/${created.id}/upload`)
+        .attach('resume', uploaded, 'update.pdf')
+      expect(res.status).toBe(200)
+      const d = res.body.data
+      expect(d.id).toBe(created.id) // SAME resume, not a new one
+      expect(await storage.listResumes(profile.id)).toHaveLength(1) // nothing new created
+      expect(d.data.experience[0].bullets).toEqual(['A bullet', 'B bullet']) // content replaced
+      expect(d.revision).toBe(1) // appended on top of the seeded empty version (rev 0)
+      expect(d.title).toBe('In Progress') // title preserved, not taken from the filename
+    })
+
     it('create-from-upload: still works (text-only) when Qwen fails', async () => {
       await seedProfile(storage)
       const { parseResumeWithQwen } = await import('../../services/qwen-parser.js')

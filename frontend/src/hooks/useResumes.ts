@@ -54,6 +54,17 @@ export function useCreateFromUpload() {
   })
 }
 
+export function useUploadIntoResume(id: string) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (file: File) => api.uploadIntoResume(id, file),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: resumeKeys.detail(id) })
+      qc.invalidateQueries({ queryKey: resumeKeys.all })
+    },
+  })
+}
+
 export function useSaveResume(id: string) {
   const qc = useQueryClient()
   return useMutation({
