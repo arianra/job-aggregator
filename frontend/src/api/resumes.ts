@@ -64,6 +64,11 @@ export async function listResumeVersions(id: string): Promise<ResumeVersionSumma
   return unwrap(res)
 }
 
+export async function getResumeVersion(id: string, revision: number): Promise<ResumeDoc> {
+  const res = await api.get<{ data: ResumeDoc }>(`/profile/resumes/${id}/versions/${revision}`)
+  return unwrap(res)
+}
+
 export async function duplicateResume(id: string): Promise<ResumeMeta> {
   const res = await api.post<{ data: ResumeMeta }>(`/profile/resumes/${id}/duplicate`)
   return unwrap(res)

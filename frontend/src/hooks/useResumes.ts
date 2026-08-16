@@ -10,10 +10,10 @@ export const resumeKeys = {
 }
 
 /** Fetch the resume list (excludes archived by default). */
-export function useResumes() {
+export function useResumes(includeArchived = false) {
   return useQuery({
-    queryKey: resumeKeys.list(),
-    queryFn: () => api.listResumes(false),
+    queryKey: includeArchived ? [...resumeKeys.list(), 'archived'] : resumeKeys.list(),
+    queryFn: () => api.listResumes(includeArchived),
   })
 }
 

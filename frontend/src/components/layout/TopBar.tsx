@@ -7,13 +7,16 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { useTheme } from '@/components/theme-provider'
+import { useTopBarHeader } from '@/components/layout/topbar-header'
 
 export function TopBar() {
   const { theme, setTheme } = useTheme()
+  const header = useTopBarHeader()
 
   return (
-    <header className="sticky top-0 z-30 flex h-16 items-center gap-4 border-b bg-card/95 backdrop-blur supports-[backdrop-filter]:bg-card/60 px-6">
-      <div className="flex-1" />
+    <header className="sticky top-0 z-30 flex h-16 items-center gap-4 border-b bg-card/95 px-6 backdrop-blur supports-[backdrop-filter]:bg-card/60">
+      {/* Page-specific header content (e.g. Resume name/primary/Versions/Save) sits left of theme */}
+      <div className="flex min-w-0 flex-1 items-center gap-3">{header}</div>
 
       <DropdownMenu>
         <DropdownMenuTrigger>

@@ -15,8 +15,15 @@ function esc(s: string): string {
  */
 export function renderResumeHtml(doc: ResumeDoc): string {
   const c = doc.contact
+  const vis = c.visibility ?? { email: true, phone: true, linkedin: true }
   const place = [c.city, c.state, c.country].filter(Boolean).join(', ')
-  const how = [c.email, c.phone, c.linkedin].filter(Boolean).join('  ·  ')
+  const how = [
+    vis.email !== false && c.email ? c.email : '',
+    vis.phone !== false && c.phone ? c.phone : '',
+    vis.linkedin !== false && c.linkedin ? c.linkedin : '',
+  ]
+    .filter(Boolean)
+    .join('  ·  ')
   const parts: string[] = []
 
   parts.push(`<div class="dn">${esc(c.name || '')}</div>`)
@@ -32,9 +39,9 @@ export function renderResumeHtml(doc: ResumeDoc): string {
       parts.push(`<h5>${esc(e.role)}</h5>`)
       const meta = [e.company, e.dates, e.location].filter(Boolean).join('  ·  ')
       if (meta) parts.push(`<div class="m">${esc(meta)}</div>`)
-      parts.push('<ul>')
-      for (const b of e.bullets || []) parts.push(`<li>${esc(b)}</li>`)
-      parts.push('</ul>')
+      for (const b of e.bullets || []) {
+        if (b) parts.push(`<div class="bl"><span class="bmark">•</span><span>${esc(b)}</span></div>`)
+      }
     }
   }
 

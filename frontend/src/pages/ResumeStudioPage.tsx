@@ -1,7 +1,7 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom'
 import {
-  Save, History, Loader2, Upload, Sparkles, X, ChevronUp, ChevronDown, GripVertical, Plus,
+  Save, History, Loader2, Upload, Sparkles, X, ChevronUp, ChevronDown, GripVertical, Plus, RotateCcw,
 } from 'lucide-react'
 import { useResume, useSaveResume, useUpdateMeta, useLint, useResumeVersions, useDuplicateResume, useArchiveResume, useDeleteResume, useCreateFromUpload } from '../hooks/useResumes'
 import * as resumeApi from '../api/resumes'
@@ -15,7 +15,9 @@ import { Label } from '../components/ui/label'
 import { Textarea } from '../components/ui/textarea'
 import { Switch } from '../components/ui/switch'
 import { ConfirmDialog } from '../components/ConfirmDialog'
-import type { ResumeDoc, AtsReport } from '../types'
+import { timeAgo, fmtDateTime } from '../lib/dates'
+import { setTopBarHeader } from '../components/layout/topbar-header'
+import type { ResumeDoc, AtsReport, AtsCategory } from '../types'
 
 // Section keys match the prototype's STEPS (meta, contact, …finish).
 export type SectionKey = 'meta' | 'contact' | 'summary' | 'experience' | 'education' | 'skills' | 'certs' | 'finish'
@@ -32,6 +34,17 @@ export const STEPS: { key: SectionKey; number: string; label: string; sub: strin
 ]
 
 const DEFAULT_STEP = 'meta'
+
+// Category blurb used in the ATS report (item 3) — mirrors ats-linting-engine.
+export const CATEGORY_DESCS: Record<AtsCategory, string> = {
+  parseability: 'Will ATS software extract your text cleanly?',
+  contact: 'At least email, phone, and location present and machine-readable.',
+  structure: 'Standard section headings, order, and clear separation of sections.',
+  timeline: 'Every role has clean start/end dates in reverse-chronological order.',
+  keywords: 'Keywords and hard skills explicit and matched to the role.',
+  content: 'Quantified achievements, strong action verbs, substance per bullet.',
+  grammar: 'Spelling, punctuation, and consistent professional style.',
+}
 
 export function stepFromRoute(step?: string): SectionKey {
   const known = STEPS.some((s) => s.key === step)
@@ -105,12 +118,39 @@ export function ResumeStudioPage() {
     const { revision } = await saveResume.mutateAsync(doc)
     setDirty(false)
     notify.success(`Saved — version ${revision}`)
+    // Re-run ATS on the saved state (item 20) — report refreshes inline + drawer.
+    void doLint(false)
   }
 
-  const handleLint = async () => {
+  /** Run the deterministic lint. `open` controls the drawer; reports always update. */
+  const doLint = async (open = false) => {
     const r = await lint.mutateAsync(doc)
     setReport(r)
-    setLintOpen(true)
+    if (open) setLintOpen(true)
+  }
+
+  const handleLint = () => void doLint(true)
+
+  // Auto-run the report on first open (items 14/20) once the resume loads.
+  const loadedRef = useRef(false)
+  useEffect(() => {
+    if (resume && !loadedRef.current) {
+      loadedRef.current = true
+      // brief tick so the editor hydrates doc first
+      const t = setTimeout(() => void doLint(false), 400)
+      return () => clearTimeout(t)
+    }
+    // `resume` referenced intentionally; see auto-lint on load.
+    // eslint-disable-next-line
+  }, [resume?.id, resume?.data])
+
+  const handleRestore = async (revision: number) => {
+    const versionData = await resumeApi.getResumeVersion(id, revision)
+    setDoc(cloneDoc(versionData))
+    setDirty(true)
+    setVersionsOpen(false)
+    notify.success(`Loaded v${revision} — press Save to commit (new version)`)
+    void doLint(false)
   }
 
   const handleAccurateRender = async () => {
@@ -189,33 +229,33 @@ export function ResumeStudioPage() {
 
   const stepMeta = STEPS.find((s) => s.key === activeSection) ?? STEPS[0]
 
-  return (
-    <div className="flex h-[calc(100vh-52px)] flex-col">
-      {/* topbar */}
-      <div className="flex h-[52px] shrink-0 items-center gap-3 border-b bg-card px-4">
-        <div className="min-w-0 flex items-center gap-2">
-          <span className="max-w-[240px] truncate font-semibold">{title}</span>
-          {resume?.primary && (
-            <Badge className="font-mono text-[10px]">PRIMARY</Badge>
-          )}
-        </div>
-        <div className="ml-auto flex items-center gap-3">
-          <span className={`flex items-center gap-1.5 text-xs ${dirty ? 'text-amber-600' : 'text-muted-foreground'}`}>
-            <span className={`h-[7px] w-[7px] rounded-full ${dirty ? 'bg-amber-500' : 'bg-emerald-600'}`} />
-            {dirty ? 'Unsaved changes' : `Saved · v${Math.max(0, resume?.revision ?? 0)}`}
-          </span>
-          <Button variant="outline" size="sm" onClick={() => setVersionsOpen(true)}>
-            <History className="mr-2 h-4 w-4" /> Versions ({resume?.revision ?? 0})
-          </Button>
-          <Button size="sm" onClick={handleSave} disabled={!dirty || saveResume.isPending}>
-            {saveResume.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
-            Save
-          </Button>
-        </div>
+  // Item 24: the resume header (name / primary / versions / save) lives in the
+  // shared top banner, left of the theme button.
+  useEffect(() => {
+    setTopBarHeader(
+      <div className="flex min-w-0 items-center gap-3">
+        <span className="max-w-[200px] truncate text-sm font-semibold">{title}</span>
+        {resume?.primary && <Badge className="font-mono text-[10px]">PRIMARY</Badge>}
+        <span className={`ml-2 flex items-center gap-1.5 text-xs ${dirty ? 'text-amber-600' : 'text-muted-foreground'}`}>
+          <span className={`h-[7px] w-[7px] rounded-full ${dirty ? 'bg-amber-500' : 'bg-emerald-600'}`} />
+          {dirty ? 'Unsaved changes' : `Saved · v${Math.max(0, resume?.revision ?? 0)}`}
+        </span>
+        <Button variant="outline" size="sm" onClick={() => setVersionsOpen(true)}>
+          <History className="mr-2 h-4 w-4" /> Versions ({resume?.revision ?? 0})
+        </Button>
+        <Button size="sm" onClick={handleSave} disabled={!dirty || saveResume.isPending}>
+          {saveResume.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
+          Save
+        </Button>
       </div>
+    )
+    return () => setTopBarHeader(null)
+  }, [title, dirty, resume?.primary, resume?.revision, saveResume.isPending])
 
-      {/* 2-column grid: form | score+fit+render */}
-      <div className="grid min-h-0 flex-1 grid-cols-2 gap-3 p-3">
+  return (
+    <div className="flex h-[calc(100vh)] flex-col">
+        {/* 2-column grid: form | score+fit+render */}
+        <div className="grid min-h-0 flex-1 grid-cols-2 gap-3 p-3">
         {/* CENTER: active section form */}
         <section className="panel flex min-h-0 flex-col overflow-auto rounded-lg border bg-card shadow-sm">
           <div className="flex items-baseline gap-2 border-b px-4 py-3">
@@ -313,7 +353,7 @@ export function ResumeStudioPage() {
       )}
 
       {/* Versions drawer */}
-      <VersionsDrawer open={versionsOpen} onClose={() => setVersionsOpen(false)} versions={versions.data} loading={versions.isLoading} />
+      <VersionsDrawer open={versionsOpen} onClose={() => setVersionsOpen(false)} versions={versions.data} loading={versions.isLoading} onRestore={(rev) => void handleRestore(rev)} />
 
       <ConfirmDialog
         open={confirm === 'delete'}
@@ -619,18 +659,18 @@ function GroupSection({ doc, set, kind }: { doc: ResumeDoc; set: (p: (d: ResumeD
         const open = openIdx === idx
         return (
           <div key={idx} className="rounded-lg border bg-card">
-            <div className="gl-head flex cursor-pointer items-center gap-2 p-3" onClick={() => setOpenIdx(open ? null : idx)}>
-              <GripVertical className="h-4 w-4 text-muted-foreground/50" />
+            <div className="gl-head flex cursor-pointer items-center gap-3 p-3" onClick={() => setOpenIdx(open ? null : idx)}>
+              <GripVertical className="h-5 w-5 flex-none text-muted-foreground/50" />
               <div className="min-w-0 flex-1">
                 <div className="truncate text-[13.5px] font-semibold">{label || `New ${kind}`}</div>
                 <div className="truncate text-[11.5px] text-muted-foreground">{String(spec.subtitle(it as Record<string, unknown>))}</div>
               </div>
               <button
                 onClick={(e) => { e.stopPropagation(); setPendingDel(idx) }}
-                className="text-muted-foreground hover:text-red-600"
+                className="flex h-8 w-8 flex-none items-center justify-center rounded-md text-lg text-muted-foreground hover:bg-muted hover:text-red-600"
                 aria-label="delete"
               >×</button>
-              <span className={`text-muted-foreground transition-transform ${open ? 'rotate-90' : ''}`}>›</span>
+              <span className={`flex-none text-2xl text-muted-foreground/70 leading-none transition-transform ${open ? 'rotate-90' : ''}`}>›</span>
             </div>
             {open && (
               <div className="space-y-3 border-t p-3">
@@ -754,14 +794,14 @@ function SkillsSection({ doc, set }: { doc: ResumeDoc; set: (p: (d: ResumeDoc) =
         const open = openCat === cat || (openCat === null && idx === selIdx)
         return (
           <div key={cat} className={`rounded-lg border bg-card ${open ? '' : ''}`}>
-            <div className="flex items-center gap-2 p-2.5">
-              <GripVertical className="h-4 w-4 text-muted-foreground/50" />
+            <div className="flex items-center gap-2.5 p-2.5">
+              <GripVertical className="h-5 w-5 flex-none text-muted-foreground/50" />
               <span className="flex-1 text-[13.5px] font-semibold">{cat}</span>
               <span className="text-[11.5px] text-muted-foreground">{skills.length} skills</span>
               <Button variant="ghost" size="icon-xs" onClick={() => moveCat(idx, -1)} disabled={idx === 0}><ChevronUp className="h-3.5 w-3.5" /></Button>
               <Button variant="ghost" size="icon-xs" onClick={() => moveCat(idx, 1)} disabled={idx === cats.length - 1}><ChevronDown className="h-3.5 w-3.5" /></Button>
-              <button onClick={() => set((d) => { const n: Record<string, string[]> = {}; for (const [k, v] of Object.entries(d.skills)) if (k !== cat) n[k] = v; d.skills = n })} className="text-muted-foreground hover:text-red-600" aria-label="delete category">×</button>
-              <span className={`text-muted-foreground transition-transform ${open ? 'rotate-90' : ''}`} onClick={() => setOpenCat(open ? null : cat)}>›</span>
+              <button onClick={() => set((d) => { const n: Record<string, string[]> = {}; for (const [k, v] of Object.entries(d.skills)) if (k !== cat) n[k] = v; d.skills = n })} className="flex h-8 w-8 flex-none items-center justify-center rounded-md text-lg text-muted-foreground hover:bg-muted hover:text-red-600" aria-label="delete category">×</button>
+              <span className={`flex-none cursor-pointer text-2xl text-muted-foreground/70 leading-none transition-transform ${open ? 'rotate-90' : ''}`} onClick={() => setOpenCat(open ? null : cat)}>›</span>
             </div>
             <div className="flex flex-wrap gap-1.5 px-2.5 pb-2.5">
               {skills.map((s, i) => (
@@ -870,11 +910,12 @@ function LintDrawer({ open, onClose, report }: { open: boolean; onClose: () => v
           <Button variant="outline" size="sm" onClick={onClose}><X className="mr-2 h-4 w-4" /> Close</Button>
         </div>
         <div className="flex-1 overflow-auto px-4 py-3">
-          <p className="text-xs text-muted-foreground">Deterministic, every point attributed to a rule. No LLM moves the score. <b className="text-foreground">{report.overall.score} / 100 — {gradeOf(report.overall.score)}</b>.</p>
+          <p className="text-xs text-muted-foreground">ATS summary — deterministic, every point attributed to a rule. No LLM moves the score. <b className="text-foreground">{report.overall.score} / 100 — {gradeOf(report.overall.score)}</b>.</p>
           {report.byCategory.map((c) => (
             <div key={c.category} className="mb-4">
               <div className="flex justify-between text-xs text-muted-foreground"><span className="capitalize">{c.category.replace('_', ' & ')}</span><span>{c.percent}%</span></div>
-              <div className="mb-1 h-1.5 overflow-hidden rounded-full bg-muted"><div className="h-full rounded-full bg-emerald-600" style={{ width: `${c.percent}%` }} /></div>
+              <div className="mb-0.5 text-[11px] text-muted-foreground">{CATEGORY_DESCS[c.category]}</div>
+              <div className="h-1.5 overflow-hidden rounded-full bg-muted"><div className="h-full rounded-full bg-emerald-600" style={{ width: `${c.percent}%` }} /></div>
             </div>
           ))}
           <div>
@@ -895,8 +936,16 @@ function LintDrawer({ open, onClose, report }: { open: boolean; onClose: () => v
 }
 
 // --- Versions drawer ---
-function VersionsDrawer({ open, onClose, versions, loading }: { open: boolean; onClose: () => void; versions: { id: string; revision: number; created_at: string }[] | undefined; loading: boolean }) {
+function VersionsDrawer({ open, onClose, versions, loading, onRestore }: {
+  open: boolean
+  onClose: () => void
+  versions: { id: string; revision: number; created_at: string }[] | undefined
+  loading: boolean
+  onRestore: (revision: number) => void
+}) {
+  const [confirmRev, setConfirmRev] = useState<number | null>(null)
   if (!open) return null
+  const sorted = [...(versions ?? [])].sort((a, b) => b.revision - a.revision) // newest first (21)
   return (
     <>
       <div className="fixed inset-0 z-40 bg-black/25" onClick={onClose} />
@@ -908,13 +957,27 @@ function VersionsDrawer({ open, onClose, versions, loading }: { open: boolean; o
         <div className="flex-1 overflow-auto px-4 py-3">
           {loading ? <div className="text-sm text-muted-foreground">Loading…</div>
             : !versions?.length ? <div className="text-sm text-muted-foreground">No saved versions yet. Edit this resume, then press Save.</div>
-            : versions.map((v) => (
-              <div key={v.id} className="mb-2 flex items-center justify-between rounded-lg border bg-muted/30 px-3 py-2.5">
-                <div><b className="text-[13px]">v{v.revision}</b><div className="text-[11.5px] text-muted-foreground">{new Date(v.created_at).toLocaleString()}</div></div>
+            : sorted.map((v) => (
+              <div key={v.id} className="mb-2 flex items-center justify-between gap-2 rounded-lg border bg-muted/30 px-3 py-2.5">
+                <div>
+                  <b className="text-[13px]">v{v.revision}</b>
+                  <div className="text-[11.5px] text-muted-foreground">{fmtDateTime(v.created_at)} · {timeAgo(v.created_at)}</div>
+                </div>
+                <Button variant="outline" size="sm" onClick={() => setConfirmRev(v.revision)}>
+                  <RotateCcw className="mr-1.5 h-3 w-3" /> Restore
+                </Button>
               </div>
             ))}
         </div>
       </aside>
+      <ConfirmDialog
+        open={confirmRev !== null}
+        onOpenChange={(o) => !o && setConfirmRev(null)}
+        title={`Restore v${confirmRev}?`}
+        description="This loads that saved version into the editor. Press Save to commit it as a new version — history is never rewritten."
+        confirmLabel="Restore"
+        onConfirm={() => { if (confirmRev !== null) onRestore(confirmRev); setConfirmRev(null) }}
+      />
     </>
   )
 }
