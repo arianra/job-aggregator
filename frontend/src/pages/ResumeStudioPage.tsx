@@ -286,6 +286,8 @@ export function ResumeStudioPage() {
               lintLoading={lint.isPending}
               report={report}
               primary={!!resume?.primary}
+              revision={Math.max(0, committedRevision)}
+              updatedAt={resume?.updated_at ?? null}
               onTogglePrimary={(p) => void updateMeta.mutateAsync({ primary: p })}
               onAskLifecycle={(k) => setConfirm(k)}
               onUpload={(f) => void handleUpload(f)}
@@ -450,6 +452,8 @@ function SectionForm(props: {
   lintLoading: boolean
   report: AtsReport | null
   primary: boolean
+  revision: number
+  updatedAt?: string | null
   onTogglePrimary: (p: boolean) => void
   onAskLifecycle: (k: LifecycleKind) => void
   onUpload: (f: File) => void
@@ -485,6 +489,8 @@ function DetailsSection(props: {
   title: string
   setTitle: (t: string) => void
   primary: boolean
+  revision: number
+  updatedAt?: string | null
   onTogglePrimary: (p: boolean) => void
   onAskLifecycle: (k: LifecycleKind) => void
   onUpload: (f: File) => void
@@ -497,9 +503,14 @@ function DetailsSection(props: {
         <Input value={props.title} onChange={(e) => props.setTitle(e.target.value)} placeholder="e.g. Lead Frontend Engineer 2026" className="mt-1" />
         <div className="mt-1 text-xs text-muted-foreground">This is how the resume appears in your list and exports.</div>
       </div>
-      <div className="flex items-center justify-between rounded-lg border p-3">
+      <div className={`flex items-center justify-between rounded-lg border p-3 ${props.primary ? 'border-amber-400 bg-amber-50' : ''}`}>
         <div>
-          <div className="font-medium">Primary resume</div>
+          <div className="flex items-center gap-2">
+            <span className="font-medium">Primary resume</span>
+            {props.primary && (
+              <span className="rounded-full bg-amber-500 px-2 py-0.5 font-mono text-[10px] font-bold uppercase tracking-wide text-white">Primary</span>
+            )}
+          </div>
           <div className="text-xs text-muted-foreground">Feeds your Profile and job matching. One primary at a time.</div>
         </div>
         <Switch checked={props.primary} onCheckedChange={props.onTogglePrimary} />
@@ -507,8 +518,9 @@ function DetailsSection(props: {
 
       <div className="pt-2 text-[11px] font-bold uppercase tracking-wide text-muted-foreground">Metadata</div>
       <div className="mstrip flex flex-wrap gap-6 border-y px-1 py-3">
-        <Cell k="Status" v={props.primary ? 'Live · Primary' : 'Live'} />
-        <Cell k="Version" v="Saves append here" />
+        <Cell k="Status" v="Live" />
+        <Cell k="Version" v={props.revision >= 0 ? `v${props.revision}` : '—'} />
+        <Cell k="Last updated" v={fmtDateTime(props.updatedAt)} />
         <Cell k="Format" v="compact" />
       </div>
 
