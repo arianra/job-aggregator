@@ -72,7 +72,7 @@ function App() {
               <Route path="/jobs/:id" element={<JobDetails />} />
               <Route path="/profile" element={<ProfilePage />} />
               <Route path="/resume" element={<ResumeOverviewPage />} />
-              <Route path="/resume/:id" element={<ResumeStudioPage />} />
+              <Route path="/resume/:id/:step?" element={<ResumeStudioPage />} />
               <Route path="/applications" element={<ApplicationsPage />} />
               <Route path="/boards" element={<BoardsPage />} />
               <Route path="/settings" element={<Navigate to="/profile" replace />} />
