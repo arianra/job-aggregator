@@ -76,6 +76,11 @@ export function ResumeStudioPage() {
   const [activeSection, setActiveSection] = useState<SectionKey>(stepFromRoute(step))
   const [dirty, setDirty] = useState(false)
   const [title, setTitle] = useState('Untitled resume')
+  // ADR-0009: committed baseline + hydration-once guard. Refetches of `resume`
+  // update committed metadata (revision/title) but NEVER clobber the working draft.
+  const hydratedRef = useRef(false)
+  const [committedRevision, setCommittedRevision] = useState(-1)
+  const [committedTitle, setCommittedTitle] = useState('Untitled resume')
   const [report, setReport] = useState<AtsReport | null>(null)
   const [lintOpen, setLintOpen] = useState(false)
   const [previewMode, setPreviewMode] = useState<'live' | 'docx'>('live')
@@ -104,11 +109,16 @@ export function ResumeStudioPage() {
     if (wantsLint) void handleLint()
   }, [wantsLint])
 
-  // Hydrate the local editing doc when the resume loads.
+  // ADR-0009: hydrate the working draft EXACTLY ONCE on load, from the latest
+  // ResumeVersion.data (or an empty doc for a NEW resume). Subsequent `resume`
+  // refetches update committed metadata only — they must never overwrite draft edits.
   useEffect(() => {
-    if (resume) {
+    if (resume && !hydratedRef.current) {
+      hydratedRef.current = true
       setDoc(cloneDoc(resume.data ?? emptyResumeDoc()))
       setTitle(resume.title)
+      setCommittedTitle(resume.title)
+      setCommittedRevision(resume.revision ?? -1)
       setDirty(false)
     }
   }, [resume])
@@ -123,10 +133,18 @@ export function ResumeStudioPage() {
   }
 
   const handleSave = async () => {
+    // ADR-0009: persist the current name (title) if it changed from the committed
+    // baseline, then commit the draft as a new immutable version. The draft is NOT
+    // re-hydrated afterward — it already IS the committed content.
+    if (title.trim() && title.trim() !== committedTitle) {
+      await updateMeta.mutateAsync({ title: title.trim() })
+      setCommittedTitle(title.trim())
+    }
     const { revision } = await saveResume.mutateAsync(doc)
+    setCommittedRevision(revision)
     setDirty(false)
     notify.success(`Saved — version ${revision}`)
-    // Re-run ATS on the saved state (item 20) — report refreshes inline + drawer.
+    // Re-run ATS on the saved state — report refreshes inline + drawer.
     void doLint(false)
   }
 
@@ -237,10 +255,10 @@ export function ResumeStudioPage() {
         {resume?.primary && <Badge className="font-mono text-[10px]">PRIMARY</Badge>}
         <span className={`ml-2 flex items-center gap-1.5 text-xs ${dirty ? 'text-amber-600' : 'text-muted-foreground'}`}>
           <span className={`h-[7px] w-[7px] rounded-full ${dirty ? 'bg-amber-500' : 'bg-emerald-600'}`} />
-          {dirty ? 'Unsaved changes' : `Saved · v${Math.max(0, resume?.revision ?? 0)}`}
+          {dirty ? 'Unsaved changes' : `Saved · v${Math.max(0, committedRevision)}`}
         </span>
         <Button variant="outline" size="sm" onClick={() => setVersionsOpen(true)}>
-          <History className="mr-2 h-4 w-4" /> Versions ({resume?.revision ?? 0})
+          <History className="mr-2 h-4 w-4" /> Versions ({Math.max(0, committedRevision)})
         </Button>
         <Button size="sm" onClick={handleSave} disabled={!dirty || saveResume.isPending}>
           {saveResume.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
@@ -249,7 +267,7 @@ export function ResumeStudioPage() {
       </div>
     )
     return () => setTopBarHeader(null)
-  }, [title, dirty, resume?.primary, resume?.revision, saveResume.isPending])
+  }, [title, dirty, resume?.primary, committedRevision, saveResume.isPending])
 
   if (isLoading) {
     return (
