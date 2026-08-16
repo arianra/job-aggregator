@@ -28,7 +28,7 @@ const app = express()
 // Middleware
 // ---------------------------------------------------------------------------
 
-app.use(cors({ origin: config.frontendUrl }))
+app.use(cors({ origin: config.frontendUrl, exposedHeaders: ['Content-Disposition'] }))
 app.use(express.json())
 
 app.use((req, _res, next) => {

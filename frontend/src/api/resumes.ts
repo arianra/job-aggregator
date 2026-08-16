@@ -1,4 +1,5 @@
 import api from './client'
+import { filenameFromContentDisposition } from './download-filename'
 import type {
   ResumeMeta,
   ResumeWithData,
@@ -124,10 +125,16 @@ export async function fetchPreviewBlob(id: string, data: ResumeDoc): Promise<Blo
 export async function downloadExport(id: string, kind: 'docx' | 'pdf'): Promise<boolean> {
   const res = await api.get(`/profile/resumes/${id}/export-${kind}`, { responseType: 'blob' })
   const blob = res.data as Blob
+  // Honour the resume name the server set in Content-Disposition (bug 1) —
+  // fall back to `resume.<ext>` if the header isn't reachable (e.g. no CORS exposure).
+  const filename = filenameFromContentDisposition(
+    (res.headers['content-disposition'] as string | undefined) ?? null,
+    `resume.${kind}`
+  )
   const objectUrl = URL.createObjectURL(blob)
   const a = document.createElement('a')
   a.href = objectUrl
-  a.download = `resume.${kind}`
+  a.download = filename
   document.body.appendChild(a)
   a.click()
   a.remove()
