@@ -60,6 +60,22 @@ Known caveats:
   **relative** `stored_path` in the DB; the serve route resolves
   cross-platform paths via basename fallback.
 
+## Running the App in Hermes (preview pane)
+
+The full-stack launch recipe — including the pitfalls that break ad-hoc runs — lives in
+`.hermes/skills/run-in-hermes.md`. Read it before launching dev servers from the Hermes
+desktop agent. The short version:
+
+- Launch each server as its own tracked **Hermes background job**, invoking WSL with
+  `bash -lc` (login shell), explicit NVM sourcing, `exec`, and absolute
+  `/home/aria/...` paths. `bash -c` → npm dies with `Maximum call stack size exceeded`.
+- **Docker Desktop must be started manually from Windows first**, then wait for the
+  `job-aggregator-db` Postgres container to report `healthy` **before** starting the
+  backend — otherwise Prisma exits with `P1001 Can't reach database server`.
+- Then start backend (`exec npx tsx src/index.ts` in `backend/`), then frontend
+  (`exec npx vite --port 5173 --host` in `frontend/`), verify both `/api/health`
+  endpoints from the Windows host, and `open_preview http://localhost:5173`.
+
 ## Quick Reference
 
 ```bash
@@ -183,7 +199,7 @@ bd prime                # Refresh Beads context
 <!-- gitnexus:start -->
 # GitNexus — Code Intelligence
 
-This project is indexed by GitNexus as **job-aggregator** (2385 symbols, 5009 relationships, 201 execution flows). Use the GitNexus MCP tools to understand code, assess impact, and navigate safely.
+This project is indexed by GitNexus as **job-aggregator** (2620 symbols, 5767 relationships, 221 execution flows). Use the GitNexus MCP tools to understand code, assess impact, and navigate safely.
 
 > Index stale? Run `node .gitnexus/run.cjs analyze` from the project root — it auto-selects an available runner. No `.gitnexus/run.cjs` yet? `npx gitnexus analyze` (npm 11 crash → `npm i -g gitnexus`; #1939).
 
