@@ -9,6 +9,8 @@ import type {
   ResumeDoc,
   ResumeMeta,
   ResumeVersionSummary,
+  ScoringSource,
+  Profile,
 } from '@job-aggregator/shared'
 import type { ParsedProfile } from './qwen-parser.js'
 
@@ -129,4 +131,71 @@ function splitBullets(description?: string): string[] {
     .split(/\r?\n/)
     .map((s) => s.replace(/^[-•*]\s*/, '').trim())
     .filter(Boolean)
+}
+
+// ---------------------------------------------------------------------------
+// Scoring source builder (E5 — ADR-0008 N1/N3)
+// ---------------------------------------------------------------------------
+
+/**
+ * Build a slim ScoringSource from the PRIMARY resume's latest saved data plus
+ * person-level location/preferences. Returns null when there is no primary
+ * resume or no saved version yet (scoring cannot run → unscored jobs).
+ *
+ * PURE: (primaryResumeData, profile) -> ScoringSource | null. No I/O.
+ */
+export function buildScoringSource(
+  primaryData: ResumeDoc,
+  profile: Profile
+): ScoringSource {
+  const skills: ScoringSource['skills'] = flattenSkills(primaryData.skills)
+  const experience: ScoringSource['experience'] = flattenExperience(primaryData.experience)
+  return {
+    skills,
+    experience,
+    location: profile.location,
+    preferences: profile.preferences,
+  }
+}
+
+/** Map the ResumeDoc's ordered skills categories → Skill[] (names only). */
+function flattenSkills(skills?: Record<string, string[]>): ScoringSource['skills'] {
+  const out: ScoringSource['skills'] = []
+  for (const [category, names] of Object.entries(skills ?? {})) {
+    for (const name of names || []) {
+      out.push({ name, proficiency: 'intermediate', category })
+    }
+  }
+  return out
+}
+
+/** Map ResumeDoc experience entries → scorer Experience[] (dates parsed). */
+function flattenExperience(exp?: Array<{ role: string; company: string; dates?: string; location?: string; bullets?: string[] }>): ScoringSource['experience'] {
+  return (exp ?? []).map((e) => ({
+    company: e.company ?? '',
+    title: e.role ?? '',
+    start_date: parseStartDate(e.dates),
+    end_date: parseEndDate(e.dates),
+    description: (e.bullets ?? []).join('\n'),
+    skills_used: [],
+  }))
+}
+
+/** "2022 — Present" | "2021-2022" | "2020 - 2023" → a Date (defaults to 1970). */
+function parseStartDate(dates?: string): Date {
+  const m = (dates ?? '').match(/(19|20)\d{2}/)
+  if (!m) return new Date('1970-01-01')
+  return new Date(Date.UTC(Number(m[0]), 0, 1))
+}
+
+/** → a Date, or undefined when the range ends with Present/Current/now. */
+function parseEndDate(dates?: string): Date | undefined {
+  const d = (dates ?? '').toLowerCase()
+  if (/present|current|now|— *$/.test(d)) return undefined
+  const m = d.match(/(19|20)\d{2}\s*[-–to]\s*(19|20)\d{2}/)
+  if (m) {
+    const y = m[0].match(/(19|20)\d{2}/g)?.pop()
+    if (y) return new Date(Date.UTC(Number(y), 11, 31))
+  }
+  return undefined
 }

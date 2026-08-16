@@ -1,6 +1,17 @@
 import { describe, it, expect } from 'vitest'
 import { scoreJob, scoreJobs } from '../scorer.js'
-import type { Job, Profile } from '@job-aggregator/shared'
+import type { Job, Profile, ScoringSource } from '@job-aggregator/shared'
+
+/** Convert a test Profile fixture into the slim ScoringSource (E5 signature). */
+function toSource(p: Profile): ScoringSource {
+  return {
+    skills: p.skills,
+    experience: p.experience,
+    location: p.location,
+    preferences: p.preferences,
+  }
+}
+const PROF_ID = 'profile-1'
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -81,7 +92,7 @@ describe('scoreJob', () => {
     const profile = makeProfile()
     const job = makeJob()
 
-    const match = scoreJob(profile, job)
+    const match = scoreJob(toSource(profile), job, PROF_ID)
 
     expect(match.score).toBeGreaterThan(0)
     expect(match.score).toBeLessThanOrEqual(100)
@@ -123,7 +134,7 @@ describe('scoreJob', () => {
       posted_date: new Date(),
     })
 
-    const match = scoreJob(profile, job)
+    const match = scoreJob(toSource(profile), job, PROF_ID)
     expect(match.score).toBeGreaterThanOrEqual(75)
   })
 
@@ -149,7 +160,7 @@ describe('scoreJob', () => {
       seniority_level: 'entry',
     })
 
-    const match = scoreJob(profile, job)
+    const match = scoreJob(toSource(profile), job, PROF_ID)
     expect(match.score).toBeLessThan(50)
   })
 
@@ -162,7 +173,7 @@ describe('scoreJob', () => {
       tags: ['react', 'javascript'],
     })
 
-    const match = scoreJob(profile, job)
+    const match = scoreJob(toSource(profile), job, PROF_ID)
     expect(match.dimensions.skills.score).toBeGreaterThan(0)
   })
 
@@ -183,7 +194,7 @@ describe('scoreJob', () => {
       salary_range: { min: 150000, max: 200000, currency: 'USD', period: 'annual' },
     })
 
-    const match = scoreJob(profile, job)
+    const match = scoreJob(toSource(profile), job, PROF_ID)
     expect(match.dimensions.salary.score).toBeGreaterThanOrEqual(70)
     expect(match.flags).toContain('salary_above_min')
   })
@@ -205,7 +216,7 @@ describe('scoreJob', () => {
       salary_range: { min: 80000, max: 100000, currency: 'USD', period: 'annual' },
     })
 
-    const match = scoreJob(profile, job)
+    const match = scoreJob(toSource(profile), job, PROF_ID)
     expect(match.dimensions.salary.score).toBeLessThan(50)
   })
 
@@ -225,7 +236,7 @@ describe('scoreJob', () => {
       location: { city: 'Remote', state: '', country: 'US', remote: true },
     })
 
-    const match = scoreJob(profile, job)
+    const match = scoreJob(toSource(profile), job, PROF_ID)
     expect(match.dimensions.location.score).toBe(100)
   })
 
@@ -235,8 +246,8 @@ describe('scoreJob', () => {
     const recent = makeJob({ posted_date: new Date() })
     const old = makeJob({ posted_date: new Date(Date.now() - 60 * 24 * 60 * 60 * 1000) })
 
-    const recentMatch = scoreJob(profile, recent)
-    const oldMatch = scoreJob(profile, old)
+    const recentMatch = scoreJob(toSource(profile), recent, PROF_ID)
+    const oldMatch = scoreJob(toSource(profile), old, PROF_ID)
 
     expect(recentMatch.dimensions.recency.score).toBeGreaterThan(oldMatch.dimensions.recency.score)
   })
@@ -245,7 +256,7 @@ describe('scoreJob', () => {
     const profile = makeProfile()
     const job = makeJob({ direct_apply_url: 'https://careers.example.com/job' })
 
-    const match = scoreJob(profile, job)
+    const match = scoreJob(toSource(profile), job, PROF_ID)
     expect(match.flags).toContain('direct_apply_available')
   })
 })
@@ -273,7 +284,7 @@ describe('scoreJobs', () => {
       seniority_level: 'intern',
     })
 
-    const matches = scoreJobs(profile, [badJob, goodJob])
+    const matches = scoreJobs(toSource(profile), [badJob, goodJob], PROF_ID)
     expect(matches).toHaveLength(2)
     expect(matches[0].job_id).toBe('good')
     expect(matches[1].job_id).toBe('bad')

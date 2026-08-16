@@ -1,16 +1,18 @@
 import type {
   Job,
-  Profile,
   Skill,
+  Experience,
   Match,
   MatchDimensions,
   DimensionScore,
+  ScoringSource,
+  ProfilePreferences,
+  Location,
 } from '@job-aggregator/shared'
 import { v4 as uuidv4 } from 'uuid'
-import logger from '../utils/logger.js'
 
 // ---------------------------------------------------------------------------
-// Configurable weights (sum to 1.0)
+// Configurable weights (sum to 1.0) — UNCHANGED by E5 (ADR-0008 re-wire).
 // ---------------------------------------------------------------------------
 
 const DEFAULT_WEIGHTS: Record<string, number> = {
@@ -23,32 +25,34 @@ const DEFAULT_WEIGHTS: Record<string, number> = {
 }
 
 /**
- * Score a job against a profile across multiple dimensions.
- * Returns a Match object with overall score (0-100) and dimension breakdown.
+ * Score a job against a slim ScoringSource (ADR-0008 N1) built from the
+ * primary resume's latest saved version + person-level location/preferences.
+ * Decoupled from the resume-doc / Profile model. `profileId` labels the Match.
+ * Dimension logic and weights are unchanged from before the re-wire.
  */
-export function scoreJob(profile: Profile, job: Job): Match {
+export function scoreJob(source: ScoringSource, job: Job, profileId: string): Match {
   const dimensions: MatchDimensions = {
-    skills: scoreSkills(profile.skills, job),
-    experience: scoreExperience(profile.experience, job),
-    location: scoreLocation(profile, job),
-    salary: scoreSalary(profile.preferences, job),
-    preferences: scorePreferences(profile.preferences, job),
+    skills: scoreSkills(source.skills, job),
+    experience: scoreExperience(source.experience, job),
+    location: scoreLocation(source.preferences, source.location, job),
+    salary: scoreSalary(source.preferences, job),
+    preferences: scorePreferences(source.preferences, job),
     recency: scoreRecency(job),
   }
 
   // Weighted overall score (0-100)
   const overall = Math.round(
-    Object.entries(dimensions).reduce((sum, [key, dim]) => {
+    Object.entries(dimensions).reduce((sum, [, dim]) => {
       return sum + dim.weighted * 100
     }, 0)
   )
 
   const reasons = generateReasons(dimensions, job)
-  const flags = generateFlags(dimensions, job, profile)
+  const flags = generateFlags(dimensions, job, source.preferences)
 
   return {
     id: uuidv4(),
-    profile_id: profile.id,
+    profile_id: profileId,
     job_id: job.id,
     created_at: new Date(),
     updated_at: new Date(),
@@ -60,10 +64,10 @@ export function scoreJob(profile: Profile, job: Job): Match {
 }
 
 /**
- * Score multiple jobs against a profile, sorted by score descending.
+ * Score multiple jobs against a source, sorted by score descending.
  */
-export function scoreJobs(profile: Profile, jobs: Job[]): Match[] {
-  return jobs.map((job) => scoreJob(profile, job)).sort((a, b) => b.score - a.score)
+export function scoreJobs(source: ScoringSource, jobs: Job[], profileId: string): Match[] {
+  return jobs.map((job) => scoreJob(source, job, profileId)).sort((a, b) => b.score - a.score)
 }
 
 // ---------------------------------------------------------------------------
@@ -75,7 +79,6 @@ function scoreSkills(profileSkills: Skill[], job: Job): DimensionScore {
     return dim(0, DEFAULT_WEIGHTS.skills)
   }
 
-  const profileSkillNames = new Set(profileSkills.map((s) => normalizeSkill(s.name)))
   const jobSkillNames = new Set(job.tags.map(normalizeSkill))
 
   let matched = 0
@@ -107,7 +110,7 @@ function scoreSkills(profileSkills: Skill[], job: Job): DimensionScore {
   return dim(Math.round(coverage * 100), DEFAULT_WEIGHTS.skills)
 }
 
-function scoreExperience(profileExp: Profile['experience'], job: Job): DimensionScore {
+function scoreExperience(profileExp: Experience[], job: Job): DimensionScore {
   if (!profileExp.length) return dim(50, DEFAULT_WEIGHTS.experience)
 
   const totalYears = profileExp.reduce((sum, e) => {
@@ -160,8 +163,7 @@ function scoreExperience(profileExp: Profile['experience'], job: Job): Dimension
   return dim(score, DEFAULT_WEIGHTS.experience)
 }
 
-function scoreLocation(profile: Profile, job: Job): DimensionScore {
-  const prefs = profile.preferences
+function scoreLocation(prefs: ProfilePreferences, profileLocation: Location | undefined, job: Job): DimensionScore {
   const jobLoc = job.location
 
   // Remote match
@@ -171,20 +173,26 @@ function scoreLocation(profile: Profile, job: Job): DimensionScore {
     return dim(30, DEFAULT_WEIGHTS.location)
   }
 
-  // Onsite: check if job location matches any preferred location
+  // Onsite: check if job location matches person baseline location (N3)
   if (!prefs.onsite_ok) return dim(20, DEFAULT_WEIGHTS.location)
 
-  for (const prefLoc of prefs.locations) {
+  // Person-level location is the primary geo baseline; preferences.locations
+  // are desired-work locations. Check both.
+  const candidates = [profileLocation, ...(prefs.locations ?? [])].filter(
+    (l): l is Location => !!l
+  )
+
+  for (const loc of candidates) {
     if (
-      prefLoc.city?.toLowerCase() === jobLoc.city?.toLowerCase() &&
-      prefLoc.state?.toLowerCase() === jobLoc.state?.toLowerCase()
+      loc.city?.toLowerCase() === jobLoc.city?.toLowerCase() &&
+      loc.state?.toLowerCase() === jobLoc.state?.toLowerCase()
     ) {
       return dim(100, DEFAULT_WEIGHTS.location)
     }
-    if (prefLoc.state?.toLowerCase() === jobLoc.state?.toLowerCase()) {
+    if (loc.state?.toLowerCase() === jobLoc.state?.toLowerCase()) {
       return dim(70, DEFAULT_WEIGHTS.location)
     }
-    if (prefLoc.country?.toLowerCase() === jobLoc.country?.toLowerCase()) {
+    if (loc.country?.toLowerCase() === jobLoc.country?.toLowerCase()) {
       return dim(50, DEFAULT_WEIGHTS.location)
     }
   }
@@ -192,7 +200,7 @@ function scoreLocation(profile: Profile, job: Job): DimensionScore {
   return dim(30, DEFAULT_WEIGHTS.location)
 }
 
-function scoreSalary(prefs: Profile['preferences'], job: Job): DimensionScore {
+function scoreSalary(prefs: ProfilePreferences, job: Job): DimensionScore {
   if (!prefs.salary_min || !job.salary_range) return dim(50, DEFAULT_WEIGHTS.salary)
 
   const jobMin = job.salary_range.min
@@ -214,7 +222,7 @@ function scoreSalary(prefs: Profile['preferences'], job: Job): DimensionScore {
   return dim(50, DEFAULT_WEIGHTS.salary)
 }
 
-function scorePreferences(prefs: Profile['preferences'], job: Job): DimensionScore {
+function scorePreferences(prefs: ProfilePreferences, job: Job): DimensionScore {
   let score = 50
 
   // Job type match
@@ -279,7 +287,7 @@ function inferRequiredYears(job: Job): number {
   return Math.max(...years)
 }
 
-function estimateSeniority(experience: Profile['experience']): number {
+function estimateSeniority(experience: Experience[]): number {
   const totalYears = experience.reduce((sum, e) => {
     const start = new Date(e.start_date).getTime()
     const end = e.end_date ? new Date(e.end_date).getTime() : Date.now()
@@ -294,7 +302,7 @@ function estimateSeniority(experience: Profile['experience']): number {
   return 10 // director+
 }
 
-function generateReasons(dimensions: MatchDimensions, job: Job): string[] {
+function generateReasons(dimensions: MatchDimensions, _job: Job): string[] {
   const reasons: string[] = []
 
   if (dimensions.skills.score >= 80) {
@@ -316,12 +324,12 @@ function generateReasons(dimensions: MatchDimensions, job: Job): string[] {
   return reasons
 }
 
-function generateFlags(dimensions: MatchDimensions, job: Job, profile: Profile): string[] {
+function generateFlags(dimensions: MatchDimensions, job: Job, prefs: ProfilePreferences): string[] {
   const flags: string[] = []
 
   if (job.direct_apply_url) flags.push('direct_apply_available')
-  if (job.salary_range && profile.preferences.salary_min) {
-    if (job.salary_range.min >= (profile.preferences.salary_min ?? 0)) {
+  if (job.salary_range && prefs.salary_min) {
+    if (job.salary_range.min >= (prefs.salary_min ?? 0)) {
       flags.push('salary_above_min')
     }
   }

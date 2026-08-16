@@ -1,8 +1,9 @@
 import { Router, Request, Response } from 'express'
 import { z } from 'zod'
 import { Orchestrator } from '../services/orchestrator.js'
-import type { Storage, JobFilter } from '@job-aggregator/shared'
+import type { Storage, JobFilter, ScoringSource } from '@job-aggregator/shared'
 import { scoreJob, scoreJobs } from '../services/scorer.js'
+import { buildScoringSource } from '../services/resume-service.js'
 import logger from '../utils/logger.js'
 
 // ---------------------------------------------------------------------------
@@ -92,12 +93,13 @@ export function createJobsRouter(orchestrator: Orchestrator, storage: Storage): 
 
       const jobs = await storage.listJobs(filter)
 
-      // Optionally score jobs against the current profile
+      // Optionally score jobs against the current profile's primary resume
       let scores: Record<string, number> | undefined
       if (query.scored) {
-        const profiles = await storage.listProfiles()
-        if (profiles.length > 0) {
-          const matches = scoreJobs(profiles[0], jobs)
+        const source = await resolveScoringSource(storage)
+        if (source) {
+          const profileId = (await sourceProfile(storage))?.id ?? 'unknown'
+          const matches = scoreJobs(source, jobs, profileId)
           scores = Object.fromEntries(matches.map((m) => [m.job_id, m.score]))
         }
       }
@@ -132,12 +134,13 @@ export function createJobsRouter(orchestrator: Orchestrator, storage: Storage): 
       const sources = await storage.getJobSourcesByJobId(job.id)
       const enriched = { ...job, sources }
 
-      // Optionally score against profile
+      // Optionally score against the primary resume
       let match = undefined
       if (req.query.scored === 'true') {
-        const profiles = await storage.listProfiles()
-        if (profiles.length > 0) {
-          match = scoreJob(profiles[0], enriched)
+        const source = await resolveScoringSource(storage)
+        if (source) {
+          const profileId = (await sourceProfile(storage))?.id ?? 'unknown'
+          match = scoreJob(source, enriched, profileId)
         }
       }
 
@@ -153,4 +156,30 @@ export function createJobsRouter(orchestrator: Orchestrator, storage: Storage): 
   })
 
   return router
+}
+
+// ---------------------------------------------------------------------------
+// Scoring-source resolution (E5 — ADR-0008 N1)
+// ---------------------------------------------------------------------------
+
+/** The single-user current profile (most recently updated), or null. */
+async function sourceProfile(storage: Storage) {
+  const profiles = await storage.listProfiles()
+  if (profiles.length === 0) return null
+  return profiles.reduce((latest, current) =>
+    current.updated_at > latest.updated_at ? current : latest
+  )
+}
+
+/**
+ * Build a ScoringSource from the current profile's PRIMARY resume (latest
+ * saved ResumeVersion.data). Returns null when there's no profile, no primary
+ * resume, or no saved version yet → scoring is skipped (unscored jobs).
+ */
+async function resolveScoringSource(storage: Storage): Promise<ScoringSource | null> {
+  const profile = await sourceProfile(storage)
+  if (!profile) return null
+  const primary = await storage.getPrimaryResume(profile.id)
+  if (!primary?.data) return null
+  return buildScoringSource(primary.data, profile)
 }
