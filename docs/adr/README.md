@@ -39,3 +39,4 @@ decided, why, and what remains open** — without re-deriving context from chat 
 - [0007 — Consolidated DOCX-First Resume UX](./0007-consolidated-docx-first-resume-ux.md)
 - [0008 — Resume as the Scored, Versioned Document](./0008-resume-as-scored-versioned-document.md)
 - [0009 — Resume Draft/Commit State Flow](./0009-resume-draft-commit-state-flow.md)
+- [0010 — Template-as-Contract, DOCX-as-Artifact (template system + fidelity gates)](./0010-template-as-contract-and-fidelity-gates.md)
