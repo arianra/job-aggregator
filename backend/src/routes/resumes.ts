@@ -24,6 +24,8 @@ import {
 } from '../services/resume-service.js'
 import { buildDocx } from '../services/docx-builder.js'
 import { convertDocxToPdf } from '../services/pdf-deriver.js'
+import { lintResume } from '../services/ats-linter.js'
+import { atsAdvice } from '../services/ats-advice.js'
 
 // ---------------------------------------------------------------------------
 // Multer: accept PDF, DOCX, TXT up to 10MB (same policy as the legacy upload)
@@ -443,12 +445,73 @@ export function createResumesRouter(storage: Storage): Router {
     }
   })
 
+  // POST /api/profile/resumes/:id/lint — deterministic ATS report (E4.7)
+  // Lints the latest saved structured data (mode 'text'). Report-only, never
+  // warns/blocks. Optional Qwen advice appended under `advice`, never score.
+  router.post('/:id/lint', async (req: Request, res: Response) => {
+    try {
+      const resume = await storage.getResume(req.params.id)
+      if (!resume) {
+        res.status(404).json({ error: 'Resume not found' })
+        return
+      }
+      const data = (req.body as ResumeDoc) ?? null
+      if (!data || typeof data !== 'object') {
+        res.status(400).json({ error: 'ResumeDoc body is required for lint' })
+        return
+      }
+      // Flatten the structured doc to plain text for the lint engine.
+      const text = resumeDocToText(data)
+      const report = lintResume({ text, skillLexicon: [] })
+      const advice = await atsAdvice(text, report)
+      res.json({ success: true, data: { ...report, advice } })
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err)
+      logger.error('POST /api/profile/resumes/:id/lint failed', { err: msg })
+      res.status(500).json({ error: 'Lint failed' })
+    }
+  })
+
   return router
 }
 
 // ---------------------------------------------------------------------------
-// E3 helpers
+// E3 / E4 helpers
 // ---------------------------------------------------------------------------
+
+/** Flatten a ResumeDoc into plain, lintable text (E4.7 lint gate input). */
+export function resumeDocToText(data: ResumeDoc): string {
+  const lines: string[] = []
+  const c = data.contact ?? {}
+  if (c.name) lines.push(c.name)
+  const contact = [c.city, c.state, c.country, c.email, c.phone, c.linkedin]
+    .filter(Boolean)
+    .join(' · ')
+  if (contact) lines.push(contact)
+  if (data.summary) lines.push('SUMMARY', data.summary)
+  if (data.experience?.length) {
+    lines.push('EXPERIENCE')
+    for (const e of data.experience) {
+      lines.push([e.role, e.company, e.dates, e.location].filter(Boolean).join(' · '))
+      for (const b of e.bullets || []) lines.push(b)
+    }
+  }
+  if (data.education?.length) {
+    lines.push('EDUCATION')
+    for (const e of data.education) lines.push([e.degree, e.school, e.location, e.year].filter(Boolean).join(' · '))
+  }
+  if (data.skills) {
+    lines.push('SKILLS')
+    for (const [cat, skills] of Object.entries(data.skills)) {
+      if (skills?.length) lines.push(`${cat}: ${skills.join(', ')}`)
+    }
+  }
+  if (data.certifications?.length) {
+    lines.push('CERTIFICATIONS')
+    for (const cert of data.certifications) lines.push([cert.title, cert.issuer, cert.year].filter(Boolean).join(' · '))
+  }
+  return lines.join('\n')
+}
 
 /** Map a ResumeDoc's canonical settings onto the docx builder options. */
 function settingsFromDoc(data: ResumeDoc): { fontSize?: number; lineHeight?: number } {

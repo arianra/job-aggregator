@@ -146,6 +146,83 @@ export interface ResumeData {
 }
 
 // ============================================================================
+// ATS Lint Engine (E4 — docs/ats-linting-engine.md §6)
+// ============================================================================
+
+export type AtsSeverity = 'error' | 'warning' | 'info'
+export type AtsRuleStatus = 'pass' | 'fail' | 'skipped'
+
+export type AtsCategory =
+  | 'parseability'
+  | 'contact'
+  | 'structure'
+  | 'timeline'
+  | 'keywords'
+  | 'content'
+  | 'grammar'
+
+export type AtsGrade = 'A' | 'B' | 'C' | 'D' | 'F'
+
+export interface AtsRuleResult {
+  code: string
+  category: AtsCategory
+  title: string
+  severity: AtsSeverity
+  status: AtsRuleStatus
+  maxPoints: number
+  earnedPoints: number
+  message: string // human verdict on fail (or '—' on pass)
+  suggestion?: string
+  evidence?: string[]
+  count?: number
+}
+
+export interface AtsCategoryScore {
+  category: AtsCategory
+  weight: number // out of 100 overall
+  percent: number // 0-100 placement
+  maxPoints: number
+  earnedPoints: number
+  errors: number
+  warnings: number
+}
+
+export interface AtsReport {
+  requestedAt: string
+  input: {
+    format?: 'pdf' | 'docx' | 'txt'
+    pageCount?: number
+    wordCount: number
+    charCount: number
+    hasTextLayer?: boolean
+    isScanned?: boolean
+    lines: number
+    mode: 'file' | 'text'
+  }
+  overall: { score: number; grade: AtsGrade; label: string }
+  byCategory: AtsCategoryScore[]
+  rules: AtsRuleResult[]
+  summary: string[]
+}
+
+/** Extractor-produced file metadata (ATS engine input; E4 Phase A). */
+export interface ExtractedFileMeta {
+  format: 'pdf' | 'docx' | 'txt'
+  pageCount?: number
+  hasTextLayer?: boolean
+  isScanned?: boolean
+  perPageText?: string[]
+}
+
+/** Pure lint entrypoint input (ats-linting-engine.md §2.2). */
+export interface LintInput {
+  text: string
+  meta?: ExtractedFileMeta
+  jobDescription?: string
+  skillLexicon?: string[]
+}
+
+// ============================================================================
 // Company
 // ============================================================================
 

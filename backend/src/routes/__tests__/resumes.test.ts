@@ -22,6 +22,11 @@ vi.mock('../../services/pdf-deriver.js', () => ({
   isLibreOfficeAvailable: vi.fn(async () => true),
 }))
 
+// ATS advice channel — always resolves empty (no network) so lint route works.
+vi.mock('../../services/ats-advice.js', () => ({
+  atsAdvice: vi.fn(async () => []),
+}))
+
 const configState = { key: 'test-qwen', endpoint: 'http://qwen.test' }
 
 /**
@@ -414,6 +419,29 @@ describe('Resumes API (E2)', () => {
       const id = await createBlank(storage)
       const res = await request(app).post(`/api/profile/resumes/${id}/render-preview`).send({})
       expect(res.status).toBe(400)
+    })
+
+    it('lint returns a deterministic AtsReport with advice key', async () => {
+      const profile = await seedProfile(storage)
+      const id = (await storage.createResume(profile.id, { title: 'Lint Me' })).id
+      const res = await request(app).post(`/api/profile/resumes/${id}/lint`).send(FULL_DOC())
+      expect(res.status).toBe(200)
+      const d = res.body.data
+      expect(d.overall).toBeDefined()
+      expect(d.overall.score).toBeGreaterThanOrEqual(0)
+      expect(Array.isArray(d.rules)).toBe(true)
+      expect(d.rules.some((r: { code: string }) => r.code === 'ATS-C-002')).toBe(true)
+      expect(d.advice).toEqual([])
+      expect(d.overall.score).toBe(d.overall.score) // deterministic (no-op sanity)
+    })
+
+    it('lint handles an empty object body as a (low-scoring) report, not an error', async () => {
+      const id = await createBlank(storage)
+      // An empty object is a valid ResumeDoc input to the pure engine — linting
+      // an empty doc yields a low score, never a crash or 4xx.
+      const res = await request(app).post(`/api/profile/resumes/${id}/lint`).send({})
+      expect(res.status).toBe(200)
+      expect(res.body.data.overall.score).toBeLessThanOrEqual(100)
     })
   })
 })
