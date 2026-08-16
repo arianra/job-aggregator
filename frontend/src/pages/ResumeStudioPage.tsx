@@ -506,12 +506,12 @@ function DetailsSection(props: {
         <Input value={props.title} onChange={(e) => props.setTitle(e.target.value)} placeholder="e.g. Lead Frontend Engineer 2026" className="mt-1" />
         <div className="mt-1 text-xs text-muted-foreground">This is how the resume appears in your list and exports.</div>
       </div>
-      <div className={`flex items-center justify-between rounded-lg border p-3 ${props.primary ? 'border-amber-400 bg-amber-50' : ''}`}>
+      <div className={`flex items-center justify-between rounded-lg border p-3 ${props.primary ? 'border-amber-400 bg-amber-500/10 dark:bg-amber-400/15' : ''}`}>
         <div>
           <div className="flex items-center gap-2">
             <span className="font-medium">Primary resume</span>
             {props.primary && (
-              <span className="rounded-full bg-amber-500 px-2 py-0.5 font-mono text-[10px] font-bold uppercase tracking-wide text-white">Primary</span>
+              <span className="rounded-full bg-amber-500 px-2 py-0.5 font-mono text-[10px] font-bold uppercase tracking-wide text-amber-950">Primary</span>
             )}
           </div>
           <div className="text-xs text-muted-foreground">Feeds your Profile and job matching. One primary at a time.</div>
@@ -956,7 +956,7 @@ function FinishSection({ resumeId, report, onLint }: { resumeId: string; report:
         </div>
         <div className="mt-2 text-xs text-muted-foreground">DOCX is the artifact; PDF is derived from it — they always match.</div>
       </div>
-      <div className="rounded-md border-l-[3px] border-amber-500 bg-amber-50 px-3 py-2 text-xs text-amber-800">
+      <div className="rounded-md border-l-[3px] border-amber-500 bg-amber-500/10 px-3 py-2 text-xs text-amber-700 dark:text-amber-300">
         <b className="font-mono">One-page gate</b> — Warn on overflow + optional Auto-fit (shrink-to-fit). Never silently truncates.
       </div>
 
