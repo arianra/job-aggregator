@@ -173,3 +173,139 @@ export interface ApplicationResponse {
   success: boolean
   data: Application
 }
+
+// ============================================================================
+// Resume (ADR-0008) — mirrors @job-aggregator/shared Resume types
+// ============================================================================
+
+export type ProfilePreferences = {
+  remote_ok?: boolean
+  hybrid_ok?: boolean
+  onsite_ok?: boolean
+  locations?: Location[]
+  job_types?: string[]
+  seniority_levels?: string[]
+  salary_min?: number
+  keywords?: string[]
+}
+
+export type ResumeFormat = 'compact'
+export type ResumeStatus = 'NEW' | 'SAVED' | 'ARCHIVED'
+
+export interface ResumeContact {
+  name: string
+  email: string
+  phone: string
+  linkedin: string
+  country: string
+  state: string
+  city: string
+  visibility: { email: boolean; phone: boolean; linkedin: boolean }
+}
+
+export interface ResumeExperienceEntry {
+  role: string
+  company: string
+  dates: string
+  location: string
+  bullets: string[]
+}
+
+export interface ResumeEducationEntry {
+  degree: string
+  school: string
+  location: string
+  year: string
+}
+
+export interface ResumeCertificationEntry {
+  title: string
+  issuer: string
+  year: string
+}
+
+export interface ResumeSettings {
+  fontSize: number
+  lineHeight: number
+  spacing: number
+  typeface: 'serif' | 'sans'
+  paperA4: boolean
+}
+
+export interface ResumeDoc {
+  contact: ResumeContact
+  summary: string
+  experience: ResumeExperienceEntry[]
+  education: ResumeEducationEntry[]
+  skills: Record<string, string[]>
+  certifications: ResumeCertificationEntry[]
+  sections: { order: string[]; visibility: Record<string, boolean> }
+  settings: ResumeSettings
+}
+
+/** The list-card / meta shape returned by GET /resumes. */
+export interface ResumeMeta {
+  id: string
+  profile_id: string
+  title: string
+  format: ResumeFormat
+  status: ResumeStatus
+  primary: boolean
+  created_at: string
+  updated_at: string
+  revision: number
+}
+
+/** A resume with its latest saved data (GET /resumes/:id). */
+export interface ResumeWithData extends ResumeMeta {
+  data: ResumeDoc
+}
+
+export interface ResumeVersionSummary {
+  id: string
+  revision: number
+  created_at: string
+}
+
+// --- ATS report (E4) ---
+export type AtsSeverity = 'error' | 'warning' | 'info'
+export type AtsCategory =
+  | 'parseability'
+  | 'contact'
+  | 'structure'
+  | 'timeline'
+  | 'keywords'
+  | 'content'
+  | 'grammar'
+
+export interface AtsRuleResult {
+  code: string
+  category: AtsCategory
+  title: string
+  severity: AtsSeverity
+  status: 'pass' | 'fail' | 'skipped'
+  maxPoints: number
+  earnedPoints: number
+  message: string
+  suggestion?: string
+  evidence?: string[]
+  count?: number
+}
+
+export interface AtsCategoryScore {
+  category: AtsCategory
+  weight: number
+  percent: number
+  maxPoints: number
+  earnedPoints: number
+  errors: number
+  warnings: number
+}
+
+export interface AtsReport {
+  overall: { score: number; grade: 'A' | 'B' | 'C' | 'D' | 'F'; label: string }
+  byCategory: AtsCategoryScore[]
+  rules: AtsRuleResult[]
+  summary: string[]
+  advice?: { area: string; advice: string }[]
+}

@@ -231,3 +231,45 @@
   --sidebar-border: oklch(1 0 0 / 10%);
   --sidebar-ring: oklch(0.556 0 0);
 }
+
+/* ---- Resume Studio live-preview pane ---- */
+.preview-doc h4 {
+  margin: 0.7em 0 0.2em;
+  font-size: 0.85em;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  border-bottom: 1px solid currentColor;
+  padding-bottom: 2px;
+}
+.preview-doc h5 {
+  margin: 0.45em 0 0;
+  font-size: 1em;
+  font-weight: 600;
+}
+.preview-doc p {
+  margin: 0.3em 0;
+  font-size: 0.95em;
+  line-height: inherit;
+}
+.preview-doc ul {
+  margin: 0.2em 0 0.5em;
+  padding-left: 1.1em;
+  font-size: 0.9em;
+}
+.preview-doc li {
+  margin: 0.12em 0;
+}
+.preview-doc .dn {
+  font-size: 1.35em;
+  font-weight: 800;
+}
+.preview-doc .dc,
+.preview-doc .m,
+.preview-doc .sk {
+  font-size: 0.85em;
+  color: #555;
+}
+.preview-doc .sk {
+  margin: 0.2em 0;
+}

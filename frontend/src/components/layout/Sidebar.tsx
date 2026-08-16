@@ -7,6 +7,7 @@ import {
   User,
   FolderKanban,
   Settings,
+  FileText,
   ChevronLeft,
   ChevronRight,
 } from 'lucide-react'
@@ -16,6 +17,7 @@ const navItems = [
   { path: '/', label: 'Dashboard', icon: LayoutDashboard },
   { path: '/jobs', label: 'Jobs', icon: Briefcase },
   { path: '/applications', label: 'Applications', icon: FolderKanban },
+  { path: '/resume', label: 'Resume', icon: FileText },
   { path: '/profile', label: 'Profile', icon: User },
   { path: '/settings', label: 'Settings', icon: Settings },
 ]
@@ -45,7 +47,10 @@ export function Sidebar() {
       <nav className="space-y-1 p-2">
         {navItems.map((item) => {
           const Icon = item.icon
-          const isActive = location.pathname === item.path
+          const isActive =
+            item.path === '/'
+              ? location.pathname === '/'
+              : location.pathname === item.path || location.pathname.startsWith(`${item.path}/`)
           return (
             <Link key={item.path} to={item.path}>
               <Button
