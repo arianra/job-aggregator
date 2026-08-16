@@ -9,13 +9,19 @@ import type { ResumeDoc } from '@job-aggregator/shared'
 export async function extractDocxParagraphs(buffer: Buffer): Promise<string[]> {
   const zip = await JSZip.loadAsync(buffer)
   const xml = await zip.file('word/document.xml')!.async('string')
-  const paras = xml.match(/<w:p[^>]*>[\s\S]*?<\/w:p>/g) ?? []
-  return paras.map((p) => {
-    const runs = p.match(/<w:t[^>]*>([\s\S]*?)<\/w:t>/g) ?? []
-    return runs
-      .map((r) => (r.match(/<w:t[^>]*>([\s\S]*?)<\/w:t>/) ?? ['', ''])[1])
-      .join('')
-  })
+  // Split on the literal paragraph closer `</w:p>`. This never appears inside
+  // `</w:pBdr>` or `</w:pPr>`, so each chunk is exactly one paragraph's content.
+  const paras: string[] = []
+  for (const chunk of xml.split('</w:p>')) {
+    let text = ''
+    // `<w:t` must be followed by a space or `>` — otherwise `<w:top>`/`<w:toolbar>`
+    // (which begin with the literal `<w:t`) would be misread as a text run.
+    const re = /<w:t(?=[\s>])[^>]*>([\s\S]*?)<\/w:t>/g
+    let m: RegExpExecArray | null
+    while ((m = re.exec(chunk)) !== null) text += m[1]
+    paras.push(text)
+  }
+  return paras
 }
 
 /** True if the document.xml contains a table, drawing or text-box. */

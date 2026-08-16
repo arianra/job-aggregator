@@ -13,7 +13,7 @@
  *   - Body/bullets . 13 (6.5pt) normal
  * Fit controls (settings) scale font size + line height proportionally.
  */
-import { AlignmentType, Document, Packer, Paragraph, TextRun, type IParagraphOptions } from 'docx'
+import { AlignmentType, BorderStyle, Document, Packer, Paragraph, TextRun, type IParagraphOptions } from 'docx'
 import type { ResumeDoc } from '@job-aggregator/shared'
 
 export interface DocxResult {
@@ -66,6 +66,17 @@ export async function buildDocx(doc: ResumeDoc): Promise<DocxResult> {
     })
   }
 
+  /** A section heading paragraph with the divider rule (top gray + bottom black),
+   * matching the golden template's section rule (bug 6 — missing dividing lines). */
+  const head = (label: string): void =>
+    p([{ text: label, size: k.head, bold: true }], {
+      spacing: { before: Math.round(130 * k.spacing), after: Math.round(60 * k.spacing) },
+      border: {
+        top: { style: BorderStyle.SINGLE, size: 4, color: 'A6A6A6', space: 2 },
+        bottom: { style: BorderStyle.SINGLE, size: 12, color: '000000', space: 2 },
+      },
+    })
+
   const c = doc.contact ?? ({} as ResumeDoc['contact'])
   const vis = c.visibility ?? { email: true, phone: true, linkedin: true }
 
@@ -84,13 +95,13 @@ export async function buildDocx(doc: ResumeDoc): Promise<DocxResult> {
 
   // ---- 2. SUMMARY ----
   if (doc.summary) {
-    p([{ text: 'SUMMARY', size: k.head, bold: true }])
+    head('SUMMARY')
     p([{ text: doc.summary, size: k.body }])
   }
 
   // ---- 3. EXPERIENCE ----
   if (doc.experience?.length) {
-    p([{ text: 'EXPERIENCE', size: k.head, bold: true }])
+    head('EXPERIENCE')
     for (const e of doc.experience) {
       if (e.role) p([{ text: e.role, size: k.role, bold: true }])
       const meta = [e.company, e.dates, e.location].filter(Boolean).join('   ')
@@ -103,7 +114,7 @@ export async function buildDocx(doc: ResumeDoc): Promise<DocxResult> {
 
   // ---- 4. EDUCATION ----
   if (doc.education?.length) {
-    p([{ text: 'EDUCATION', size: k.head, bold: true }])
+    head('EDUCATION')
     for (const e of doc.education) {
       if (e.degree) p([{ text: e.degree, size: k.role, bold: true }])
       const meta = [e.school, e.location, e.year].filter(Boolean).join('  •  ')
@@ -114,7 +125,7 @@ export async function buildDocx(doc: ResumeDoc): Promise<DocxResult> {
   // ---- 5. SKILLS ----
   const cats = Object.entries(doc.skills || {}).filter(([, v]) => v && v.length)
   if (cats.length) {
-    p([{ text: 'SKILLS', size: k.head, bold: true }])
+    head('SKILLS')
     for (const [cat, list] of cats) {
       p([{ text: `${cat}:`, size: k.body, bold: true }, { text: ` ${list.join(', ')}`, size: k.body }])
     }
@@ -122,7 +133,7 @@ export async function buildDocx(doc: ResumeDoc): Promise<DocxResult> {
 
   // ---- 6. CERTIFICATIONS (optional by §2.2 / O2) ----
   if (doc.certifications?.length) {
-    p([{ text: 'CERTIFICATIONS', size: k.head, bold: true }])
+    head('CERTIFICATIONS')
     for (const ct of doc.certifications) {
       const line = [ct.title, ct.issuer, ct.year].filter(Boolean).join('  —  ')
       if (line) p([{ text: line, size: k.body, bold: true }])

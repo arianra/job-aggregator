@@ -111,6 +111,16 @@ describe('buildDocx (E3) — pure renderer', () => {
     expect(text).not.toContain('+1 (707) 771-6645')
   })
 
+  it('renders section headings with a divider rule (restores the dividing lines — bug 6)', async () => {
+    const { bytes } = await buildDocx(golden)
+    const zip = await (await import('jszip')).default.loadAsync(bytes)
+    const xml = await zip.file('word/document.xml')!.async('string')
+    expect(xml).toContain('<w:pBdr>') // paragraph border
+    expect(xml).toContain('<w:top')
+    expect(xml).toContain('<w:bottom')
+    expect(xml).toMatch(/w:color="000000"/) // the bottom black rule
+  })
+
   it('is content-deterministic: same input → identical rendered text', async () => {
     // docx.js stamps a creation time in the package core-properties, so raw
     // bytes are not byte-identical between runs; the REQUIREMENT is that the
