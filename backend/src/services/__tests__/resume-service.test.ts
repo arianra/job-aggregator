@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest'
-import { buildScoringSource } from '../resume-service.js'
+import { buildScoringSource, parseResultToResumeDoc } from '../resume-service.js'
+import type { ParsedProfile } from '../qwen-parser.js'
 import type { ResumeDoc, Profile } from '@job-aggregator/shared'
 
 function doc(over: Partial<ResumeDoc> = {}): ResumeDoc {
@@ -80,5 +81,58 @@ describe('buildScoringSource (E5.1)', () => {
     const src = buildScoringSource(d, profile())
     expect(src.skills).toEqual([])
     expect(src.experience).toEqual([])
+  })
+})
+
+function parsedProfile(over: Partial<ParsedProfile> = {}): ParsedProfile {
+  return {
+    name: 'Alice',
+    email: 'alice@x.com',
+    skills: [],
+    experience: [],
+    education: [],
+    ...over,
+  }
+}
+
+describe('parseResultToResumeDoc (bug 4/8)', () => {
+  it('maps each Qwen bullet to its own experience bullet (trimmed, blanks dropped)', () => {
+    const d = parseResultToResumeDoc(
+      parsedProfile({
+        experience: [
+          {
+            company: 'C',
+            title: 'Role',
+            start_date: '2020-01',
+            description: ['Led team', '  Shipped feature  ', '', 'Wrote docs'],
+            skills_used: [],
+          },
+        ],
+      })
+    )
+    expect(d.experience).toHaveLength(1)
+    expect(d.experience[0].company).toBe('C')
+    expect(d.experience[0].role).toBe('Role')
+    expect(d.experience[0].bullets).toEqual(['Led team', 'Shipped feature', 'Wrote docs'])
+  })
+
+  it('groups parsed skills by their category, defaulting uncategorized to Development', () => {
+    const d = parseResultToResumeDoc(
+      parsedProfile({
+        skills: [
+          { name: 'React', category: 'Development' },
+          { name: 'TypeScript', category: 'Development' },
+          { name: 'Agile', category: 'Process' },
+          { name: 'Networking' },
+        ],
+      })
+    )
+    expect(d.skills).toEqual({ Development: ['React', 'TypeScript', 'Networking'], Process: ['Agile'] })
+  })
+
+  it('yields a valid empty doc when the parse has no experience/skills', () => {
+    const d = parseResultToResumeDoc(parsedProfile())
+    expect(d.experience).toEqual([])
+    expect(d.skills).toEqual({})
   })
 })

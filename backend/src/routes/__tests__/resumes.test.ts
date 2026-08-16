@@ -301,7 +301,7 @@ describe('Resumes API (E2)', () => {
         location: { city: 'City', state: 'ST', country: 'US' },
         skills: [{ name: 'TypeScript', years: 8 }],
         experience: [
-                  { company: 'Co', title: 'Eng', start_date: '2020-01', end_date: '2023-06', description: 'Led a\nteam.', skills_used: [] },
+                  { company: 'Co', title: 'Eng', start_date: '2020-01', end_date: '2023-06', description: ['Led a', 'team.'], skills_used: [] },
                 ],
         education: [{ institution: 'U', degree: 'BSc', graduation_year: 2015 }],
         summary: 'Parsed summary',

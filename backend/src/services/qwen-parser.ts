@@ -15,13 +15,13 @@ export interface ParsedProfile {
   }
   skills: { name: string; years?: number; category?: string }[]
   experience: {
-    company: string
-    title: string
-    start_date: string // ISO
-    end_date?: string
-    description?: string
-    skills_used: string[]
-  }[]
+      company: string
+      title: string
+      start_date: string // ISO
+      end_date?: string
+      description?: string[] // achievement bullets, ONE PER element — never a single merged paragraph
+      skills_used: string[]
+    }[]
   education: {
     institution: string
     degree: string
@@ -73,7 +73,7 @@ Return ONLY valid JSON — no explanation, no markdown fences.
 Required fields:
 - name: string (full name)
 - skills: array of { name, years?, category? }
-- experience: array of { company, title, start_date (ISO), end_date? (ISO or null), description?, skills_used }
+- experience: array of { company, title, start_date (ISO), end_date? (ISO or null), description?: array of strings, skills_used }
 - education: array of { institution, degree, field?, graduation_year? }
 
 Optional fields:
@@ -85,7 +85,8 @@ Optional fields:
 Important rules:
 - If a field is missing from the resume, OMIT it entirely from the JSON (don't send null or empty string)
 - years for skills should be inferred from experience if possible
-- skills_used should be individual skill names, not technologies combined
+- skills for role descriptions (the "description" field): return the achievement bullets as an ARRAY of strings — ONE bullet PER element, in the original order. Never merge them into a single paragraph.
+- OPTIONAL per-skill "category" so skills group naturally (e.g. "Development", "Process", "AI & DX", or a domain-specific label). Provide it whenever the grouping is obvious.
 - Normalize skill names: "React.js" → "React", "NodeJS" → "Node.js", "TypeScript" (not "Typescript")
 - start_date should be ISO format like "2020-01" or "2020-01-15"`
 
@@ -112,4 +113,15 @@ function validateParsedProfile(profile: ParsedProfile): void {
   if (!Array.isArray(profile.education)) {
     profile.education = []
   }
+  // Normalize experience descriptions to a clean bullets array (defensive: some
+  // models return a single merged string instead of an array).
+  profile.experience = profile.experience.map((e) => {
+    const d = e.description as string | string[] | undefined
+    let bullets: string[] = []
+    if (Array.isArray(d)) bullets = d.filter((x): x is string => typeof x === 'string')
+    else if (typeof d === 'string') {
+      bullets = d.split(/\r?\n/).map((s) => s.replace(/^[-•*]\s*/, '').trim()).filter(Boolean)
+    }
+    return { ...e, description: bullets }
+  })
 }

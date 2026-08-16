@@ -95,7 +95,7 @@ export function parseResultToResumeDoc(parsed: ParsedProfile): ResumeDoc {
     company: e.company ?? '',
     dates: formatDateRange(e.start_date, e.end_date),
     location: '',
-    bullets: splitBullets(e.description),
+    bullets: (e.description ?? []).map((b) => b.trim()).filter(Boolean),
   }))
 
   doc.education = (parsed.education ?? []).map((e) => ({
@@ -105,9 +105,17 @@ export function parseResultToResumeDoc(parsed: ParsedProfile): ResumeDoc {
     year: e.graduation_year ? String(e.graduation_year) : '',
   }))
 
-  // Group parsed skills into a single "Development" category (names only).
-  const dev = (parsed.skills ?? []).map((s) => s.name).filter(Boolean) as string[]
-  doc.skills = { Development: dev, Process: [] }
+  // Group parsed skills by category (Qwen `category` field), defaulting to
+  // "Development" when a category is missing. Preserves per-category order.
+  const grouped: Record<string, string[]> = {}
+  for (const s of parsed.skills ?? []) {
+    const name = (s.name ?? '').trim()
+    if (!name) continue
+    const cat = (s.category && s.category.trim()) || 'Development'
+    if (!grouped[cat]) grouped[cat] = []
+    grouped[cat].push(name)
+  }
+  doc.skills = grouped
 
   return doc
 }
@@ -123,14 +131,6 @@ function formatDateRange(start?: string, end?: string): string {
 function trimMonth(iso?: string): string {
   if (!iso) return ''
   return iso.slice(0, 7) // YYYY-MM
-}
-
-function splitBullets(description?: string): string[] {
-  if (!description) return []
-  return description
-    .split(/\r?\n/)
-    .map((s) => s.replace(/^[-•*]\s*/, '').trim())
-    .filter(Boolean)
 }
 
 // ---------------------------------------------------------------------------
