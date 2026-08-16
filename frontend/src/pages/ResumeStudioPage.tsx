@@ -55,6 +55,14 @@ function cloneDoc(doc: ResumeDoc): ResumeDoc {
   return JSON.parse(JSON.stringify(doc)) as ResumeDoc
 }
 
+/** Move item at `from` to `to` (returns a new array). Shared by all card groups. */
+function reorder<T>(arr: T[], from: number, to: number): T[] {
+  const next = [...arr]
+  const [it] = next.splice(from, 1)
+  next.splice(to, 0, it)
+  return next
+}
+
 export function ResumeStudioPage() {
   const { id = '', step } = useParams()
   const [searchParams] = useSearchParams()
@@ -650,6 +658,13 @@ function GroupSection({ doc, set, kind }: { doc: ResumeDoc; set: (p: (d: ResumeD
   }
 
   const [pendingDel, setPendingDel] = useState<number | null>(null)
+  const [dragIdx, setDragIdx] = useState<number | null>(null)
+
+  const onDrop = (to: number) => {
+    if (dragIdx === null || dragIdx === to) { setDragIdx(null); return }
+    setItems(reorder(items, dragIdx, to))
+    setDragIdx(null)
+  }
 
   return (
     <div className="space-y-2">
@@ -658,7 +673,15 @@ function GroupSection({ doc, set, kind }: { doc: ResumeDoc; set: (p: (d: ResumeD
         const bullets = Array.isArray(it.bullets) ? (it.bullets as string[]) : []
         const open = openIdx === idx
         return (
-          <div key={idx} className="rounded-lg border bg-card">
+          <div
+            key={idx}
+            draggable
+            onDragStart={() => setDragIdx(idx)}
+            onDragEnd={() => setDragIdx(null)}
+            onDragOver={(e) => e.preventDefault()}
+            onDrop={(e) => { e.preventDefault(); onDrop(idx) }}
+            className={`rounded-lg border bg-card ${dragIdx === idx ? 'opacity-40 border-dashed' : ''}`}
+          >
             <div className="gl-head flex cursor-pointer items-center gap-3 p-3" onClick={() => setOpenIdx(open ? null : idx)}>
               <GripVertical className="h-5 w-5 flex-none text-muted-foreground/50" />
               <div className="min-w-0 flex-1">
@@ -784,6 +807,27 @@ function SkillsSection({ doc, set }: { doc: ResumeDoc; set: (p: (d: ResumeDoc) =
     setTimeout(() => setOpenCat(base + i), 0)
   }
 
+  const renameCat = (oldName: string, newName: string) => {
+    const n = newName.trim()
+    if (!n || n === oldName || Object.prototype.hasOwnProperty.call(doc.skills, n)) return
+    set((d) => {
+      // preserve order
+      const entries = Object.entries(d.skills).map(([k, v]) => (k === oldName ? [n, v] : [k, v]) as [string, string[]])
+      d.skills = {}
+      for (const [k, v] of entries) d.skills[k] = v
+    })
+    setOpenCat((cur) => (cur === oldName ? n : cur))
+  }
+
+  const [dragIdx, setDragIdx] = useState<number | null>(null)
+  const onDropCat = (to: number) => {
+    if (dragIdx === null || dragIdx === to) { setDragIdx(null); return }
+    const entries = [...cats]
+    const moved = reorder(entries, dragIdx, to)
+    set((d) => { d.skills = {}; for (const [k, v] of moved) d.skills[k] = v })
+    setDragIdx(null)
+  }
+
   return (
     <div className="max-w-xl space-y-2 text-sm">
       <div>
@@ -793,10 +837,22 @@ function SkillsSection({ doc, set }: { doc: ResumeDoc; set: (p: (d: ResumeDoc) =
       {cats.map(([cat, skills], idx) => {
         const open = openCat === cat || (openCat === null && idx === selIdx)
         return (
-          <div key={cat} className={`rounded-lg border bg-card ${open ? '' : ''}`}>
+          <div
+            key={cat}
+            draggable
+            onDragStart={() => setDragIdx(idx)}
+            onDragEnd={() => setDragIdx(null)}
+            onDragOver={(e) => e.preventDefault()}
+            onDrop={(e) => { e.preventDefault(); onDropCat(idx) }}
+            className={`rounded-lg border bg-card ${dragIdx === idx ? 'opacity-40 border-dashed' : ''}`}
+          >
             <div className="flex items-center gap-2.5 p-2.5">
               <GripVertical className="h-5 w-5 flex-none text-muted-foreground/50" />
-              <span className="flex-1 text-[13.5px] font-semibold">{cat}</span>
+              <Input
+                defaultValue={cat}
+                onBlur={(e) => renameCat(cat, e.target.value)}
+                className="h-7 flex-1 border-0 bg-transparent px-1 text-[13.5px] font-semibold shadow-none focus-visible:ring-0"
+              />
               <span className="text-[11.5px] text-muted-foreground">{skills.length} skills</span>
               <Button variant="ghost" size="icon-xs" onClick={() => moveCat(idx, -1)} disabled={idx === 0}><ChevronUp className="h-3.5 w-3.5" /></Button>
               <Button variant="ghost" size="icon-xs" onClick={() => moveCat(idx, 1)} disabled={idx === cats.length - 1}><ChevronDown className="h-3.5 w-3.5" /></Button>
@@ -884,7 +940,34 @@ function FinishSection({ resumeId, report, onLint }: { resumeId: string; report:
       <div className="rounded-md border-l-[3px] border-amber-500 bg-amber-50 px-3 py-2 text-xs text-amber-800">
         <b className="font-mono">One-page gate</b> — Warn on overflow + optional Auto-fit (shrink-to-fit). Never silently truncates.
       </div>
-      <Button variant="outline" size="sm" onClick={onLint} disabled={false}><Sparkles className="mr-2 h-4 w-4" /> Run ATS lint</Button>
+
+      {/* ATS summary — auto-run on load/save, shown inline (item 14) */}
+      <div className="rounded-lg border p-3">
+        <div className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">ATS summary</div>
+        {report ? <InlineAtsReport report={report} onOpenDrawer={onLint} /> : <p className="text-xs text-muted-foreground">Run the linter to see feedback…</p>}
+      </div>
+    </div>
+  )
+}
+
+function InlineAtsReport({ report, onOpenDrawer }: { report: AtsReport; onOpenDrawer: () => void }) {
+  return (
+    <div className="space-y-3">
+      <div className="flex items-center justify-between">
+        <span className="text-sm font-bold">{report.overall.score} / 100 — {gradeOf(report.overall.score)}</span>
+        <Button variant="ghost" size="sm" onClick={onOpenDrawer} className="text-xs">View full report →</Button>
+      </div>
+      <div className="space-y-1.5">
+        {report.byCategory.map((c) => (
+          <div key={c.category} className="flex items-center gap-2">
+            <span className="w-24 shrink-0 text-xs capitalize">{c.category.replace('_', ' & ')}</span>
+            <div className="h-2 flex-1 overflow-hidden rounded-full bg-muted">
+              <div className="h-full rounded-full bg-emerald-600" style={{ width: `${c.percent}%` }} />
+            </div>
+            <span className="w-10 text-right text-xs font-mono text-muted-foreground">{Math.round(c.percent)}%</span>
+          </div>
+        ))}
+      </div>
     </div>
   )
 }
