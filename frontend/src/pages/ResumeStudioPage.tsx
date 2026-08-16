@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
-import { useParams } from 'react-router-dom'
-import { Save, History, Loader2, Upload, FileText, Sparkles, X } from 'lucide-react'
-import { useResume, useSaveResume, useUpdateMeta, useLint, useResumeVersions } from '../hooks/useResumes'
+import { useParams, useNavigate } from 'react-router-dom'
+import { Save, History, Loader2, Upload, FileText, Sparkles, X, Copy, Archive, Trash2, ChevronUp, ChevronDown, GripVertical } from 'lucide-react'
+import { useResume, useSaveResume, useUpdateMeta, useLint, useResumeVersions, useDuplicateResume, useArchiveResume, useDeleteResume, useCreateFromUpload } from '../hooks/useResumes'
 import * as resumeApi from '../api/resumes'
 import { emptyResumeDoc } from '../lib/resume-doc'
 import { renderResumeHtml, previewStyle } from '../lib/resume-render'
@@ -15,6 +15,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card'
 import { Separator } from '../components/ui/separator'
 import { Switch } from '../components/ui/switch'
 import { ScrollArea } from '../components/ui/scroll-area'
+import { ConfirmDialog } from '../components/ConfirmDialog'
 import type { ResumeDoc, AtsReport } from '../types'
 
 type SectionKey = 'details' | 'contact' | 'summary' | 'experience' | 'education' | 'skills' | 'certs' | 'finish'
@@ -50,6 +51,48 @@ export function ResumeStudioPage() {
   const [accurateLoading, setAccurateLoading] = useState(false)
   const [versionsOpen, setVersionsOpen] = useState(false)
   const versions = useResumeVersions(versionsOpen ? id : undefined)
+  const navigate = useNavigate()
+  const duplicate = useDuplicateResume()
+  const archive = useArchiveResume()
+  const deleteResume = useDeleteResume(id)
+  const upload = useCreateFromUpload()
+  const [confirm, setConfirm] = useState<'delete' | 'archive' | 'duplicate' | null>(null)
+  const [lifecycleBusy, setLifecycleBusy] = useState(false)
+  const [uploading, setUploading] = useState(false)
+
+  const doLifecycle = async (kind: 'delete' | 'archive' | 'duplicate') => {
+    setLifecycleBusy(true)
+    try {
+      if (kind === 'duplicate') {
+        const dup = await duplicate.mutateAsync(id)
+        notify.success(`Duplicated as "${dup.title}"`)
+        navigate(`/resume/${dup.id}`)
+      } else if (kind === 'archive') {
+        await archive.mutateAsync(id)
+        notify.success('Resume archived')
+        navigate('/resume')
+      } else {
+        await deleteResume.mutateAsync()
+        notify.success('Resume deleted')
+        navigate('/resume')
+      }
+      setConfirm(null)
+    } finally {
+      setLifecycleBusy(false)
+    }
+  }
+
+  const handleUpload = async (file: File) => {
+    setUploading(true)
+    try {
+      const res = await upload.mutateAsync(file)
+      notify.success('Uploaded — parsed resume content')
+      void res
+      navigate(`/resume/${id}`)
+    } finally {
+      setUploading(false)
+    }
+  }
 
   // Hydrate the local editing doc when the resume loads.
   useEffect(() => {
@@ -183,6 +226,9 @@ export function ResumeStudioPage() {
               report={report}
               primary={!!resume?.primary}
               onTogglePrimary={(p) => void updateMeta.mutateAsync({ primary: p })}
+              onAskLifecycle={(k) => setConfirm(k)}
+              onUpload={(f) => void handleUpload(f)}
+              uploading={uploading}
             />
           </CardContent>
         </Card>
@@ -222,6 +268,35 @@ export function ResumeStudioPage() {
         versions={versions.data}
         loading={versions.isLoading}
       />
+
+      <ConfirmDialog
+        open={confirm === 'delete'}
+        onOpenChange={(o) => !o && setConfirm(null)}
+        title="Delete this resume?"
+        description="This permanently removes the resume and all its saved versions. This cannot be undone."
+        confirmLabel="Delete"
+        tone="danger"
+        busy={lifecycleBusy}
+        onConfirm={() => void doLifecycle('delete')}
+      />
+      <ConfirmDialog
+        open={confirm === 'archive'}
+        onOpenChange={(o) => !o && setConfirm(null)}
+        title="Archive this resume?"
+        description="It will be hidden from the active list but not deleted. You can restore it later."
+        confirmLabel="Archive"
+        busy={lifecycleBusy}
+        onConfirm={() => void doLifecycle('archive')}
+      />
+      <ConfirmDialog
+        open={confirm === 'duplicate'}
+        onOpenChange={(o) => !o && setConfirm(null)}
+        title="Duplicate this resume?"
+        description="Creates an editable copy. The copy will not be primary."
+        confirmLabel="Duplicate"
+        busy={lifecycleBusy}
+        onConfirm={() => void doLifecycle('duplicate')}
+      />
     </div>
   )
 }
@@ -242,6 +317,9 @@ function SectionForm(props: {
   report: Awaited<ReturnType<typeof resumeApi.lintResume>> | null
   primary: boolean
   onTogglePrimary: (p: boolean) => void
+  onAskLifecycle: (k: 'delete' | 'archive' | 'duplicate') => void
+  onUpload: (f: File) => void
+  uploading: boolean
 }) {
   const { section, doc, set } = props
   switch (section) {
@@ -292,8 +370,10 @@ function DetailsSection(props: {
   setTitle: (t: string) => void
   primary: boolean
   onTogglePrimary: (p: boolean) => void
+  onAskLifecycle: (k: 'delete' | 'archive' | 'duplicate') => void
+  onUpload: (f: File) => void
+  uploading: boolean
 }) {
-  void props
   return (
     <div className="space-y-4 text-sm">
       <div className="grid gap-1.5">
@@ -310,12 +390,40 @@ function DetailsSection(props: {
       <Separator />
       <div>
         <div className="mb-2 font-medium">Source</div>
-        <Button variant="outline" size="sm" disabled title="Upload wiring added in E6.4 follow-up">
-          <Upload className="mr-2 h-4 w-4" /> Upload File
-        </Button>
+        <label className="inline-flex cursor-pointer select-none items-center justify-center gap-1.5 rounded-lg border border-border bg-background px-2.5 text-sm font-medium transition-all hover:bg-muted">
+          {props.uploading ? (
+            <Loader2 className="h-4 w-4 animate-spin" />
+          ) : (
+            <Upload className="h-4 w-4" />
+          )}
+          Upload File
+          <input
+            type="file"
+            accept=".pdf,.docx,.doc,.txt"
+            className="hidden"
+            disabled={props.uploading}
+            onChange={(e) => {
+              const f = e.target.files?.[0]
+              if (f) props.onUpload(f)
+              e.target.value = ''
+            }}
+          />
+        </label>
         <p className="mt-1 text-xs text-muted-foreground">
-          Upload a PDF or DOCX to seed this resume, or continue without data.
+          Upload a PDF or DOCX to seed this resume (creates a new resume and parses it), or keep editing.
         </p>
+      </div>
+      <Separator />
+      <div className="flex flex-wrap gap-2">
+        <Button variant="outline" size="sm" onClick={() => props.onAskLifecycle('duplicate')}>
+          <Copy className="mr-2 h-4 w-4" /> Duplicate
+        </Button>
+        <Button variant="outline" size="sm" onClick={() => props.onAskLifecycle('archive')}>
+          <Archive className="mr-2 h-4 w-4" /> Archive
+        </Button>
+        <Button variant="outline" size="sm" className="text-destructive hover:text-destructive" onClick={() => props.onAskLifecycle('delete')}>
+          <Trash2 className="mr-2 h-4 w-4" /> Delete
+        </Button>
       </div>
     </div>
   )
@@ -408,6 +516,15 @@ function GroupSection({ doc, set, kind }: { doc: ResumeDoc; set: (p: (d: ResumeD
   const updateItem = (idx: number, patch: Partial<Item>) =>
     setItems(items.map((x, i) => (i === idx ? { ...x, ...patch } : x)))
 
+  const moveItem = (idx: number, dir: -1 | 1) => {
+    const to = idx + dir
+    if (to < 0 || to >= items.length) return
+    const next = [...items]
+    const [it] = next.splice(idx, 1)
+    next.splice(to, 0, it)
+    setItems(next)
+  }
+
   return (
     <div className="space-y-2">
       {items.map((it, idx) => {
@@ -416,7 +533,18 @@ function GroupSection({ doc, set, kind }: { doc: ResumeDoc; set: (p: (d: ResumeD
         return (
           <Card key={idx}>
             <CardContent className="space-y-3 p-4">
-              <div className="font-medium">{label || `New ${kind}`}</div>
+              <div className="flex items-center gap-2">
+                <GripVertical className="h-4 w-4 text-muted-foreground/50" />
+                <div className="font-medium">{label || `New ${kind}`}</div>
+                <div className="ml-auto flex items-center gap-0.5">
+                  <Button variant="ghost" size="icon-xs" onClick={() => moveItem(idx, -1)} disabled={idx === 0} aria-label="Move up">
+                    <ChevronUp className="h-4 w-4" />
+                  </Button>
+                  <Button variant="ghost" size="icon-xs" onClick={() => moveItem(idx, 1)} disabled={idx === items.length - 1} aria-label="Move down">
+                    <ChevronDown className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
               <div className="grid grid-cols-2 gap-3">
                 {spec.fields.map((f) => (
                   <div key={f.key} className="grid gap-1">
@@ -471,13 +599,52 @@ function GroupSection({ doc, set, kind }: { doc: ResumeDoc; set: (p: (d: ResumeD
 // --- Skills ---
 function SkillsSection({ doc, set }: { doc: ResumeDoc; set: (p: (d: ResumeDoc) => void) => void }) {
   const cats = Object.entries(doc.skills)
+
+  const moveCat = (idx: number, dir: -1 | 1) => {
+    const to = idx + dir
+    if (to < 0 || to >= cats.length) return
+    const entries = [...cats]
+    const [c] = entries.splice(idx, 1)
+    entries.splice(to, 0, c)
+    set((d) => {
+      d.skills = {}
+      for (const [k, v] of entries) d.skills[k] = v
+    })
+  }
+
+  const removeCat = (cat: string) =>
+    set((d) => {
+      const next: Record<string, string[]> = {}
+      for (const [k, v] of Object.entries(d.skills)) if (k !== cat) next[k] = v
+      d.skills = next
+    })
+
+  const addCat = () => {
+    const base = 'New category'
+    let name = base
+    let n = 2
+    while (Object.prototype.hasOwnProperty.call(doc.skills, name)) name = `${base} ${n++}`
+    set((d) => void (d.skills[name] = []))
+  }
+
   return (
     <div className="space-y-4">
-      {cats.map(([cat, skills]) => (
+      {cats.map(([cat, skills], idx) => (
         <div key={cat} className="space-y-1.5 rounded border p-3">
           <div className="flex items-center justify-between">
             <Label>{cat}</Label>
-            <Badge variant="outline">{skills.length} skills</Badge>
+            <div className="flex items-center gap-1">
+              <Badge variant="outline">{skills.length} skills</Badge>
+              <Button variant="ghost" size="icon-xs" onClick={() => moveCat(idx, -1)} disabled={idx === 0} aria-label={`Move ${cat} up`}>
+                <ChevronUp className="h-4 w-4" />
+              </Button>
+              <Button variant="ghost" size="icon-xs" onClick={() => moveCat(idx, 1)} disabled={idx === cats.length - 1} aria-label={`Move ${cat} down`}>
+                <ChevronDown className="h-4 w-4" />
+              </Button>
+              <Button variant="ghost" size="icon-xs" onClick={() => removeCat(cat)} aria-label={`Remove ${cat}`} className="text-muted-foreground hover:text-destructive">
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
           </div>
           <div className="flex flex-wrap gap-1.5">
             {skills.map((s, i) => (
@@ -507,6 +674,9 @@ function SkillsSection({ doc, set }: { doc: ResumeDoc; set: (p: (d: ResumeDoc) =
           />
         </div>
       ))}
+      <Button variant="outline" size="sm" onClick={addCat}>
+        + Add category
+      </Button>
     </div>
   )
 }
