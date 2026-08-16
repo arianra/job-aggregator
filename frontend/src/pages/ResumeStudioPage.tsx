@@ -134,7 +134,13 @@ export function ResumeStudioPage() {
     if (open) setLintOpen(true)
   }
 
-  const handleLint = () => void doLint(true)
+  const handleLint = () => {
+    // Bug 9: open the already-computed report instantly — never block the drawer
+    // on a fresh lint (which waits on the slow Qwen advice call). Only run a new
+    // lint when there is nothing cached yet.
+    if (report) setLintOpen(true)
+    else void doLint(true)
+  }
 
   // Auto-run the report on first open (items 14/20) once the resume loads.
   const loadedRef = useRef(false)
@@ -957,12 +963,16 @@ function InlineAtsReport({ report, onOpenDrawer }: { report: AtsReport; onOpenDr
       </div>
       <div className="space-y-1.5">
         {report.byCategory.map((c) => (
-          <div key={c.category} className="flex items-center gap-2">
-            <span className="w-24 shrink-0 text-xs capitalize">{c.category.replace('_', ' & ')}</span>
-            <div className="h-2 flex-1 overflow-hidden rounded-full bg-muted">
-              <div className="h-full rounded-full bg-emerald-600" style={{ width: `${c.percent}%` }} />
+          <div key={c.category}>
+            <div className="flex items-center gap-2">
+              <span className="w-24 shrink-0 text-xs capitalize">{c.category.replace('_', ' & ')}</span>
+              <div className="h-2 flex-1 overflow-hidden rounded-full bg-muted">
+                <div className="h-full rounded-full bg-emerald-600" style={{ width: `${c.percent}%` }} />
+              </div>
+              <span className="w-10 text-right text-xs font-mono text-muted-foreground">{Math.round(c.percent)}%</span>
             </div>
-            <span className="w-10 text-right text-xs font-mono text-muted-foreground">{Math.round(c.percent)}%</span>
+            {/* Bug 10: show the category description (the drawer had it; the inline summary didn't) */}
+            <div className="mt-0.5 text-[11px] text-muted-foreground">{CATEGORY_DESCS[c.category]}</div>
           </div>
         ))}
       </div>
