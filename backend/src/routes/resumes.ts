@@ -270,6 +270,29 @@ export function createResumesRouter(storage: Storage): Router {
     }
   })
 
+  // GET /api/profile/resumes/:id/versions/:revision — full data of one version
+  // (used by the frontend Restore feature; data is loaded into the editor, then
+  // Save commits it as a new version — never mutates history).
+  router.get('/:id/versions/:revision', async (req: Request, res: Response) => {
+    try {
+      const resume = await storage.getResume(req.params.id)
+      if (!resume) {
+        res.status(404).json({ error: 'Resume not found' })
+        return
+      }
+      const revision = Number(req.params.revision)
+      const version = await storage.getResumeVersion(resume.id, revision)
+      if (!version) {
+        res.status(404).json({ error: `Version v${revision} not found` })
+        return
+      }
+      res.json({ success: true, data: version.data })
+    } catch (err) {
+      logger.error('GET /api/profile/resumes/:id/versions/:revision failed', { err })
+      res.status(500).json({ error: 'Internal server error' })
+    }
+  })
+
   // POST /api/profile/resumes/:id/duplicate
   router.post('/:id/duplicate', async (req: Request, res: Response) => {
     try {
@@ -383,8 +406,7 @@ export function createResumesRouter(storage: Storage): Router {
         return
       }
       const data = resume.data ?? emptyResumeDoc()
-      const opts = settingsFromDoc(data)
-      const { bytes } = await buildDocx(data, opts)
+      const { bytes } = await buildDocx(data)
       const ext = '.docx'
       res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document')
       res.setHeader('Content-Disposition', `attachment; filename="${safeFilename(resume.title)}${ext}"`)
@@ -404,8 +426,7 @@ export function createResumesRouter(storage: Storage): Router {
         return
       }
       const data = resume.data ?? emptyResumeDoc()
-      const opts = settingsFromDoc(data)
-      const { bytes } = await buildDocx(data, opts)
+      const { bytes } = await buildDocx(data)
       const pdf = await convertDocxToPdf(Buffer.from(bytes))
       res.setHeader('Content-Type', 'application/pdf')
       res.setHeader('Content-Disposition', `attachment; filename="${safeFilename(resume.title)}.pdf"`)
@@ -432,8 +453,7 @@ export function createResumesRouter(storage: Storage): Router {
         res.status(400).json({ error: 'A valid ResumeDoc body (with contact) is required for preview' })
         return
       }
-      const opts = settingsFromDoc(data)
-      const { bytes } = await buildDocx(data, opts)
+      const { bytes } = await buildDocx(data)
       const pdf = await convertDocxToPdf(Buffer.from(bytes))
       res.setHeader('Content-Type', 'application/pdf')
       res.setHeader('Cache-Control', 'no-store')
@@ -511,15 +531,6 @@ export function resumeDocToText(data: ResumeDoc): string {
     for (const cert of data.certifications) lines.push([cert.title, cert.issuer, cert.year].filter(Boolean).join(' · '))
   }
   return lines.join('\n')
-}
-
-/** Map a ResumeDoc's canonical settings onto the docx builder options. */
-function settingsFromDoc(data: ResumeDoc): { fontSize?: number; lineHeight?: number } {
-  const s = data.settings
-  return {
-    fontSize: typeof s?.fontSize === 'number' ? s.fontSize : 6.5,
-    lineHeight: typeof s?.lineHeight === 'number' ? s.lineHeight : 1.42,
-  }
 }
 
 /** Sanitize a resume title into a safe download filename. */

@@ -90,17 +90,25 @@ describe('buildDocx (E3) — pure renderer', () => {
   })
 
   it('fit-control scaling changes the emitted size half-points', async () => {
+    const biggerDoc = { ...JSON.parse(JSON.stringify(golden)) as typeof golden, settings: { ...golden.settings, fontSize: 9 } }
     const base = await buildDocx(golden)
-    const bigger = await buildDocx(golden, { fontSize: 9 })
+    const bigger = await buildDocx(biggerDoc)
     const bxml = await (await import('jszip')).default.loadAsync(base.bytes)
     const btext = await bxml.file('word/document.xml')!.async('string')
     const xxml = await (await import('jszip')).default.loadAsync(bigger.bytes)
     const xtext = await xxml.file('word/document.xml')!.async('string')
-    // larger fontSize → larger w:sz attributes somewhere
     const sizes = (s: string) => (s.match(/w:sz w:val="(\d+)"/g) ?? []).map((m) => parseInt(m.match(/\d+/)![0], 10))
     const maxBase = Math.max(...sizes(btext))
     const maxBig = Math.max(...sizes(xtext))
     expect(maxBig).toBeGreaterThan(maxBase)
+  })
+
+  it('omits hidden contact lines from the rendered doc (visibility)', async () => {
+    const doc = JSON.parse(JSON.stringify(golden)) as typeof golden
+    doc.contact.visibility = { ...doc.contact.visibility, email: false, phone: false, linkedin: false }
+    const text = (await extractDocxParagraphs((await buildDocx(doc)).bytes)).map(norm).join(' ')
+    expect(text).not.toContain('arian99@gmail.com')
+    expect(text).not.toContain('+1 (707) 771-6645')
   })
 
   it('is content-deterministic: same input → identical rendered text', async () => {

@@ -1,172 +1,152 @@
 /**
- * Pure DOCX builder (E3 — DOCX/PDF pipeline).
+ * Pure DOCX builder (E3 — DOCX/PDF pipeline). Reproduces the ADR-0004 §2 fixed
+ * format ("rezi-compact") from cv2026/003 — a compact single-page serif resume.
  *
- * Reproduces the ADR-0004 §2 fixed format ("rezi-compact") from a ResumeDoc.
- * PURE: (resumeDoc, settings, opts) -> Promise<DocxResult>. No fs, no request context.
- * Only the route layer touches disk/child-process.
+ * PURE: (resumeDoc) -> Promise<DocxResult>. No fs / request I/O; only the route
+ * touches disk/child-process.
  *
- * Type scale (base, §2.1):
- *   - Name ......... sz 26 (13pt)  bold
- *   - Section head . sz 18 (9pt)   bold    (SUMMARY / EXPERIENCE / ...)
- *   - Role/degree .. sz 16 (8pt)   bold
- *   - Company line . sz 13 (6.5pt) bold
- *   - Body/bullets . sz 13 (6.5pt) normal
- * Sizes scale proportionally with the fit control (fontSize); line-height
- * scales paragraph spacing.
+ * §2.1 type scale (base, half-points → pt):
+ *   - Name ......... 26 (13pt)  bold
+ *   - Section head . 18 (9pt)   bold uppercase  (SUMMARY / EXPERIENCE / ...)
+ *   - Role/degree .. 16 (8pt)   bold
+ *   - Company line . 13 (6.5pt) bold  (Company   YYYY–YYYY, City)
+ *   - Body/bullets . 13 (6.5pt) normal
+ * Fit controls (settings) scale font size + line height proportionally.
  */
-import {
-  AlignmentType,
-  Document,
-  Packer,
-  Paragraph,
-  TextRun,
-  type IParagraphOptions,
-} from 'docx'
+import { AlignmentType, Document, Packer, Paragraph, TextRun, type IParagraphOptions } from 'docx'
 import type { ResumeDoc } from '@job-aggregator/shared'
-
-export interface DocxBuildOptions {
-  fontSize?: number // base pt for body (default 6.5)
-  lineHeight?: number // multiplier (default 1.42)
-}
 
 export interface DocxResult {
   bytes: Buffer
-  // Rough one-page estimate: number of generated body paragraphs (heuristic).
   pageCount: number
 }
 
-export async function buildDocx(
-  resumeDoc: ResumeDoc,
-  opts: DocxBuildOptions = {}
-): Promise<DocxResult> {
-  const base = opts.fontSize ?? 6.5
-  const lineHeight = opts.lineHeight ?? 1.42
-  // scale relative sizes off the body base
-  const scale = (halfPoints: number) => Math.max(4, Math.round((halfPoints * base) / 13 * 2))
-  const szName = scale(26)
-  const szHead = scale(18)
-  const szRole = scale(16)
-  const szBody = scale(13)
+const SERIF = 'Georgia'
+const SANS = 'Calibri'
 
-  const children: IParagraphOptions[] = []
+/** Map ResumeDoc settings → builder knobs. */
+function knobs(doc: ResumeDoc) {
+  const s = doc.settings ?? {}
+  const fontSize = s.fontSize ?? 6.5
+  const lineHeight = s.lineHeight ?? 1.42
+  const spacing = s.spacing ?? 1 // extra space between entries, multiplier
+  const paperA4 = !!s.paperA4
+  const font = s.typeface === 'sans' ? SANS : SERIF
+  // §2.1 base half-point sizes, scaled proportionally off the body base (13).
+  const scale = (half: number) => Math.round(((half * fontSize) / 13) * 2)
+  return {
+    fontSize,
+    lineHeight,
+    spacing,
+    paperA4,
+    font,
+    name: scale(26),
+    head: scale(18),
+    role: scale(16),
+    body: scale(13),
+  }
+}
 
-  /** Build a paragraph with the fixed font + scaled line-height (fit control). */
-  function p(runs: Array<{ text: string; size: number; bold?: boolean }>, extra: Partial<IParagraphOptions> = {}): IParagraphOptions {
-    return {
+export async function buildDocx(doc: ResumeDoc): Promise<DocxResult> {
+  const k = knobs(doc)
+  const kids: IParagraphOptions[] = []
+
+  /** A text paragraph with the fixed face + fit-scaled line height. */
+  function p(runs: Array<{ text: string; size: number; bold?: boolean }>, extra: Partial<IParagraphOptions> = {}): void {
+    kids.push({
       children: runs.map(
-        (r) =>
-          new TextRun({
-            text: r.text,
-            size: Math.round(r.size * 2), // docx size is half-points
-            bold: r.bold,
-            font: 'Calibri',
-          })
+        (r) => new TextRun({ text: r.text, size: r.size, bold: r.bold, font: k.font })
       ),
       ...extra,
-      spacing: { line: Math.round(240 * lineHeight), ...(extra.spacing ?? {}) },
-    }
+      spacing: {
+        line: Math.round(240 * k.lineHeight),
+        after: Math.round(40 * k.spacing),
+        ...(extra.spacing ?? {}),
+      },
+    })
   }
 
-  function pushSection(title: string, body: string): void {
-    if (!body) return
-    children.push(p([{ text: title, size: szHead, bold: true }]))
-    children.push(p([{ text: body, size: szBody }]))
-  }
+  const c = doc.contact ?? ({} as ResumeDoc['contact'])
+  const vis = c.visibility ?? { email: true, phone: true, linkedin: true }
 
-  // ---- 1. Contact block: one inline line, location · email · phone · linkedin ----
-  const parts = [
-    [resumeDoc.contact.city, resumeDoc.contact.state, resumeDoc.contact.country]
-      .filter(Boolean)
-      .join(', '),
+  // ---- 1. Contact block (per §2.2: location · email · phone · linkedin) ----
+  if (c.name) p([{ text: c.name, size: k.name, bold: true }], { alignment: AlignmentType.CENTER })
+  const place = [c.city, c.state, c.country].filter(Boolean).join(', ')
+  const how = [
+    vis.email !== false && c.email ? c.email : '',
+    vis.phone !== false && c.phone ? c.phone : '',
+    vis.linkedin !== false && c.linkedin ? c.linkedin : '',
   ]
-  if (resumeDoc.contact.visibility?.email !== false && resumeDoc.contact.email)
-    parts.push(resumeDoc.contact.email)
-  if (resumeDoc.contact.visibility?.phone !== false && resumeDoc.contact.phone)
-    parts.push(resumeDoc.contact.phone)
-  if (resumeDoc.contact.visibility?.linkedin !== false && resumeDoc.contact.linkedin)
-    parts.push(resumeDoc.contact.linkedin)
-  const contactLine = [...new Set(parts)].filter(Boolean).join('  ·  ')
-  if (contactLine || resumeDoc.contact.name) {
-    children.push(
-      p(
-        [{ text: resumeDoc.contact.name || '', size: szName, bold: true }],
-        { alignment: AlignmentType.CENTER }
-      )
-    )
-    if (contactLine) children.push(p([{ text: contactLine, size: szBody }], { alignment: AlignmentType.CENTER }))
-  }
+    .filter(Boolean)
+    .join('  ·  ')
+  const contactLine = [place, how].filter(Boolean).join('  ·  ')
+  if (contactLine) p([{ text: contactLine, size: k.body }], { alignment: AlignmentType.CENTER })
 
   // ---- 2. SUMMARY ----
-  pushSection('SUMMARY', resumeDoc.summary)
+  if (doc.summary) {
+    p([{ text: 'SUMMARY', size: k.head, bold: true }])
+    p([{ text: doc.summary, size: k.body }])
+  }
 
   // ---- 3. EXPERIENCE ----
-  if (resumeDoc.experience.length) {
-    children.push(p([{ text: 'EXPERIENCE', size: szHead, bold: true }]))
-    for (const exp of resumeDoc.experience) {
-      if (exp.role) children.push(p([{ text: exp.role, size: szRole, bold: true }]))
-      const meta = [exp.company, exp.dates ? exp.dates : '', exp.location].filter(Boolean).join('   ')
-      if (meta) children.push(p([{ text: meta, size: szBody, bold: true }]))
-      for (const b of exp.bullets || []) {
-        children.push(
-          p(
-            [{ text: '•  ', size: szBody }, { text: b, size: szBody }],
-            { bullet: { level: 0 }, spacing: { before: 20, after: 20 } }
-          )
-        )
+  if (doc.experience?.length) {
+    p([{ text: 'EXPERIENCE', size: k.head, bold: true }])
+    for (const e of doc.experience) {
+      if (e.role) p([{ text: e.role, size: k.role, bold: true }])
+      const meta = [e.company, e.dates, e.location].filter(Boolean).join('   ')
+      if (meta) p([{ text: meta, size: k.body, bold: true }])
+      for (const b of e.bullets || []) {
+        if (b) p([{ text: '•  ', size: k.body }, { text: b, size: k.body }])
       }
     }
   }
 
   // ---- 4. EDUCATION ----
-  if (resumeDoc.education.length) {
-    children.push(p([{ text: 'EDUCATION', size: szHead, bold: true }]))
-    for (const edu of resumeDoc.education) {
-      if (edu.degree) children.push(p([{ text: edu.degree, size: szRole, bold: true }]))
-      const meta = [edu.school, edu.location, edu.year].filter(Boolean).join('  •  ')
-      if (meta) children.push(p([{ text: meta, size: szBody, bold: true }]))
+  if (doc.education?.length) {
+    p([{ text: 'EDUCATION', size: k.head, bold: true }])
+    for (const e of doc.education) {
+      if (e.degree) p([{ text: e.degree, size: k.role, bold: true }])
+      const meta = [e.school, e.location, e.year].filter(Boolean).join('  •  ')
+      if (meta) p([{ text: meta, size: k.body, bold: true }])
     }
   }
 
   // ---- 5. SKILLS ----
-  const skillCats = Object.entries(resumeDoc.skills || {}).filter(([, v]) => v && v.length)
-  if (skillCats.length) {
-    children.push(p([{ text: 'SKILLS', size: szHead, bold: true }]))
-    for (const [cat, skills] of skillCats) {
-      if (skills && skills.length)
-        children.push(p([{ text: `${cat}:`, size: szBody, bold: true }, { text: ` ${skills.join(', ')}`, size: szBody }]))
+  const cats = Object.entries(doc.skills || {}).filter(([, v]) => v && v.length)
+  if (cats.length) {
+    p([{ text: 'SKILLS', size: k.head, bold: true }])
+    for (const [cat, list] of cats) {
+      p([{ text: `${cat}:`, size: k.body, bold: true }, { text: ` ${list.join(', ')}`, size: k.body }])
     }
   }
 
-  // ---- 6. CERTIFICATIONS (optional section, ADR-0004 §2.2 / O2) ----
-  if (resumeDoc.certifications && resumeDoc.certifications.length) {
-    children.push(p([{ text: 'CERTIFICATIONS', size: szHead, bold: true }]))
-    for (const cert of resumeDoc.certifications) {
-      const meta = [cert.title, cert.issuer, cert.year].filter(Boolean).join('  —  ')
-      if (meta) children.push(p([{ text: meta, size: szBody, bold: true }]))
+  // ---- 6. CERTIFICATIONS (optional by §2.2 / O2) ----
+  if (doc.certifications?.length) {
+    p([{ text: 'CERTIFICATIONS', size: k.head, bold: true }])
+    for (const ct of doc.certifications) {
+      const line = [ct.title, ct.issuer, ct.year].filter(Boolean).join('  —  ')
+      if (line) p([{ text: line, size: k.body, bold: true }])
     }
   }
 
-  const doc = new Document({
+  const docx = new Document({
     sections: [
       {
         properties: {
-          page: {
-            margin: { top: 600, bottom: 600, left: 850, right: 850 },
-          },
+          page: k.paperA4
+            ? { size: { width: 11906, height: 16838 }, margin: { top: 600, bottom: 600, left: 850, right: 850 } }
+            : { margin: { top: 600, bottom: 600, left: 850, right: 850 } },
         },
-        children: children.map((c) => new Paragraph(c)),
+        children: kids.map((c) => new Paragraph(c)),
       },
     ],
   })
 
-  return {
-    bytes: await Packer.toBuffer(doc),
-    pageCount: estimatePages(children, base),
-  }
+  return { bytes: await Packer.toBuffer(docx), pageCount: estimatePages(kids, k.fontSize) }
 }
 
-/** Rough page estimate: A4 is dense at ~6.5pt; ~38 body lines fit a page. */
+/** Rough one-page estimate (A4 at ~6.5pt fits ~40 body lines). */
 function estimatePages(paragraphs: IParagraphOptions[], base: number): number {
-  const perPage = Math.max(20, Math.round(38 / (base / 6.5)))
+  const perPage = Math.max(20, Math.round(40 / (base / 6.5)))
   return Math.max(1, Math.ceil(paragraphs.length / perPage))
 }
