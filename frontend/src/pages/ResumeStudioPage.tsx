@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { useParams, useNavigate } from 'react-router-dom'
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom'
 import {
   Save, History, Loader2, Upload, Sparkles, X, ChevronUp, ChevronDown, GripVertical, Plus,
 } from 'lucide-react'
@@ -44,6 +44,7 @@ function cloneDoc(doc: ResumeDoc): ResumeDoc {
 
 export function ResumeStudioPage() {
   const { id = '', step } = useParams()
+  const [searchParams] = useSearchParams()
   const navigate = useNavigate()
   const { data: resume, isLoading } = useResume(id)
   const saveResume = useSaveResume(id)
@@ -75,6 +76,12 @@ export function ResumeStudioPage() {
   useEffect(() => {
     setActiveSection(stepFromRoute(step))
   }, [step])
+
+  // Sidebar "ATS lint" link lands with ?lint=1 → run lint + open the drawer.
+  const wantsLint = searchParams.get('lint') === '1'
+  useEffect(() => {
+    if (wantsLint) void handleLint()
+  }, [wantsLint])
 
   // Hydrate the local editing doc when the resume loads.
   useEffect(() => {

@@ -1,15 +1,12 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { Plus, FileText, Loader2 } from 'lucide-react'
+import { Plus } from 'lucide-react'
 import { useResumes, useCreateBlankResume, resumeKeys } from '../hooks/useResumes'
 import * as resumeApi from '../api/resumes'
 import { notify } from '../lib/notify'
-import { Card, CardContent } from '../components/ui/card'
-import { Button } from '../components/ui/button'
-import { Badge } from '../components/ui/badge'
+import { cn } from '../lib/utils'
 import { EmptyState } from '../components/ui/EmptyState'
-import type { ResumeMeta } from '../types'
 
 function formatDate(iso: string): string {
   try {
@@ -19,6 +16,7 @@ function formatDate(iso: string): string {
   }
 }
 
+// ordered(): live resumes first, primary on top (mirrors app list semantics + prototype).
 export function ResumeOverviewPage() {
   const navigate = useNavigate()
   const qc = useQueryClient()
@@ -28,10 +26,9 @@ export function ResumeOverviewPage() {
 
   const makePrimary = useMutation({
     mutationFn: (id: string) => resumeApi.updateResumeMeta(id, { primary: true }),
-    onSuccess: (_d, id) => {
+    onSuccess: () => {
       qc.invalidateQueries({ queryKey: resumeKeys.all })
-      notify.success('Resume set as primary')
-      void id
+      notify.success('Primary resume set')
     },
   })
 
@@ -39,91 +36,86 @@ export function ResumeOverviewPage() {
     setCreating(true)
     try {
       const meta = await createBlank.mutateAsync(undefined)
-      navigate(`/resume/${meta.id}`)
+      navigate(`/resume/${meta.id}/meta`)
     } finally {
       setCreating(false)
     }
   }
 
-  const handleMakePrimary = async (r: ResumeMeta) => {
-    await makePrimary.mutateAsync(r.id)
-  }
-
   return (
-    <div className="mx-auto max-w-5xl">
-      <div className="mb-4 flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold">Resume</h1>
-          <p className="text-sm text-muted-foreground">
-            Documents you author per role. The <b>primary</b> resume feeds your profile and job scoring.
-          </p>
-        </div>
-        <Button onClick={handleCreate} disabled={creating || createBlank.isPending}>
-          {creating || createBlank.isPending ? (
-            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-          ) : (
-            <Plus className="mr-2 h-4 w-4" />
-          )}
-          Create resume
-        </Button>
+    <div className="mx-auto w-full max-w-5xl px-7 py-6">
+      <div className="flex items-center gap-2">
+        <h1 className="m-0 text-2xl font-bold tracking-tight">Resume</h1>
+        <span className="rounded-full border border-accent px-1.5 py-0.5 font-mono text-[9.5px] text-accent">resumes</span>
+      </div>
+      <p className="mt-0 text-[13.5px] text-muted-foreground">
+        Documents you author per role. The <b>primary</b> resume feeds your Profile and job scoring.
+      </p>
+
+      <div className="my-4 flex flex-wrap items-center gap-2.5">
+        <button onClick={handleCreate} disabled={creating || createBlank.isPending} className="inline-flex items-center gap-2 rounded-lg bg-primary px-5 py-2.5 text-[13.5px] font-semibold text-primary-foreground shadow-sm hover:bg-primary/80">
+          <Plus className="h-4 w-4" /> Create resume
+        </button>
+        <span className="text-[12.5px] text-muted-foreground">Upload your source in 01 · Details inside the studio</span>
+        {resumes.length > 0 && (
+          <span className="ml-auto text-[12.5px] text-muted-foreground">
+            {resumes.length} resume{resumes.length === 1 ? '' : 's'}
+          </span>
+        )}
       </div>
 
       {isLoading ? (
-        <div className="space-y-3">
-          {[...Array(2)].map((_, i) => (
-            <div key={i} className="h-20 animate-pulse rounded-lg border bg-card" />
-          ))}
-        </div>
+        <div className="space-y-2.5">{[...Array(2)].map((_, i) => <div key={i} className="h-[78px] animate-pulse rounded-xl border" />)}</div>
       ) : resumes.length === 0 ? (
-        <EmptyState
-          icon={FileText}
-          title="No resumes yet"
-          description="Create your first resume to build your profile and start job scoring."
-          action={
-            <Button onClick={handleCreate} disabled={createBlank.isPending}>
-              <Plus className="mr-2 h-4 w-4" /> Create your first resume
-            </Button>
-          }
-        />
+        <div className="py-10">
+          <EmptyState
+            title="No resumes yet"
+            description="Create a resume and set it as primary to build your profile."
+            action={
+              <button onClick={handleCreate} disabled={creating} className="inline-flex items-center gap-2 rounded-lg bg-primary px-5 py-2.5 text-[13.5px] font-semibold text-primary-foreground">
+                <Plus className="h-4 w-4" /> Create your first resume
+              </button>
+            }
+          />
+        </div>
       ) : (
-        <div className="space-y-2">
+        <div className="space-y-2.5">
           {resumes.map((r) => (
-            <Card
+            <div
               key={r.id}
-              className="cursor-pointer transition-colors hover:border-primary"
-              onClick={() => navigate(`/resume/${r.id}`)}
+              onClick={() => navigate(`/resume/${r.id}/meta`)}
+              className={cn(
+                'group flex cursor-pointer items-center gap-3.5 rounded-xl border bg-card px-4 py-3.5 hover:border-accent',
+                r.primary && 'border-accent'
+              )}
             >
-              <CardContent className="flex items-center gap-4 p-4">
-                <div className="flex h-14 w-11 items-center justify-center rounded border bg-muted/40 text-[10px] text-muted-foreground">
-                  CV
+              <div className="flex h-[52px] w-10 flex-none items-center justify-center rounded-md border bg-muted font-mono text-[9px] text-muted-foreground">
+                CV
+              </div>
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center gap-2 font-semibold">
+                  <span className="truncate">{r.title}</span>
                 </div>
-                <div className="min-w-0 flex-1">
-                  <div className="font-semibold">{r.title}</div>
-                  <div className="mt-0.5 flex items-center gap-2 text-xs text-muted-foreground">
-                    <span>updated {formatDate(r.updated_at)}</span>
-                    <Badge variant="outline">rev {Math.max(0, r.revision)}</Badge>
-                    <Badge variant="outline">{r.format}</Badge>
-                    {r.status !== 'SAVED' && <Badge variant="outline">{r.status}</Badge>}
-                  </div>
+                <div className="mt-0.5 flex flex-wrap gap-2 text-[12.5px] text-muted-foreground">
+                  <span>updated {formatDate(r.updated_at)}</span>
+                  <span className="rounded-full border px-1.5 font-mono text-[9.5px]">rev {Math.max(0, r.revision)}</span>
+                  <span className="rounded-full border px-1.5 font-mono text-[9.5px]">{r.format}</span>
                 </div>
-                <div className="flex items-center gap-2">
-                  {r.primary ? (
-                    <Badge>PRIMARY</Badge>
-                  ) : (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        void handleMakePrimary(r)
-                      }}
-                    >
-                      Make primary
-                    </Button>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
+              </div>
+              <div className="ml-auto flex flex-none items-center">
+                {r.primary ? (
+                  <span className="rounded-full border border-accent px-1.5 font-mono text-[9.5px] text-accent">PRIMARY</span>
+                ) : (
+                  <button
+                    onClick={(e) => { e.stopPropagation(); void makePrimary.mutateAsync(r.id) }}
+                    className="whitespace-nowrap rounded-full border bg-muted/40 px-2.5 py-1 text-[11.5px] font-semibold text-muted-foreground opacity-0 transition-opacity hover:border-accent hover:bg-accent-soft hover:text-accent group-hover:opacity-100"
+                  >
+                    Make primary
+                  </button>
+                )}
+              </div>
+              <span className="flex-none text-muted-foreground">›</span>
+            </div>
           ))}
         </div>
       )}
