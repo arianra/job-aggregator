@@ -38,3 +38,4 @@ decided, why, and what remains open** — without re-deriving context from chat 
 - [0006 — Rezi UX Design Case Study](./0006-rezi-ux-design-case-study.md)
 - [0007 — Consolidated DOCX-First Resume UX](./0007-consolidated-docx-first-resume-ux.md)
 - [0008 — Resume as the Scored, Versioned Document](./0008-resume-as-scored-versioned-document.md)
+- [0009 — Resume Draft/Commit State Flow](./0009-resume-draft-commit-state-flow.md)
