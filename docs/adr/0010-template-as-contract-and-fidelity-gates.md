@@ -1,6 +1,7 @@
 # ADR-0010 — Template-as-Contract, DOCX-as-Artifact (template system + fidelity gates)
 
-- **Status:** Proposed
+- **Status:** Accepted (finalized 2026-08-16 after GitNexus blast-radius analysis + codebase-design
+  review — see *Codebase grounding*. Documentation only; implementation begins from the build path.)
 - **Date:** 2026-08-16
 - **Owner:** job-aggregator
 - **Scope:** Define how document *style* is represented, authored, and kept honest: a template is a
@@ -224,16 +225,70 @@ Apache-2.0 (open fidelity issues #178/#187/#195; pagination fork stalled) · Off
 Apache-2.0 (docx→HTML/PNG, all-platform binaries incl. linux-x64 — candidate alternate rasterizer,
 spike-gated) · diff-pdf GPL (reference only).
 
+## Codebase grounding (GitNexus + deep-module analysis, 2026-08-16)
+
+Indexed at commit `21eccfe` (2,620 symbols / 5,767 edges). Blast radii measured with
+`gitnexus impact`; design language follows the codebase-design skill (deep modules, seams, adapters).
+
+### Measured blast radii (refactor surface is small)
+
+| Symbol | Impact | Direct callers | Notes |
+|---|---|---|---|
+| `buildDocx` (docx-builder.ts) | **LOW** | `createResumesRouter` only, 3 call sites (export-docx / export-pdf / render-preview) | Signature refactor `buildDocx(doc, resolved)` touches one module |
+| `convertDocxToPdf` (pdf-deriver.ts) | **LOW** | same router | Unchanged by this ADR |
+| `buildDocxOnePage` (docx-fit.ts) | LOW, **0 callers — unwired** | none | Exists, pure, has a DI `render` seam; becomes the auto-fit host (below) |
+| `renderResumeHtml` (frontend/src/lib/resume-render.ts) | in use | `ResumeStudioPage` via `useMemo` | The live HTML renderer **already exists** — second renderer to migrate |
+
+### Findings that reshape the plan
+
+1. **Live bug found — settings never reach the builder.** All three routes call
+   `buildDocx(data)` with **no opts**; the doc's `settings` (fontSize/lineHeight/spacing/typeface/
+   paperA4) are ignored at export. `resolve()` + threading settings through the routes fixes this —
+   the ADR's step 3 is a bug fix, not just a refactor.
+2. **`ResumeSettings` already exists** in `shared/src/types.ts`, canonical and CSS-free
+   (`fontSize` pt / `lineHeight` / `spacing` / `typeface` / `paperA4`) — it **is** `resolve()`'s
+   input contract. No new settings schema; the template schema only adds what settings don't carry
+   (slots, decorations, page geometry, section order).
+3. **`buildDocxOnePage` already implements the auto-fit loop** (bounded retries, floor,
+   never-truncates, DI render seam) — currently scaling `settings.fontSize` on cloned docs. Under
+   this ADR it is adopted as-is at the seam; its body moves to scaling the **resolved template's
+   scale factor** through `resolve()` instead of mutating doc settings. New capability: zero.
+4. **`renderResumeHtml` is hardcoded** (classes `.dn/.dc/.m/.bl/.sk`, ignores settings entirely).
+   Its migration to ResolvedTemplate→CSS is the preview half of step 4; its current pure shape
+   (doc → HTML string) is preserved — only its style source changes.
+
+### Deep-module design (where the seams go)
+
+- **`resume-template` module (shared)** — deep: the entire style contract + `resolve()` +
+  unit conversions behind one config type and two functions. Deletion test: deleting it makes the
+  style reappear hand-written in two renderers + N gate tests — it earns its keep.
+- **Two adapters at one seam** — `buildDocx` (docx.js adapter) and `renderResumeHtml` (CSS
+  adapter) both consume `ResolvedTemplate`. Two adapters ⇒ a real seam, not a hypothetical one
+  (the codebase-design criterion is satisfied by existing code, not aspiration).
+- **Renderer seam (E3, already approved)** stays pure: `buildDocx(doc, resolved) → {bytes, pageCount}`,
+  no fs/request context. Routes remain thin adapters over it.
+- **Unit-conversion module** — deep in the other direction: many OOXML↔CSS facts (half-points,
+  twips, line-240ths) behind a handful of conversion functions; the single place drift can hide,
+  therefore the single place G1 asserts against.
+- **Gates as test modules at the same seams** — G1 crosses the builder seam (XML in = config out);
+  G2/G3 cross the full pipeline (data+template in, pixels out). The interface is the test surface:
+  no test needs to reach past either seam.
+
 ## Recommended build path
 
-1. **`shared/src/resume-template/`** — schema, `resolve()`, unit conversions (pure, zero deps).
+1. **`shared/src/resume-template/`** — schema, `resolve(template, settings: ResumeSettings)`,
+   unit conversions (pure, zero deps). Reuses the existing `ResumeSettings` as the input contract.
    *G1 can be written against the CURRENT builder immediately — give the in-flight E3/E6 agent an
    objective convergence target before the refactor, not after.*
 2. **`scripts/extract-template.ts` + fitness audit** — DOCX → candidate config; emit the `compact`
    config from the golden; human-review + commit.
 3. **Refactor `docx-builder.ts`** to `buildDocx(doc, resolved)` — hardcoded values replaced by the
-   extracted `compact` config (fixes the 7 drifts). Golden test extended with G1 assertions.
-4. **`LivePreview`** consumes ResolvedTemplate → CSS (E6.8), same conversions module.
+   extracted `compact` config (fixes the 7 drifts **and the live bug: routes currently never pass
+   settings** — wire `resume.data.settings` through all three route call sites). Golden test
+   extended with G1 assertions. Blast radius measured LOW (single router module, 3 call sites).
+4. **`renderResumeHtml`** consumes ResolvedTemplate → CSS (E6.8) through the same conversions
+   module; keep its pure doc→HTML-string shape. `buildDocxOnePage` adopted unchanged as the
+   auto-fit host, retargeted from `settings.fontSize` mutation to resolved-template scale factor.
 5. **G2 snapshot harness** — vitest + rasterizer abstraction (PyMuPDF local / poppler or OfficeCLI in
    Docker) + committed baselines (`compact` baselined against the golden) + settings-matrix sweep.
 6. **Second template end-to-end** (harvard-bullet-2025 candidate) — exercises the full admission
@@ -259,6 +314,9 @@ spike-gated) · diff-pdf GPL (reference only).
 | O5 | Where baselines live (git-tracked PNGs vs artifact store) | Git-tracked under `backend/src/services/__tests__/fixtures/snapshots/` — reviewable in PRs | Recommended default |
 | O6 | Threshold budgets (G2 artifact, preview-vs-docx) | Start: artifact < 0.1% style-identical tolerance; preview-vs-docx looser (~2–3%), tuned from first real run | Pending calibration |
 | O7 | Interaction with the in-flight E3/E6 agent work | Build G1 against the current builder first (objective target); coordinate builder refactor (item 3) so it lands once | **Open — coordinate** |
+| O8 | `buildDocxOnePage` retarget (grounding finding): currently scales `settings.fontSize` on cloned docs; under ADR-0010 it should scale the resolved template's scale factor via `resolve()` | Fold into step 4 — same bounded-retry logic, new input source. Zero new code, one wiring change | Deferred to build path step 4 |
+| O9 | Settings threading bug (grounding finding): export-docx / export-pdf / render-preview all call `buildDocx(data)` with no opts, ignoring the doc's `settings` | Fix as part of step 3 (wire `resume.data.settings` through all three call sites) — this is a correctness fix, not a refactor side-effect | **Open — fix in step 3** |
 
 ---
-*End of ADR-0010. Builds later from the recommended path; implementation begins only after review.*
+*End of ADR-0010. Accepted 2026-08-16; implementation begins from the recommended build path,
+documentation-only until then.*
