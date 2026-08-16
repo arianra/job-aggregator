@@ -167,7 +167,10 @@ export function ResumeStudioPage() {
     if (!id || accurateLoading) return
     setAccurateLoading(true)
     try {
-      if (accurateUrl) URL.revokeObjectURL(accurateUrl)
+      // Bug 7: do NOT revoke the URL currently shown in the iframe before the
+      // replacement is ready — revoking a live blob URL breaks the render. The
+      // `[accurateUrl]` effect cleanup revokes the previous URL only after the
+      // swap, and revokes the current one on unmount.
       const blob = await resumeApi.fetchPreviewBlob(id, doc)
       setAccurateUrl(URL.createObjectURL(blob))
     } catch {
