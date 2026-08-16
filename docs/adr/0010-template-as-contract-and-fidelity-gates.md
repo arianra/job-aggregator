@@ -105,15 +105,33 @@ contract, and the gates all center on the DOCX.
 2. **Both renderers consume the resolved object.** `buildDocx(doc, resolved) → bytes` (refactor of
    the current builder — its hardcoded values become the extracted `compact` config) and the E6
    `LivePreview` (CSS from the same resolved object). Neither owns style numbers.
-3. **Template admission pipeline** (adding a template = adding a DOCX):
-   1. `scripts/extract-template.ts <file.docx>` → candidate config + extraction report
-      (sectPr→geometry; run props→slots; styles.xml→decorations/named styles; docDefaults→fonts).
-   2. **Fitness audit (automatic gate):** no tables, no textboxes, no images/shapes, single column,
-      recognizable headings + bullets + section structure. Decorative DOCX fail here with a report.
-   3. **Human review** maps extracted styles to slots (~10 min for a clean DOCX); config committed.
-   4. **Acceptance gate (G3):** render a fixture resume with the new template → DOCX → PDF → PNG,
-      pixel-diff against the same rendering of the *original reference DOCX* within budget. A
-      template ships when it provably recreates the DOCX it came from.
+3. **Template admission pipeline** (adding a template = adding a DOCX). Artifacts:
+
+   ```
+   backend/src/templates/sources/<name>/reference.docx        # committed, immutable provenance
+   backend/src/templates/sources/<name>/extraction-report.json # machine findings + ambiguities
+   backend/src/templates/fixtures/<name>/fixture-data.ts      # standard test resume for gates
+   backend/src/templates/fixtures/<name>/baseline-*.png       # committed snapshot baselines
+   shared/src/resume-template/templates/<name>.ts             # reviewed ResumeTemplate (THE artifact)
+   ```
+
+   Flow — `npm run template:add <file.docx> <name>`:
+   1. copy the DOCX to `sources/<name>/reference.docx`;
+   2. **fitness audit (automatic gate):** no tables, no textboxes, no images/shapes, single column,
+      recognizable headings + bullets + section structure. Decorative DOCX fail here with a report
+      (validated: 462/463 market templates fail at this door);
+   3. **extractor:** sectPr→geometry; run props→slots; styles.xml→decorations/named styles;
+      docDefaults→fonts; heuristics flag slot candidates with confidence ("short bold lines →
+      heading"); emits candidate config + extraction report;
+   4. **human review (~10 min):** resolve only the semantic labels extraction can't judge, next to
+      a rendered PNG of the reference DOCX;
+   5. `npm run template:accept <name>` — **acceptance gate (G3):** render fixture with the new
+      config → DOCX → PDF → PNG, pixel-diff against the rendering of the *original reference DOCX*
+      within budget; pass → commit the trio (reference + config + baselines), template is live.
+
+   Both input kinds work: placeholder-template DOCX (ideal) and filled-in real resumes (extraction
+   reads formatting, not content — the golden `cv2026/003` entered this way). The stored DOCX is
+   kept for provenance, re-extraction when the extractor improves, and as G3's comparison source.
 4. **Fidelity gates:**
    - **G1 (structural, CI, fast):** extract XML from `buildDocx` output; assert sizes/fonts/margins/
      borders/spacing/page equal the template config. Names the cause of drift.
