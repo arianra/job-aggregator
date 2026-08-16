@@ -5,8 +5,8 @@ import {
 } from 'lucide-react'
 import { useResume, useSaveResume, useUpdateMeta, useLint, useResumeVersions, useDuplicateResume, useArchiveResume, useDeleteResume, useCreateFromUpload } from '../hooks/useResumes'
 import * as resumeApi from '../api/resumes'
-import { emptyResumeDoc } from '../lib/resume-doc'
 import { renderResumeHtml, previewStyle } from '../lib/resume-render'
+import { createDraftState, hydrateResume, editDoc, editTitle, commitTitle, markSaved, applyRestore } from '../lib/resume-draft'
 import { notify } from '../lib/notify'
 import { Button } from '../components/ui/button'
 import { Badge } from '../components/ui/badge'
@@ -51,10 +51,6 @@ export function stepFromRoute(step?: string): SectionKey {
   return known ? (step as SectionKey) : DEFAULT_STEP
 }
 
-function cloneDoc(doc: ResumeDoc): ResumeDoc {
-  return JSON.parse(JSON.stringify(doc)) as ResumeDoc
-}
-
 /** Move item at `from` to `to` (returns a new array). Shared by all card groups. */
 function reorder<T>(arr: T[], from: number, to: number): T[] {
   const next = [...arr]
@@ -72,15 +68,12 @@ export function ResumeStudioPage() {
   const updateMeta = useUpdateMeta(id)
   const lint = useLint(id)
 
-  const [doc, setDoc] = useState<ResumeDoc>(emptyResumeDoc)
+  // ADR-0009: one draft/commit state object — pure lifecycle in ../lib/resume-draft.
+  // `doc`, `title`, `dirty`, `committedRevision` are derived reads; edits go
+  // through `set` (editDoc) and commits through markSaved/commitTitle/applyRestore.
+  const [draft, setDraft] = useState(createDraftState)
+  const { doc, title, dirty, committedRevision } = draft
   const [activeSection, setActiveSection] = useState<SectionKey>(stepFromRoute(step))
-  const [dirty, setDirty] = useState(false)
-  const [title, setTitle] = useState('Untitled resume')
-  // ADR-0009: committed baseline + hydration-once guard. Refetches of `resume`
-  // update committed metadata (revision/title) but NEVER clobber the working draft.
-  const hydratedRef = useRef(false)
-  const [committedRevision, setCommittedRevision] = useState(-1)
-  const [committedTitle, setCommittedTitle] = useState('Untitled resume')
   const [report, setReport] = useState<AtsReport | null>(null)
   const [lintOpen, setLintOpen] = useState(false)
   const [previewMode, setPreviewMode] = useState<'live' | 'docx'>('live')
@@ -109,40 +102,26 @@ export function ResumeStudioPage() {
     if (wantsLint) void handleLint()
   }, [wantsLint])
 
-  // ADR-0009: hydrate the working draft EXACTLY ONCE on load, from the latest
-  // ResumeVersion.data (or an empty doc for a NEW resume). Subsequent `resume`
-  // refetches update committed metadata only — they must never overwrite draft edits.
+  // ADR-0009: hydrate the working draft — the module hydrates EXACTLY ONCE
+  // (state.hydrated), so later `resume` refetches are no-ops and never clobber edits.
   useEffect(() => {
-    if (resume && !hydratedRef.current) {
-      hydratedRef.current = true
-      setDoc(cloneDoc(resume.data ?? emptyResumeDoc()))
-      setTitle(resume.title)
-      setCommittedTitle(resume.title)
-      setCommittedRevision(resume.revision ?? -1)
-      setDirty(false)
-    }
+    if (resume) setDraft((prev) => hydrateResume(prev, resume))
   }, [resume])
 
   const set = (patch: (d: ResumeDoc) => void) => {
-    setDoc((prev) => {
-      const next = cloneDoc(prev)
-      patch(next)
-      return next
-    })
-    setDirty(true)
+    setDraft((prev) => editDoc(prev, patch))
   }
 
   const handleSave = async () => {
     // ADR-0009: persist the current name (title) if it changed from the committed
     // baseline, then commit the draft as a new immutable version. The draft is NOT
     // re-hydrated afterward — it already IS the committed content.
-    if (title.trim() && title.trim() !== committedTitle) {
+    if (title.trim() && title.trim() !== draft.committedTitle) {
       await updateMeta.mutateAsync({ title: title.trim() })
-      setCommittedTitle(title.trim())
+      setDraft((prev) => commitTitle(prev, title.trim()))
     }
     const { revision } = await saveResume.mutateAsync(doc)
-    setCommittedRevision(revision)
-    setDirty(false)
+    setDraft((prev) => markSaved(prev, revision))
     notify.success(`Saved — version ${revision}`)
     // Re-run ATS on the saved state — report refreshes inline + drawer.
     void doLint(false)
@@ -172,8 +151,7 @@ export function ResumeStudioPage() {
 
   const handleRestore = async (revision: number) => {
     const versionData = await resumeApi.getResumeVersion(id, revision)
-    setDoc(cloneDoc(versionData))
-    setDirty(true)
+    setDraft((prev) => applyRestore(prev, versionData))
     setVersionsOpen(false)
     notify.success(`Loaded v${revision} — press Save to commit (new version)`)
     void doLint(false)
@@ -296,7 +274,7 @@ export function ResumeStudioPage() {
               set={set}
               resumeId={id}
               title={title}
-              setTitle={(t) => { setTitle(t); setDirty(true) }}
+              setTitle={(t) => setDraft((prev) => editTitle(prev, t))}
               onLint={() => void handleLint()}
               lintLoading={lint.isPending}
               report={report}

@@ -5,13 +5,13 @@
     "kind": "node",
     "bootstrap": [],
     "build": ["wsl bash -lc \"cd ~/projects/job-aggregator && npm run build\""],
-    "test": ["wsl bash -lc \"cd ~/projects/job-aggregator && npm run lint && npm run test -w backend\""],
+    "test": ["wsl bash -lc \"cd ~/projects/job-aggregator && npm run lint && npm run test -w backend && npm run test -w frontend\""],
     "start": "wsl bash -lc \"cd ~/projects/job-aggregator && npm run dev\"",
     "port": 5173,
     "readinessPath": "/",
     "evidence": [
       "Monorepo workspaces: shared/backend/frontend; repo lives on WSL ext4 (UNC cwd unsupported by cmd, so phases are wrapped in wsl bash -lc)",
-      "vitest backend suite (25 files, 457 tests)",
+      "vitest backend suite (30 files, 516 tests) + frontend unit suites (incl. resume-draft draft/commit lifecycle) run in verify",
       "Vite dev server on 5173 proxies /api to backend on 3000"
     ]
   }
