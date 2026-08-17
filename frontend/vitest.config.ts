@@ -10,7 +10,10 @@ export default defineConfig({
     },
   },
   test: {
+    // Pure-logic tests stay in Node. Component/DOM tests opt into jsdom with a
+    // `// @vitest-environment jsdom` docblock and share this jest-dom setup.
     environment: 'node',
+    setupFiles: ['./src/test-setup.ts'],
     include: ['src/**/*.test.ts', 'src/**/*.test.tsx'],
   },
 })
