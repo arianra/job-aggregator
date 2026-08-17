@@ -40,3 +40,6 @@ decided, why, and what remains open** — without re-deriving context from chat 
 - [0008 — Resume as the Scored, Versioned Document](./0008-resume-as-scored-versioned-document.md)
 - [0009 — Resume Draft/Commit State Flow](./0009-resume-draft-commit-state-flow.md)
 - [0010 — Template-as-Contract, DOCX-as-Artifact (template system + fidelity gates)](./0010-template-as-contract-and-fidelity-gates.md)
+- [0011 — Advisory Field-Level ATS Validation & the Form Architecture (TanStack Form + zod + shadcn field family)](./0011-advisory-field-level-ats-validation-and-form-architecture.md)
+- [0012 — Save/Restore Data-Integrity Post-Mortem & the Test-Gap Root Cause](./0012-save-restore-data-integrity-and-test-gap.md)
+- [0013 — Client RUM & Unified Event Timeline (Agent-First Observability)](./0013-rum-and-unified-event-timeline.md) — companion diagram: [docs/diagrams/telemetry-architecture.html](../diagrams/telemetry-architecture.html)

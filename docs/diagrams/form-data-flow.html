@@ -1,0 +1,360 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>job-aggregator — Form & Data Flow</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { font-family:'JetBrains Mono',monospace; background:#020617; min-height:100vh; padding:2rem; color:white; }
+  .container { max-width:1240px; margin:0 auto; }
+  .header { margin-bottom:1.5rem; }
+  .header-row { display:flex; align-items:center; gap:1rem; margin-bottom:0.5rem; }
+  .pulse-dot { width:12px; height:12px; background:#22d3ee; border-radius:50%; animation:pulse 2s infinite; }
+  @keyframes pulse { 0%,100%{opacity:1;} 50%{opacity:0.5;} }
+  h1 { font-size:1.4rem; font-weight:700; letter-spacing:-0.025em; }
+  .subtitle { color:#94a3b8; font-size:0.85rem; margin-left:1.75rem; }
+  h2.panel { font-size:0.95rem; margin:1.75rem 0 0.75rem; color:#e2e8f0; }
+  h2.panel span { color:#64748b; font-weight:400; font-size:0.8rem; }
+  .diagram-container { background:rgba(15,23,42,0.5); border-radius:1rem; border:1px solid #1e293b; padding:1.25rem; overflow-x:auto; }
+  svg { width:100%; min-width:1000px; display:block; }
+  .cards { display:grid; grid-template-columns:repeat(auto-fit,minmax(300px,1fr)); gap:1rem; margin-top:2rem; }
+  .card { background:rgba(15,23,42,0.5); border-radius:0.75rem; border:1px solid #1e293b; padding:1.25rem; }
+  .card-header { display:flex; align-items:center; gap:0.5rem; margin-bottom:0.75rem; }
+  .card-dot { width:8px; height:8px; border-radius:50%; }
+  .card-dot.emerald{background:#34d399;} .card-dot.rose{background:#fb7185;} .card-dot.amber{background:#fbbf24;}
+  .card h3 { font-size:0.85rem; font-weight:600; }
+  .card ul { list-style:none; color:#94a3b8; font-size:0.72rem; }
+  .card li { margin-bottom:0.4rem; }
+  .footer { text-align:center; margin-top:1.5rem; color:#475569; font-size:0.72rem; }
+</style>
+</head>
+<body>
+<div class="container">
+  <div class="header">
+    <div class="header-row"><div class="pulse-dot"></div><h1>job-aggregator — Form &amp; Data Flow</h1></div>
+    <p class="subtitle">Panel A: current as-is flow with ad-hoc markers · Panel B: unified target (ADR-0011) · verified against source 2026-08-16</p>
+  </div>
+
+  <h2 class="panel">A — CURRENT DATA FLOW <span>(as-is · rose = ad-hoc / broken / duplicated)</span></h2>
+  <div class="diagram-container">
+  <svg viewBox="0 0 1160 640">
+    <defs>
+      <marker id="arr" markerWidth="9" markerHeight="7" refX="8" refY="3.5" orient="auto"><polygon points="0 0,9 3.5,0 7" fill="#64748b"/></marker>
+      <marker id="arrC" markerWidth="9" markerHeight="7" refX="8" refY="3.5" orient="auto"><polygon points="0 0,9 3.5,0 7" fill="#22d3ee"/></marker>
+      <marker id="arrE" markerWidth="9" markerHeight="7" refX="8" refY="3.5" orient="auto"><polygon points="0 0,9 3.5,0 7" fill="#34d399"/></marker>
+      <marker id="arrV" markerWidth="9" markerHeight="7" refX="8" refY="3.5" orient="auto"><polygon points="0 0,9 3.5,0 7" fill="#a78bfa"/></marker>
+      <marker id="arrR" markerWidth="9" markerHeight="7" refX="8" refY="3.5" orient="auto"><polygon points="0 0,9 3.5,0 7" fill="#fb7185"/></marker>
+      <marker id="arrA" markerWidth="9" markerHeight="7" refX="8" refY="3.5" orient="auto"><polygon points="0 0,9 3.5,0 7" fill="#fbbf24"/></marker>
+      <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse"><path d="M 40 0 L 0 0 0 40" fill="none" stroke="#1e293b" stroke-width="0.5"/></pattern>
+    </defs>
+    <rect width="100%" height="100%" fill="url(#grid)"/>
+
+    <!-- column headers -->
+    <text x="20" y="30" fill="#22d3ee" font-size="10" font-weight="600">UI SURFACES (pages/components)</text>
+    <text x="350" y="30" fill="#a78bfa" font-size="10" font-weight="600">CLIENT STATE</text>
+    <text x="660" y="30" fill="#34d399" font-size="10" font-weight="600">API LAYER</text>
+    <text x="860" y="30" fill="#34d399" font-size="10" font-weight="600">BACKEND (Express :3000)</text>
+
+    <!-- ============ arrows first (behind boxes) ============ -->
+    <!-- Studio <-> draft -->
+    <line x1="320" y1="80" x2="348" y2="80" stroke="#a78bfa" stroke-width="1.4" marker-end="url(#arrV)"/>
+    <text x="334" y="73" fill="#94a3b8" font-size="7.5" text-anchor="middle">set()/editDoc</text>
+    <line x1="348" y1="100" x2="320" y2="100" stroke="#a78bfa" stroke-width="1.4" marker-end="url(#arrV)"/>
+    <text x="334" y="112" fill="#94a3b8" font-size="7.5" text-anchor="middle">render</text>
+    <!-- UI -> react-query (hooks) -->
+    <line x1="320" y1="150" x2="640" y2="430" stroke="#22d3ee" stroke-width="1.2" marker-end="url(#arrC)"/>
+    <line x1="320" y1="268" x2="640" y2="450" stroke="#22d3ee" stroke-width="1.2" marker-end="url(#arrC)"/>
+    <line x1="320" y1="340" x2="640" y2="465" stroke="#22d3ee" stroke-width="1.2" marker-end="url(#arrC)"/>
+    <line x1="320" y1="412" x2="640" y2="480" stroke="#22d3ee" stroke-width="1.2" marker-end="url(#arrC)"/>
+    <text x="470" y="300" fill="#22d3ee" font-size="7.5">use* hooks (queries/mutations)</text>
+    <!-- Studio direct api (versions, preview blob) -->
+    <path d="M 320 170 L 658 120" fill="none" stroke="#22d3ee" stroke-width="1" stroke-dasharray="4,3" marker-end="url(#arrC)"/>
+    <text x="480" y="140" fill="#64748b" font-size="7.5">direct api.* (versions, preview blob)</text>
+    <!-- filterStore -> useJobs (reads) -->
+    <line x1="490" y1="330" x2="490" y2="400" stroke="#a78bfa" stroke-width="1.2" marker-end="url(#arrV)"/>
+    <text x="497" y="370" fill="#94a3b8" font-size="7.5">useJobs reads</text>
+    <!-- FilterPanel -x-> filterStore (orphan) -->
+    <path d="M 170 296 L 170 306 L 348 306" fill="none" stroke="#fb7185" stroke-width="1.3" stroke-dasharray="4,3" marker-end="url(#arrR)"/>
+    <text x="240" y="301" fill="#fb7185" font-size="7.5">③ never written (orphan)</text>
+    <!-- react-query -> api -->
+    <line x1="640" y1="440" x2="658" y2="240" stroke="#34d399" stroke-width="1.2" marker-end="url(#arrE)"/>
+    <line x1="640" y1="470" x2="658" y2="130" stroke="#34d399" stroke-width="1.2" marker-end="url(#arrE)"/>
+    <!-- api -> backend -->
+    <line x1="830" y1="110" x2="858" y2="90" stroke="#34d399" stroke-width="1.4" marker-end="url(#arrE)"/>
+    <line x1="830" y1="230" x2="858" y2="100" stroke="#34d399" stroke-width="1.4" marker-end="url(#arrE)"/>
+    <text x="845" y="60" fill="#94a3b8" font-size="7.5" text-anchor="middle">HTTP /api</text>
+    <!-- backend internal -->
+    <line x1="1000" y1="120" x2="1000" y2="138" stroke="#34d399" stroke-width="1.2" marker-end="url(#arrE)"/>
+    <line x1="1000" y1="200" x2="1000" y2="218" stroke="#34d399" stroke-width="1.2" marker-end="url(#arrE)"/>
+    <line x1="1000" y1="280" x2="1000" y2="298" stroke="#a78bfa" stroke-width="1.2" marker-end="url(#arrV)"/>
+    <!-- shared -> backend types -->
+    <line x1="1000" y1="380" x2="1000" y2="362" stroke="#fbbf24" stroke-width="1.2" marker-end="url(#arrA)"/>
+    <!-- shared -mirror-> frontend types -->
+    <path d="M 860 420 L 170 560 L 170 514" fill="none" stroke="#fb7185" stroke-width="1.3" stroke-dasharray="4,3" marker-end="url(#arrR)"/>
+    <text x="500" y="556" fill="#fb7185" font-size="7.5">④ frontend/src/types re-declares shared types (manual mirror, drift-prone)</text>
+    <!-- cardLint duplicates engine -->
+    <path d="M 170 222 L 170 600 L 1000 600 L 1000 202" fill="none" stroke="#fb7185" stroke-width="1.3" stroke-dasharray="4,3" marker-end="url(#arrR)"/>
+    <text x="560" y="614" fill="#fb7185" font-size="7.5">① cardLint() re-implements ATS-Q-001/Q-002 client-side — duplicates ats-linter rules (drift)</text>
+
+    <!-- ============ UI column ============ -->
+    <rect x="20" y="50" width="300" height="170" rx="6" fill="#0f172a"/><rect x="20" y="50" width="300" height="170" rx="6" fill="rgba(8,51,68,0.4)" stroke="#22d3ee" stroke-width="1.5"/>
+    <text x="170" y="70" fill="white" font-size="11" font-weight="600" text-anchor="middle">ResumeStudioPage</text>
+    <text x="170" y="86" fill="#94a3b8" font-size="8" text-anchor="middle">8 section forms · controlled inputs</text>
+    <text x="170" y="100" fill="#94a3b8" font-size="8" text-anchor="middle">mutation-patch set(d =&gt; void (d.x = v))</text>
+    <text x="170" y="114" fill="#94a3b8" font-size="8" text-anchor="middle">drag-reorder · JSON deep-clone per keystroke</text>
+    <text x="170" y="132" fill="#fb7185" font-size="8" text-anchor="middle">① cardLint() · ② hardcoded "ATS summary" badge</text>
+    <text x="170" y="148" fill="#94a3b8" font-size="8" text-anchor="middle">lint drawer · score dial · fit controls</text>
+    <text x="170" y="166" fill="#94a3b8" font-size="8" text-anchor="middle">⑤ no form lib — raw useState + draft</text>
+    <text x="170" y="212" fill="#22d3ee" font-size="7.5" text-anchor="middle">/resume/:id/:step</text>
+
+    <rect x="20" y="240" width="300" height="56" rx="6" fill="#0f172a"/><rect x="20" y="240" width="300" height="56" rx="6" fill="rgba(8,51,68,0.4)" stroke="#22d3ee" stroke-width="1.5"/>
+    <text x="170" y="262" fill="white" font-size="10.5" font-weight="600" text-anchor="middle">FilterPanel (job search)</text>
+    <text x="170" y="278" fill="#94a3b8" font-size="8" text-anchor="middle">local useState filters · Search/Clear buttons</text>
+
+    <rect x="20" y="312" width="300" height="56" rx="6" fill="#0f172a"/><rect x="20" y="312" width="300" height="56" rx="6" fill="rgba(8,51,68,0.4)" stroke="#22d3ee" stroke-width="1.5"/>
+    <text x="170" y="334" fill="white" font-size="10.5" font-weight="600" text-anchor="middle">JobDetails</text>
+    <text x="170" y="350" fill="#94a3b8" font-size="8" text-anchor="middle">status select (mutate onChange) · note input</text>
+
+    <rect x="20" y="384" width="300" height="56" rx="6" fill="#0f172a"/><rect x="20" y="384" width="300" height="56" rx="6" fill="rgba(8,51,68,0.4)" stroke="#22d3ee" stroke-width="1.5"/>
+    <text x="170" y="406" fill="white" font-size="10.5" font-weight="600" text-anchor="middle">Applications / Boards</text>
+    <text x="170" y="422" fill="#94a3b8" font-size="8" text-anchor="middle">status controls · kanban moves → mutations</text>
+
+    <rect x="20" y="456" width="300" height="56" rx="6" fill="#0f172a"/><rect x="20" y="456" width="300" height="56" rx="6" fill="rgba(8,51,68,0.4)" stroke="#22d3ee" stroke-width="1.5"/>
+    <text x="170" y="478" fill="white" font-size="10.5" font-weight="600" text-anchor="middle">ProfilePage (read-only)</text>
+    <text x="170" y="494" fill="#94a3b8" font-size="8" text-anchor="middle">derived from PRIMARY resume · no inputs</text>
+
+    <!-- ============ client state column ============ -->
+    <rect x="350" y="50" width="290" height="76" rx="6" fill="#0f172a"/><rect x="350" y="50" width="290" height="76" rx="6" fill="rgba(76,29,149,0.4)" stroke="#a78bfa" stroke-width="1.5"/>
+    <text x="495" y="70" fill="white" font-size="10.5" font-weight="600" text-anchor="middle">draft — lib/resume-draft (ADR-0009)</text>
+    <text x="495" y="86" fill="#94a3b8" font-size="8" text-anchor="middle">pure lifecycle · hydrate-once · snapshot dirty</text>
+    <text x="495" y="100" fill="#94a3b8" font-size="8" text-anchor="middle">commit = immutable version · restore = dirty draft</text>
+    <text x="495" y="116" fill="#a78bfa" font-size="7.5" text-anchor="middle">resume-doc SSOT ✓ good pattern</text>
+
+    <rect x="350" y="142" width="290" height="60" rx="6" fill="#0f172a"/><rect x="350" y="142" width="290" height="60" rx="6" fill="rgba(76,29,149,0.35)" stroke="#a78bfa" stroke-width="1.2"/>
+    <text x="495" y="162" fill="white" font-size="10" font-weight="600" text-anchor="middle">useState islands</text>
+    <text x="495" y="178" fill="#94a3b8" font-size="8" text-anchor="middle">per-page local state: filters, noteText, page, …</text>
+    <text x="495" y="192" fill="#fb7185" font-size="7.5" text-anchor="middle">⑤ idiom #1 of 5 — no shared form system</text>
+
+    <rect x="350" y="218" width="290" height="48" rx="6" fill="#0f172a"/><rect x="350" y="218" width="290" height="48" rx="6" fill="rgba(76,29,149,0.35)" stroke="#a78bfa" stroke-width="1.2"/>
+    <text x="495" y="238" fill="white" font-size="10" font-weight="600" text-anchor="middle">zustand uiStore (persisted)</text>
+    <text x="495" y="253" fill="#94a3b8" font-size="8" text-anchor="middle">theme · sidebar · view mode — fine as-is</text>
+
+    <rect x="350" y="282" width="290" height="48" rx="6" fill="#0f172a"/><rect x="350" y="282" width="290" height="48" rx="6" fill="rgba(136,19,55,0.35)" stroke="#fb7185" stroke-width="1.5"/>
+    <text x="495" y="302" fill="white" font-size="10" font-weight="600" text-anchor="middle">zustand filterStore</text>
+    <text x="495" y="317" fill="#fb7185" font-size="8" text-anchor="middle">③ ORPHANED — read by useJobs, written by nobody</text>
+
+    <rect x="350" y="346" width="290" height="40" rx="6" fill="#0f172a"/><rect x="350" y="346" width="290" height="40" rx="6" fill="rgba(76,29,149,0.35)" stroke="#a78bfa" stroke-width="1.2"/>
+    <text x="495" y="363" fill="white" font-size="10" font-weight="600" text-anchor="middle">topbar-header store</text>
+    <text x="495" y="377" fill="#94a3b8" font-size="8" text-anchor="middle">useSyncExternalStore slot — fine as-is</text>
+
+    <rect x="350" y="402" width="290" height="110" rx="6" fill="#0f172a"/><rect x="350" y="402" width="290" height="110" rx="6" fill="rgba(76,29,149,0.4)" stroke="#a78bfa" stroke-width="1.5"/>
+    <text x="495" y="422" fill="white" font-size="10.5" font-weight="600" text-anchor="middle">TanStack Query cache</text>
+    <text x="495" y="438" fill="#94a3b8" font-size="8" text-anchor="middle">global QueryCache/MutationCache toast policy</text>
+    <text x="495" y="452" fill="#94a3b8" font-size="8" text-anchor="middle">invalidate-on-success per hook · staleTimes</text>
+    <text x="495" y="468" fill="#94a3b8" font-size="8" text-anchor="middle">placeholderData keep-previous · dedupe guard</text>
+    <text x="495" y="486" fill="#a78bfa" font-size="7.5" text-anchor="middle">server-state layer ✓ good pattern</text>
+    <text x="495" y="502" fill="#94a3b8" font-size="7.5" text-anchor="middle">useResumes · useJobs · useApplications · useProfile</text>
+
+    <!-- ============ api column ============ -->
+    <rect x="660" y="60" width="170" height="100" rx="6" fill="#0f172a"/><rect x="660" y="60" width="170" height="100" rx="6" fill="rgba(6,78,59,0.4)" stroke="#34d399" stroke-width="1.5"/>
+    <text x="745" y="82" fill="white" font-size="10.5" font-weight="600" text-anchor="middle">api/resumes.ts</text>
+    <text x="745" y="98" fill="#94a3b8" font-size="8" text-anchor="middle">14 typed endpoints · unwrap()</text>
+    <text x="745" y="112" fill="#94a3b8" font-size="8" text-anchor="middle">export blob + Content-Disposition</text>
+    <text x="745" y="128" fill="#94a3b8" font-size="8" text-anchor="middle">lint · render-preview · versions</text>
+    <text x="745" y="148" fill="#34d399" font-size="7.5" text-anchor="middle">✓ typed, single module</text>
+
+    <rect x="660" y="180" width="170" height="100" rx="6" fill="#0f172a"/><rect x="660" y="180" width="170" height="100" rx="6" fill="rgba(6,78,59,0.4)" stroke="#34d399" stroke-width="1.5"/>
+    <text x="745" y="202" fill="white" font-size="10.5" font-weight="600" text-anchor="middle">api/client.ts (axios)</text>
+    <text x="745" y="218" fill="#94a3b8" font-size="8" text-anchor="middle">interceptors → typed ApiError</text>
+    <text x="745" y="232" fill="#94a3b8" font-size="8" text-anchor="middle">jobs · search · applications · health</text>
+    <text x="745" y="248" fill="#94a3b8" font-size="8" text-anchor="middle">error taxonomy (notify policy)</text>
+    <text x="745" y="268" fill="#34d399" font-size="7.5" text-anchor="middle">✓ normalised failures</text>
+
+    <!-- ============ backend column ============ -->
+    <rect x="860" y="50" width="280" height="70" rx="6" fill="#0f172a"/><rect x="860" y="50" width="280" height="70" rx="6" fill="rgba(6,78,59,0.4)" stroke="#34d399" stroke-width="1.5"/>
+    <text x="1000" y="72" fill="white" font-size="10.5" font-weight="600" text-anchor="middle">routes/resumes.ts</text>
+    <text x="1000" y="88" fill="#94a3b8" font-size="8" text-anchor="middle">versions · meta · upload · export (safeFilename)</text>
+    <text x="1000" y="104" fill="#94a3b8" font-size="8" text-anchor="middle">lint · render-preview · duplicate/archive</text>
+
+    <rect x="860" y="140" width="280" height="60" rx="6" fill="#0f172a"/><rect x="860" y="140" width="280" height="60" rx="6" fill="rgba(6,78,59,0.4)" stroke="#34d399" stroke-width="1.5"/>
+    <text x="1000" y="162" fill="white" font-size="10.5" font-weight="600" text-anchor="middle">ats-linter.ts (E4)</text>
+    <text x="1000" y="178" fill="#94a3b8" font-size="8" text-anchor="middle">43 rules · pure · deterministic · golden-tested</text>
+    <text x="1000" y="192" fill="#34d399" font-size="7.5" text-anchor="middle">score authority ✓ (advice-only, never blocks)</text>
+
+    <rect x="860" y="220" width="280" height="60" rx="6" fill="#0f172a"/><rect x="860" y="220" width="280" height="60" rx="6" fill="rgba(6,78,59,0.4)" stroke="#34d399" stroke-width="1.5"/>
+    <text x="1000" y="242" fill="white" font-size="10.5" font-weight="600" text-anchor="middle">docx-builder · extractor · docx-fit</text>
+    <text x="1000" y="258" fill="#94a3b8" font-size="8" text-anchor="middle">DOCX artifact · PDF derived · LibreOffice render</text>
+    <text x="1000" y="272" fill="#94a3b8" font-size="8" text-anchor="middle">parse PDF/DOCX/TXT → text + meta</text>
+
+    <rect x="860" y="300" width="280" height="60" rx="6" fill="#0f172a"/><rect x="860" y="300" width="280" height="60" rx="6" fill="rgba(76,29,149,0.4)" stroke="#a78bfa" stroke-width="1.5"/>
+    <text x="1000" y="322" fill="white" font-size="10.5" font-weight="600" text-anchor="middle">Prisma → PostgreSQL</text>
+    <text x="1000" y="338" fill="#94a3b8" font-size="8" text-anchor="middle">ResumeVersion rows (immutable) · jobs · apps</text>
+    <text x="1000" y="352" fill="#94a3b8" font-size="8" text-anchor="middle">uploads/resumes (stored_path)</text>
+
+    <rect x="860" y="380" width="280" height="70" rx="6" fill="#0f172a"/><rect x="860" y="380" width="280" height="70" rx="6" fill="rgba(120,53,15,0.3)" stroke="#fbbf24" stroke-width="1.5"/>
+    <text x="1000" y="402" fill="white" font-size="10.5" font-weight="600" text-anchor="middle">@job-aggregator/shared</text>
+    <text x="1000" y="418" fill="#94a3b8" font-size="8" text-anchor="middle">types (Resume/AtsReport) · error-codes</text>
+    <text x="1000" y="434" fill="#fb7185" font-size="7.5" text-anchor="middle">④ consumed by backend only — frontend mirrors</text>
+
+    <!-- legend -->
+    <text x="20" y="632" fill="#fb7185" font-size="8">① duplicated rule logic · ② fake hardcoded badge · ③ orphaned store · ④ manual type mirror · ⑤ five state idioms, no form system</text>
+  </svg>
+  </div>
+
+  <h2 class="panel">B — TARGET UNIFIED FLOW <span>(ADR-0011 · amber = new unified layers · everything else unchanged)</span></h2>
+  <div class="diagram-container">
+  <svg viewBox="0 0 1160 600">
+    <defs>
+      <marker id="arr2" markerWidth="9" markerHeight="7" refX="8" refY="3.5" orient="auto"><polygon points="0 0,9 3.5,0 7" fill="#64748b"/></marker>
+      <marker id="arrC2" markerWidth="9" markerHeight="7" refX="8" refY="3.5" orient="auto"><polygon points="0 0,9 3.5,0 7" fill="#22d3ee"/></marker>
+      <marker id="arrE2" markerWidth="9" markerHeight="7" refX="8" refY="3.5" orient="auto"><polygon points="0 0,9 3.5,0 7" fill="#34d399"/></marker>
+      <marker id="arrV2" markerWidth="9" markerHeight="7" refX="8" refY="3.5" orient="auto"><polygon points="0 0,9 3.5,0 7" fill="#a78bfa"/></marker>
+      <marker id="arrA2" markerWidth="9" markerHeight="7" refX="8" refY="3.5" orient="auto"><polygon points="0 0,9 3.5,0 7" fill="#fbbf24"/></marker>
+      <pattern id="grid2" width="40" height="40" patternUnits="userSpaceOnUse"><path d="M 40 0 L 0 0 0 40" fill="none" stroke="#1e293b" stroke-width="0.5"/></pattern>
+    </defs>
+    <rect width="100%" height="100%" fill="url(#grid2)"/>
+
+    <text x="20" y="30" fill="#22d3ee" font-size="10" font-weight="600">UI SURFACES (all forms, one idiom)</text>
+    <text x="350" y="30" fill="#fbbf24" font-size="10" font-weight="600">NEW: forms/ SYSTEM + draft SSOT</text>
+    <text x="660" y="30" fill="#34d399" font-size="10" font-weight="600">API LAYER (unchanged)</text>
+    <text x="860" y="30" fill="#34d399" font-size="10" font-weight="600">BACKEND (unchanged + shared predicates)</text>
+
+    <!-- arrows -->
+    <line x1="320" y1="120" x2="348" y2="120" stroke="#22d3ee" stroke-width="1.4" marker-end="url(#arrC2)"/>
+    <text x="334" y="112" fill="#94a3b8" font-size="7.5" text-anchor="middle">every input</text>
+    <line x1="495" y1="262" x2="495" y2="278" stroke="#fbbf24" stroke-width="1.4" marker-end="url(#arrA2)"/>
+    <text x="502" y="272" fill="#94a3b8" font-size="7.5">mirror seam (single)</text>
+    <line x1="495" y1="352" x2="495" y2="368" stroke="#fbbf24" stroke-width="1.2" marker-end="url(#arrA2)"/>
+    <text x="502" y="362" fill="#94a3b8" font-size="7.5">derive</text>
+    <!-- shared catalog -> forms layer + engine -->
+    <path d="M 860 90 L 640 90 L 640 120" fill="none" stroke="#fbbf24" stroke-width="1.5" marker-end="url(#arrA2)"/>
+    <text x="750" y="82" fill="#fbbf24" font-size="8" text-anchor="middle">field-rules catalog (client hints)</text>
+    <line x1="1000" y1="130" x2="1000" y2="148" stroke="#fbbf24" stroke-width="1.5" marker-end="url(#arrA2)"/>
+    <text x="1008" y="142" fill="#fbbf24" font-size="8">predicates (server score)</text>
+    <!-- forms -> react-query/save -->
+    <line x1="640" y1="300" x2="658" y2="300" stroke="#34d399" stroke-width="1.2" marker-end="url(#arrE2)"/>
+    <line x1="830" y1="300" x2="858" y2="90" stroke="#34d399" stroke-width="1.4" marker-end="url(#arrE2)"/>
+    <!-- UI -> react-query for non-resume surfaces -->
+    <line x1="320" y1="230" x2="640" y2="420" stroke="#22d3ee" stroke-width="1.2" marker-end="url(#arrC2)"/>
+    <text x="470" y="330" fill="#22d3ee" font-size="7.5">use* hooks (jobs/apps)</text>
+    <!-- filterStore fixed -->
+    <line x1="170" y1="262" x2="170" y2="470" stroke="#34d399" stroke-width="1.2" marker-end="url(#arrE2)"/>
+    <path d="M 170 470 L 490 470 L 490 452" fill="none" stroke="#34d399" stroke-width="1.2" marker-end="url(#arrE2)"/>
+    <text x="300" y="463" fill="#34d399" font-size="7.5">③ fixed: FilterPanel writes store (or URL params — ticket)</text>
+    <!-- types import -->
+    <path d="M 860 110 L 330 560 L 170 560 L 170 292" fill="none" stroke="#34d399" stroke-width="1.2" stroke-dasharray="0" marker-end="url(#arrE2)"/>
+    <text x="500" y="574" fill="#34d399" font-size="7.5">④ fixed: frontend imports shared types (mirror deleted)</text>
+
+    <!-- UI column -->
+    <rect x="20" y="50" width="300" height="200" rx="6" fill="#0f172a"/><rect x="20" y="50" width="300" height="200" rx="6" fill="rgba(8,51,68,0.4)" stroke="#22d3ee" stroke-width="1.5"/>
+    <text x="170" y="72" fill="white" font-size="11" font-weight="600" text-anchor="middle">All form surfaces</text>
+    <text x="170" y="90" fill="#94a3b8" font-size="8" text-anchor="middle">• Resume Studio sections (Contact pilot first)</text>
+    <text x="170" y="106" fill="#94a3b8" font-size="8" text-anchor="middle">• FilterPanel · JobDetails note/status</text>
+    <text x="170" y="122" fill="#94a3b8" font-size="8" text-anchor="middle">• Applications/Boards controls · future forms</text>
+    <text x="170" y="144" fill="#22d3ee" font-size="8" text-anchor="middle">every input = &lt;FormField&gt; (shadcn Field family)</text>
+    <text x="170" y="160" fill="#22d3ee" font-size="8" text-anchor="middle">+ Sparkles addon + findings popover</text>
+    <text x="170" y="178" fill="#94a3b8" font-size="8" text-anchor="middle">enforced zod core: resume title only (red)</text>
+    <text x="170" y="194" fill="#94a3b8" font-size="8" text-anchor="middle">advisory: orange/grey/green, never blocks</text>
+    <text x="170" y="212" fill="#94a3b8" font-size="8" text-anchor="middle">⑤ one idiom everywhere (was five)</text>
+    <text x="170" y="236" fill="#94a3b8" font-size="7.5" text-anchor="middle">ProfilePage stays read-only (derived)</text>
+
+    <!-- forms system boundary -->
+    <rect x="350" y="50" width="290" height="212" rx="10" fill="rgba(251,191,36,0.05)" stroke="#fbbf24" stroke-width="1" stroke-dasharray="8,4"/>
+    <text x="362" y="68" fill="#fbbf24" font-size="9" font-weight="600">frontend/src/forms — unified system (ADR-0011)</text>
+
+    <rect x="365" y="80" width="260" height="52" rx="6" fill="#0f172a"/><rect x="365" y="80" width="260" height="52" rx="6" fill="rgba(120,53,15,0.3)" stroke="#fbbf24" stroke-width="1.3"/>
+    <text x="495" y="100" fill="white" font-size="10" font-weight="600" text-anchor="middle">FormField + AtsStatusButton</text>
+    <text x="495" y="116" fill="#94a3b8" font-size="8" text-anchor="middle">shadcn Field family · popover · FieldDescription</text>
+    <text x="495" y="128" fill="#94a3b8" font-size="8" text-anchor="middle">aria-invalid reserved for enforced core</text>
+
+    <rect x="365" y="142" width="260" height="52" rx="6" fill="#0f172a"/><rect x="365" y="142" width="260" height="52" rx="6" fill="rgba(120,53,15,0.3)" stroke="#fbbf24" stroke-width="1.3"/>
+    <text x="495" y="162" fill="white" font-size="10" font-weight="600" text-anchor="middle">useDraftForm (TanStack Form)</text>
+    <text x="495" y="178" fill="#94a3b8" font-size="8" text-anchor="middle">interaction layer · touched/blur · array ops</text>
+    <text x="495" y="190" fill="#94a3b8" font-size="8" text-anchor="middle">guarded reset() on hydrate/restore only</text>
+
+    <rect x="365" y="204" width="125" height="46" rx="6" fill="#0f172a"/><rect x="365" y="204" width="125" height="46" rx="6" fill="rgba(120,53,15,0.3)" stroke="#fbbf24" stroke-width="1.3"/>
+    <text x="427" y="222" fill="white" font-size="9.5" font-weight="600" text-anchor="middle">enforced.ts</text>
+    <text x="427" y="238" fill="#94a3b8" font-size="7.5" text-anchor="middle">zod core (title)</text>
+
+    <rect x="500" y="204" width="125" height="46" rx="6" fill="#0f172a"/><rect x="500" y="204" width="125" height="46" rx="6" fill="rgba(120,53,15,0.3)" stroke="#fbbf24" stroke-width="1.3"/>
+    <text x="562" y="222" fill="white" font-size="9.5" font-weight="600" text-anchor="middle">advisory.ts</text>
+    <text x="562" y="238" fill="#94a3b8" font-size="7.5" text-anchor="middle">fieldFindings(doc)</text>
+
+    <!-- draft -->
+    <rect x="350" y="280" width="290" height="72" rx="6" fill="#0f172a"/><rect x="350" y="280" width="290" height="72" rx="6" fill="rgba(76,29,149,0.4)" stroke="#a78bfa" stroke-width="1.5"/>
+    <text x="495" y="300" fill="white" font-size="10.5" font-weight="600" text-anchor="middle">draft — lib/resume-draft (KEPT)</text>
+    <text x="495" y="316" fill="#94a3b8" font-size="8" text-anchor="middle">resume-doc SSOT · ADR-0009 lifecycle</text>
+    <text x="495" y="332" fill="#94a3b8" font-size="8" text-anchor="middle">save/restore/preview/export read ONLY this</text>
+    <text x="495" y="346" fill="#a78bfa" font-size="7.5" text-anchor="middle">snapshot dirty (Q9)</text>
+
+    <!-- react-query -->
+    <rect x="350" y="392" width="290" height="60" rx="6" fill="#0f172a"/><rect x="350" y="392" width="290" height="60" rx="6" fill="rgba(76,29,149,0.4)" stroke="#a78bfa" stroke-width="1.5"/>
+    <text x="495" y="412" fill="white" font-size="10.5" font-weight="600" text-anchor="middle">TanStack Query cache (KEPT)</text>
+    <text x="495" y="428" fill="#94a3b8" font-size="8" text-anchor="middle">server state · toast policy · invalidation</text>
+    <text x="495" y="442" fill="#94a3b8" font-size="8" text-anchor="middle">filterStore fixed or replaced (③)</text>
+
+    <!-- api + backend (condensed) -->
+    <rect x="660" y="270" width="170" height="60" rx="6" fill="#0f172a"/><rect x="660" y="270" width="170" height="60" rx="6" fill="rgba(6,78,59,0.4)" stroke="#34d399" stroke-width="1.5"/>
+    <text x="745" y="292" fill="white" font-size="10.5" font-weight="600" text-anchor="middle">api layer (KEPT)</text>
+    <text x="745" y="308" fill="#94a3b8" font-size="8" text-anchor="middle">resumes.ts · client.ts</text>
+    <text x="745" y="322" fill="#94a3b8" font-size="8" text-anchor="middle">typed endpoints · ApiError</text>
+
+    <rect x="860" y="50" width="280" height="80" rx="6" fill="#0f172a"/><rect x="860" y="50" width="280" height="80" rx="6" fill="rgba(120,53,15,0.3)" stroke="#fbbf24" stroke-width="1.5"/>
+    <text x="1000" y="72" fill="white" font-size="10.5" font-weight="600" text-anchor="middle">shared/src/ats — SSOT catalog</text>
+    <text x="1000" y="88" fill="#94a3b8" font-size="8" text-anchor="middle">predicates.ts (atomic checks, extracted)</text>
+    <text x="1000" y="104" fill="#94a3b8" font-size="8" text-anchor="middle">field-rules.ts (code→sev/msg/suggestion)</text>
+    <text x="1000" y="120" fill="#fbbf24" font-size="7.5" text-anchor="middle">one rule registry · immutable codes · additive</text>
+
+    <rect x="860" y="150" width="280" height="60" rx="6" fill="#0f172a"/><rect x="860" y="150" width="280" height="60" rx="6" fill="rgba(6,78,59,0.4)" stroke="#34d399" stroke-width="1.5"/>
+    <text x="1000" y="172" fill="white" font-size="10.5" font-weight="600" text-anchor="middle">ats-linter.ts (KEPT, imports predicates)</text>
+    <text x="1000" y="188" fill="#94a3b8" font-size="8" text-anchor="middle">document score authority · golden-tested</text>
+    <text x="1000" y="202" fill="#94a3b8" font-size="8" text-anchor="middle">① deduped: bodies reuse shared predicates</text>
+
+    <rect x="860" y="230" width="280" height="60" rx="6" fill="#0f172a"/><rect x="860" y="230" width="280" height="60" rx="6" fill="rgba(6,78,59,0.4)" stroke="#34d399" stroke-width="1.5"/>
+    <text x="1000" y="252" fill="white" font-size="10.5" font-weight="600" text-anchor="middle">routes · docx-builder · extractor (KEPT)</text>
+    <text x="1000" y="268" fill="#94a3b8" font-size="8" text-anchor="middle">versions · export · preview · parse</text>
+    <text x="1000" y="282" fill="#94a3b8" font-size="8" text-anchor="middle">Prisma → PostgreSQL</text>
+
+    <text x="20" y="592" fill="#94a3b8" font-size="8">Kill list: cardLint() · fake ATS badge · type mirror · orphaned filterStore writes. Per-card lane (cross-field, onBlur) = TanStack form-level validators, phase 2.</text>
+  </svg>
+  </div>
+
+  <div class="cards">
+    <div class="card">
+      <div class="card-header"><div class="card-dot emerald"></div><h3>KEEP — already good patterns</h3></div>
+      <ul>
+        <li>• draft/commit lifecycle (ADR-0009): pure, hydrate-once, immutable versions, snapshot dirty</li>
+        <li>• TanStack Query as the ONLY server-state layer: global toast policy, invalidation, keep-previous</li>
+        <li>• typed api modules + axios interceptors → ApiError taxonomy</li>
+        <li>• pure deterministic ats-linter (score authority, advice-only)</li>
+        <li>• shadcn v4 (base-nova) + Base UI primitives + Tailwind v4 tokens</li>
+      </ul>
+    </div>
+    <div class="card">
+      <div class="card-header"><div class="card-dot rose"></div><h3>UNIFY — the ad-hoc parts</h3></div>
+      <ul>
+        <li>• ① cardLint() duplicates engine rules → shared catalog</li>
+        <li>• ② hardcoded "ATS summary — Passed" badge → real derivation</li>
+        <li>• ③ filterStore orphaned (read, never written) → write it or URL params</li>
+        <li>• ④ frontend types mirror shared by hand → import shared</li>
+        <li>• ⑤ five state idioms (raw useState ×3, zustand ×2, external store, draft) → one FormField system</li>
+      </ul>
+    </div>
+    <div class="card">
+      <div class="card-header"><div class="card-dot amber"></div><h3>WHERE THE NEW PIECES FIT</h3></div>
+      <ul>
+        <li>• shared/src/ats catalog = single source for field hints AND doc score (no drift by construction)</li>
+        <li>• frontend/src/forms wraps EVERY input: FormField + Sparkles addon + popover</li>
+        <li>• TanStack Form = interaction layer only; draft stays SSOT (one mirror seam)</li>
+        <li>• enforced zod core = resume title (red/blocking); everything else advisory</li>
+        <li>• migration: Contact pilot → sections → other surfaces; per-card lane phase 2</li>
+      </ul>
+    </div>
+  </div>
+
+  <p class="footer">job-aggregator · form &amp; data-flow analysis · verified against source 2026-08-16 · feeds ADR-0011</p>
+</div>
+</body>
+</html>
