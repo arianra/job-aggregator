@@ -1,0 +1,469 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>job-aggregator — Telemetry & RUM Architecture (ADR-0013)</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { font-family:'JetBrains Mono',monospace; background:#020617; min-height:100vh; padding:2rem; color:white; }
+  .container { max-width:1240px; margin:0 auto; }
+  .header { margin-bottom:1.5rem; }
+  .header-row { display:flex; align-items:center; gap:1rem; margin-bottom:0.5rem; }
+  .pulse-dot { width:12px; height:12px; background:#22d3ee; border-radius:50%; animation:pulse 2s infinite; }
+  @keyframes pulse { 0%,100%{opacity:1;} 50%{opacity:0.5;} }
+  h1 { font-size:1.4rem; font-weight:700; letter-spacing:-0.025em; }
+  .subtitle { color:#94a3b8; font-size:0.85rem; margin-left:1.75rem; }
+  h2.panel { font-size:0.95rem; margin:1.75rem 0 0.75rem; color:#e2e8f0; }
+  h2.panel span { color:#64748b; font-weight:400; font-size:0.8rem; }
+  .diagram-container { background:rgba(15,23,42,0.5); border-radius:1rem; border:1px solid #1e293b; padding:1.25rem; overflow-x:auto; }
+  svg { width:100%; min-width:1000px; display:block; }
+  .cards { display:grid; grid-template-columns:repeat(auto-fit,minmax(300px,1fr)); gap:1rem; margin-top:2rem; }
+  .card { background:rgba(15,23,42,0.5); border-radius:0.75rem; border:1px solid #1e293b; padding:1.25rem; }
+  .card-header { display:flex; align-items:center; gap:0.5rem; margin-bottom:0.75rem; }
+  .card-dot { width:8px; height:8px; border-radius:50%; }
+  .card-dot.cyan{background:#22d3ee;} .card-dot.emerald{background:#34d399;} .card-dot.violet{background:#a78bfa;}
+  .card-dot.amber{background:#fbbf24;} .card-dot.rose{background:#fb7185;}
+  .card h3 { font-size:0.85rem; font-weight:600; }
+  .card ul { list-style:none; color:#94a3b8; font-size:0.72rem; }
+  .card li { margin-bottom:0.4rem; }
+  .footer { text-align:center; margin-top:1.5rem; color:#475569; font-size:0.72rem; }
+</style>
+</head>
+<body>
+<div class="container">
+  <div class="header">
+    <div class="header-row"><div class="pulse-dot"></div><h1>job-aggregator — Telemetry &amp; RUM Architecture</h1></div>
+    <p class="subtitle">Panel A: as-is logging with gaps · Panel B: unified target (ADR-0013) · research verified against primary sources 2026-08-16 · agent-first: one grep-able timeline</p>
+  </div>
+
+  <h2 class="panel">A — CURRENT STATE <span>(as-is · rose = gaps an agent cannot debug across)</span></h2>
+  <div class="diagram-container">
+  <svg viewBox="0 0 1160 580">
+    <defs>
+      <marker id="arr" markerWidth="9" markerHeight="7" refX="8" refY="3.5" orient="auto"><polygon points="0 0,9 3.5,0 7" fill="#64748b"/></marker>
+      <marker id="arrC" markerWidth="9" markerHeight="7" refX="8" refY="3.5" orient="auto"><polygon points="0 0,9 3.5,0 7" fill="#22d3ee"/></marker>
+      <marker id="arrE" markerWidth="9" markerHeight="7" refX="8" refY="3.5" orient="auto"><polygon points="0 0,9 3.5,0 7" fill="#34d399"/></marker>
+      <marker id="arrV" markerWidth="9" markerHeight="7" refX="8" refY="3.5" orient="auto"><polygon points="0 0,9 3.5,0 7" fill="#a78bfa"/></marker>
+      <marker id="arrR" markerWidth="9" markerHeight="7" refX="8" refY="3.5" orient="auto"><polygon points="0 0,9 3.5,0 7" fill="#fb7185"/></marker>
+      <pattern id="gridA" width="40" height="40" patternUnits="userSpaceOnUse"><path d="M 40 0 L 0 0 0 40" fill="none" stroke="#1e293b" stroke-width="0.5"/></pattern>
+    </defs>
+    <rect width="100%" height="100%" fill="url(#gridA)"/>
+
+    <!-- column headers -->
+    <text x="30" y="28" fill="#22d3ee" font-size="10" font-weight="600">BROWSER (React 18 + Vite)</text>
+    <text x="340" y="28" fill="#94a3b8" font-size="10" font-weight="600">API SEAM</text>
+    <text x="610" y="28" fill="#34d399" font-size="10" font-weight="600">BACKEND (Express :3000)</text>
+    <text x="900" y="28" fill="#a78bfa" font-size="10" font-weight="600">LOG FILES</text>
+
+    <!-- ============ arrows first (behind boxes) ============ -->
+    <line x1="300" y1="100" x2="336" y2="100" stroke="#22d3ee" stroke-width="1.4" marker-end="url(#arrC)"/>
+    <text x="318" y="92" fill="#94a3b8" font-size="7.5" text-anchor="middle">api.*()</text>
+
+    <line x1="570" y1="100" x2="606" y2="100" stroke="#64748b" stroke-width="1.4" marker-end="url(#arr)"/>
+    <text x="606" y="42" fill="#fb7185" font-size="7.5" text-anchor="end">HTTP — no correlation ids</text>
+
+    <line x1="100" y1="150" x2="100" y2="186" stroke="#fb7185" stroke-width="1.3" stroke-dasharray="4,3" marker-end="url(#arrR)"/>
+    <text x="108" y="172" fill="#fb7185" font-size="7.5">window.onerror →</text>
+
+    <line x1="735" y1="150" x2="735" y2="186" stroke="#34d399" stroke-width="1.4" marker-end="url(#arrE)"/>
+    <line x1="860" y1="100" x2="896" y2="100" stroke="#64748b" stroke-width="1.4" marker-end="url(#arr)"/>
+    <text x="878" y="92" fill="#94a3b8" font-size="7.5" text-anchor="middle">info</text>
+
+    <line x1="735" y1="270" x2="735" y2="306" stroke="#34d399" stroke-width="1.4" marker-end="url(#arrE)"/>
+    <text x="743" y="292" fill="#94a3b8" font-size="7.5">throw</text>
+
+    <line x1="860" y1="355" x2="896" y2="355" stroke="#fb7185" stroke-width="1.4" marker-end="url(#arrR)"/>
+    <text x="878" y="347" fill="#94a3b8" font-size="7.5" text-anchor="middle">error</text>
+
+    <line x1="980" y1="150" x2="980" y2="186" stroke="#a78bfa" stroke-width="1.4" marker-end="url(#arrV)"/>
+    <text x="988" y="172" fill="#94a3b8" font-size="7.5">all levels</text>
+
+    <path d="M 1130 120 L 1146 120 L 1146 345 L 1134 345" fill="none" stroke="#a78bfa" stroke-width="1.4" marker-end="url(#arrV)"/>
+    <text x="1150" y="240" fill="#94a3b8" font-size="7.5" transform="rotate(90 1150 240)">errors only</text>
+
+    <!-- ============ boxes ============ -->
+    <!-- React app -->
+    <rect x="30" y="50" width="270" height="100" rx="6" fill="#0f172a"/>
+    <rect x="30" y="50" width="270" height="100" rx="6" fill="rgba(8,51,68,0.4)" stroke="#22d3ee" stroke-width="1.5"/>
+    <text x="165" y="72" fill="white" font-size="12" font-weight="600" text-anchor="middle">React app</text>
+    <text x="165" y="90" fill="#94a3b8" font-size="8.5" text-anchor="middle">pages · TanStack Query · zustand</text>
+    <text x="165" y="104" fill="#94a3b8" font-size="8.5" text-anchor="middle">user acts: click · navigate · submit</text>
+    <text x="165" y="122" fill="#fb7185" font-size="8" text-anchor="middle">③ actions leave no record</text>
+    <text x="165" y="136" fill="#fb7185" font-size="8" text-anchor="middle">no telemetry SDK · no web-vitals</text>
+
+    <!-- browser console -->
+    <rect x="30" y="190" width="270" height="70" rx="6" fill="#0f172a"/>
+    <rect x="30" y="190" width="270" height="70" rx="6" fill="rgba(30,41,59,0.5)" stroke="#94a3b8" stroke-width="1.5"/>
+    <text x="165" y="212" fill="white" font-size="11" font-weight="600" text-anchor="middle">browser console</text>
+    <text x="165" y="228" fill="#94a3b8" font-size="8.5" text-anchor="middle">JS errors · unhandled rejections</text>
+    <text x="165" y="246" fill="#fb7185" font-size="8" text-anchor="middle">die here — never recorded</text>
+
+    <!-- axios -->
+    <rect x="340" y="50" width="230" height="100" rx="6" fill="#0f172a"/>
+    <rect x="340" y="50" width="230" height="100" rx="6" fill="rgba(8,51,68,0.4)" stroke="#22d3ee" stroke-width="1.5"/>
+    <text x="455" y="72" fill="white" font-size="11" font-weight="600" text-anchor="middle">axios instance</text>
+    <text x="455" y="90" fill="#94a3b8" font-size="8.5" text-anchor="middle">src/api/client.ts</text>
+    <text x="455" y="104" fill="#94a3b8" font-size="8.5" text-anchor="middle">interceptor: error normalisation</text>
+    <text x="455" y="126" fill="#fb7185" font-size="8" text-anchor="middle">no X-Request-Id · no session id</text>
+
+    <!-- request log middleware -->
+    <rect x="610" y="50" width="250" height="100" rx="6" fill="#0f172a"/>
+    <rect x="610" y="50" width="250" height="100" rx="6" fill="rgba(6,78,59,0.4)" stroke="#34d399" stroke-width="1.5"/>
+    <text x="735" y="72" fill="white" font-size="11" font-weight="600" text-anchor="middle">request-log middleware</text>
+    <text x="735" y="90" fill="#94a3b8" font-size="8.5" text-anchor="middle">logger.info(method, path, ip, UA)</text>
+    <text x="735" y="110" fill="#fb7185" font-size="8" text-anchor="middle">② fires at request START only —</text>
+    <text x="735" y="124" fill="#fb7185" font-size="8" text-anchor="middle">no status · duration · payload size</text>
+
+    <!-- routes -->
+    <rect x="610" y="190" width="250" height="80" rx="6" fill="#0f172a"/>
+    <rect x="610" y="190" width="250" height="80" rx="6" fill="rgba(6,78,59,0.4)" stroke="#34d399" stroke-width="1.5"/>
+    <text x="735" y="212" fill="white" font-size="11" font-weight="600" text-anchor="middle">routes</text>
+    <text x="735" y="230" fill="#94a3b8" font-size="8.5" text-anchor="middle">/api/jobs · profile · resumes</text>
+    <text x="735" y="244" fill="#94a3b8" font-size="8.5" text-anchor="middle">applications · boards · dashboard</text>
+
+    <!-- errorHandler -->
+    <rect x="610" y="310" width="250" height="90" rx="6" fill="#0f172a"/>
+    <rect x="610" y="310" width="250" height="90" rx="6" fill="rgba(6,78,59,0.4)" stroke="#34d399" stroke-width="1.5"/>
+    <text x="735" y="332" fill="white" font-size="11" font-weight="600" text-anchor="middle">errorHandler + AppError</text>
+    <text x="735" y="350" fill="#94a3b8" font-size="8.5" text-anchor="middle">logger.error(msg, stack, path,</text>
+    <text x="735" y="364" fill="#94a3b8" font-size="8.5" text-anchor="middle">method, ip)</text>
+    <text x="735" y="384" fill="#fb7185" font-size="8" text-anchor="middle">① no requestId in ANY log line</text>
+
+    <!-- winston -->
+    <rect x="900" y="50" width="230" height="100" rx="6" fill="#0f172a"/>
+    <rect x="900" y="50" width="230" height="100" rx="6" fill="rgba(6,78,59,0.4)" stroke="#34d399" stroke-width="1.5"/>
+    <text x="1015" y="72" fill="white" font-size="11" font-weight="600" text-anchor="middle">winston logger</text>
+    <text x="1015" y="90" fill="#94a3b8" font-size="8.5" text-anchor="middle">console + file transports</text>
+    <text x="1015" y="104" fill="#94a3b8" font-size="8.5" text-anchor="middle">JSONL format · 5MB × 5 rotation</text>
+    <text x="1015" y="126" fill="#94a3b8" font-size="8" text-anchor="middle">kept as-is in the target design</text>
+
+    <!-- combined.log -->
+    <rect x="900" y="190" width="230" height="80" rx="6" fill="#0f172a"/>
+    <rect x="900" y="190" width="230" height="80" rx="6" fill="rgba(76,29,149,0.4)" stroke="#a78bfa" stroke-width="1.5"/>
+    <text x="1015" y="212" fill="white" font-size="11" font-weight="600" text-anchor="middle">logs/combined.log</text>
+    <text x="1015" y="230" fill="#94a3b8" font-size="8.5" text-anchor="middle">JSON lines · all levels</text>
+    <text x="1015" y="248" fill="#fb7185" font-size="8" text-anchor="middle">④ server-side only — half the story</text>
+
+    <!-- error.log -->
+    <rect x="900" y="310" width="230" height="70" rx="6" fill="#0f172a"/>
+    <rect x="900" y="310" width="230" height="70" rx="6" fill="rgba(76,29,149,0.4)" stroke="#a78bfa" stroke-width="1.5"/>
+    <text x="1015" y="332" fill="white" font-size="11" font-weight="600" text-anchor="middle">logs/error.log</text>
+    <text x="1015" y="350" fill="#94a3b8" font-size="8.5" text-anchor="middle">JSON lines · errors only</text>
+
+    <!-- gaps panel -->
+    <rect x="30" y="300" width="545" height="150" rx="8" fill="rgba(136,19,55,0.12)" stroke="#fb7185" stroke-width="1" stroke-dasharray="4,4"/>
+    <text x="45" y="324" fill="#fb7185" font-size="10" font-weight="600">GAPS — an agent cannot reconstruct an incident today</text>
+    <text x="45" y="348" fill="#94a3b8" font-size="8.5">① no requestId / sessionId anywhere → client &amp; server lines unjoinable</text>
+    <text x="45" y="368" fill="#94a3b8" font-size="8.5">② request log fires at start → no status, duration, or payload size</text>
+    <text x="45" y="388" fill="#94a3b8" font-size="8.5">③ client JS errors + user actions never leave the browser</text>
+    <text x="45" y="408" fill="#94a3b8" font-size="8.5">④ no record of what the user did in the seconds before a failure</text>
+    <text x="45" y="428" fill="#94a3b8" font-size="8.5">⑤ no replay → “works on my machine” must be narrated from memory</text>
+
+    <!-- legend -->
+    <text x="30" y="492" fill="white" font-size="10" font-weight="600">Legend</text>
+    <rect x="30" y="504" width="16" height="10" rx="2" fill="rgba(8,51,68,0.4)" stroke="#22d3ee" stroke-width="1"/>
+    <text x="52" y="512" fill="#94a3b8" font-size="8">client code</text>
+    <rect x="130" y="504" width="16" height="10" rx="2" fill="rgba(6,78,59,0.4)" stroke="#34d399" stroke-width="1"/>
+    <text x="152" y="512" fill="#94a3b8" font-size="8">backend</text>
+    <rect x="220" y="504" width="16" height="10" rx="2" fill="rgba(76,29,149,0.4)" stroke="#a78bfa" stroke-width="1"/>
+    <text x="242" y="512" fill="#94a3b8" font-size="8">log files</text>
+    <rect x="310" y="504" width="16" height="10" rx="2" fill="rgba(30,41,59,0.5)" stroke="#94a3b8" stroke-width="1"/>
+    <text x="332" y="512" fill="#94a3b8" font-size="8">browser-native</text>
+    <line x1="420" y1="509" x2="436" y2="509" stroke="#fb7185" stroke-width="1.5" stroke-dasharray="3,3"/>
+    <text x="442" y="512" fill="#94a3b8" font-size="8">gap / lost signal</text>
+  </svg>
+  </div>
+
+  <h2 class="panel">B — TARGET: UNIFIED EVENT TIMELINE <span>(ADR-0013 · orange = event transport · one envelope, one file per day, grep is the query language)</span></h2>
+  <div class="diagram-container">
+  <svg viewBox="0 0 1200 815">
+    <defs>
+      <marker id="arrB" markerWidth="9" markerHeight="7" refX="8" refY="3.5" orient="auto"><polygon points="0 0,9 3.5,0 7" fill="#64748b"/></marker>
+      <marker id="arrBC" markerWidth="9" markerHeight="7" refX="8" refY="3.5" orient="auto"><polygon points="0 0,9 3.5,0 7" fill="#22d3ee"/></marker>
+      <marker id="arrBE" markerWidth="9" markerHeight="7" refX="8" refY="3.5" orient="auto"><polygon points="0 0,9 3.5,0 7" fill="#34d399"/></marker>
+      <marker id="arrBV" markerWidth="9" markerHeight="7" refX="8" refY="3.5" orient="auto"><polygon points="0 0,9 3.5,0 7" fill="#a78bfa"/></marker>
+      <marker id="arrBO" markerWidth="9" markerHeight="7" refX="8" refY="3.5" orient="auto"><polygon points="0 0,9 3.5,0 7" fill="#fb923c"/></marker>
+      <pattern id="gridB" width="40" height="40" patternUnits="userSpaceOnUse"><path d="M 40 0 L 0 0 0 40" fill="none" stroke="#1e293b" stroke-width="0.5"/></pattern>
+    </defs>
+    <rect width="100%" height="100%" fill="url(#gridB)"/>
+
+    <!-- column headers -->
+    <text x="30" y="28" fill="#22d3ee" font-size="10" font-weight="600">BROWSER</text>
+    <text x="620" y="28" fill="#34d399" font-size="10" font-weight="600">BACKEND (Express :3000)</text>
+    <text x="940" y="28" fill="#a78bfa" font-size="10" font-weight="600">LOCAL STORE</text>
+    <text x="610" y="668" fill="#94a3b8" font-size="10" font-weight="600">CONSUMERS</text>
+
+    <!-- ============ arrows first ============ -->
+    <!-- react core -> axios interceptor -->
+    <line x1="295" y1="132" x2="321" y2="132" stroke="#22d3ee" stroke-width="1.4" marker-end="url(#arrBC)"/>
+    <text x="308" y="124" fill="#94a3b8" font-size="7.5" text-anchor="middle">api.*()</text>
+
+    <!-- axios -> backend request-context middleware -->
+    <line x1="560" y1="110" x2="621" y2="110" stroke="#22d3ee" stroke-width="1.6" marker-end="url(#arrBC)"/>
+    <text x="591" y="66" fill="#22d3ee" font-size="7.5" text-anchor="middle">API call +</text>
+    <text x="591" y="74" fill="#22d3ee" font-size="7.5" text-anchor="middle">X-Request-Id / X-Session-Id</text>
+
+    <!-- middleware -> routes -> errorHandler -->
+    <line x1="755" y1="175" x2="755" y2="201" stroke="#34d399" stroke-width="1.4" marker-end="url(#arrBE)"/>
+    <line x1="755" y1="275" x2="755" y2="301" stroke="#34d399" stroke-width="1.4" marker-end="url(#arrBE)"/>
+    <text x="763" y="292" fill="#94a3b8" font-size="7.5">throw</text>
+
+    <!-- errorHandler -> winston transport (right corridor) -->
+    <path d="M 885 340 L 900 340 L 900 560 L 889 560" fill="none" stroke="#34d399" stroke-width="1.3" stroke-dasharray="4,3" marker-end="url(#arrBE)"/>
+    <text x="906" y="380" fill="#94a3b8" font-size="7.5" transform="rotate(90 906 380)">error + stack (same requestId)</text>
+
+    <!-- semantic sdk -> transport -->
+    <line x1="295" y1="290" x2="321" y2="290" stroke="#fb923c" stroke-width="1.4" marker-end="url(#arrBO)"/>
+    <text x="308" y="282" fill="#fb923c" font-size="7" text-anchor="middle">events</text>
+
+    <!-- rrweb -> transport (elbow up) -->
+    <path d="M 295 440 L 310 440 L 310 340 L 321 340" fill="none" stroke="#fb923c" stroke-width="1.4" marker-end="url(#arrBO)"/>
+    <text x="304" y="396" fill="#fb923c" font-size="7" transform="rotate(-90 304 396)">DOM + console + network chunks</text>
+
+    <!-- transport -> ingest (crosses boundary) -->
+    <path d="M 560 290 L 590 290 L 590 450 L 621 450" fill="none" stroke="#fb923c" stroke-width="1.6" marker-end="url(#arrBO)"/>
+    <text x="596" y="356" fill="#fb923c" font-size="7.5" transform="rotate(90 596 356)">batched POST ~5s / 100 events · sendBeacon on hide</text>
+
+    <!-- ingest -> events store -->
+    <path d="M 885 435 L 912 435 L 912 150 L 936 150" fill="none" stroke="#a78bfa" stroke-width="1.5" marker-end="url(#arrBV)"/>
+    <text x="916" y="300" fill="#94a3b8" font-size="7.5" transform="rotate(90 916 300)">append validated events</text>
+
+    <!-- ingest -> sessions store -->
+    <path d="M 885 475 L 912 475 L 912 300 L 936 300" fill="none" stroke="#a78bfa" stroke-width="1.5" marker-end="url(#arrBV)"/>
+    <text x="916" y="420" fill="#94a3b8" font-size="7.5" transform="rotate(90 916 420)">rrweb session files</text>
+
+    <!-- winston transport -> events store -->
+    <path d="M 885 580 L 925 580 L 925 200 L 936 200" fill="none" stroke="#34d399" stroke-width="1.5" marker-end="url(#arrBE)"/>
+    <text x="930" y="430" fill="#34d399" font-size="7.5" transform="rotate(90 930 430)">envelope mirror of every log line</text>
+
+    <!-- events store -> AI agent (left corridor) -->
+    <path d="M 948 220 L 928 220 L 928 720 L 904 720" fill="none" stroke="#64748b" stroke-width="1.5" marker-end="url(#arrB)"/>
+    <text x="922" y="500" fill="#94a3b8" font-size="7.5" transform="rotate(-90 922 500)">grep · jq · events CLI</text>
+
+    <!-- sessions store -> human (right corridor) -->
+    <path d="M 1160 300 L 1176 300 L 1176 720 L 1164 720" fill="none" stroke="#a78bfa" stroke-width="1.5" marker-end="url(#arrBV)"/>
+    <text x="1184" y="520" fill="#94a3b8" font-size="7.5" transform="rotate(90 1184 520)">GET /telemetry/sessions/:id → replay</text>
+
+    <!-- ============ browser boundary ============ -->
+    <rect x="20" y="45" width="560" height="600" rx="12" fill="rgba(34,211,238,0.03)" stroke="#22d3ee" stroke-width="1" stroke-dasharray="8,4"/>
+    <text x="32" y="62" fill="#22d3ee" font-size="9" font-weight="600">browser session · record-side ≈ 30–35 KB gz · MIT/Apache only</text>
+
+    <!-- React app core -->
+    <rect x="45" y="80" width="250" height="105" rx="6" fill="#0f172a"/>
+    <rect x="45" y="80" width="250" height="105" rx="6" fill="rgba(8,51,68,0.4)" stroke="#22d3ee" stroke-width="1.5"/>
+    <text x="170" y="102" fill="white" font-size="11" font-weight="600" text-anchor="middle">React app core</text>
+    <text x="170" y="120" fill="#94a3b8" font-size="8.5" text-anchor="middle">pages · react-router · zustand</text>
+    <text x="170" y="134" fill="#94a3b8" font-size="8.5" text-anchor="middle">TanStack Query (queries/mutations)</text>
+    <text x="170" y="152" fill="#94a3b8" font-size="8" text-anchor="middle">data-action attrs on key controls</text>
+    <text x="170" y="168" fill="#22d3ee" font-size="7.5" text-anchor="middle">mutation keys → named app actions</text>
+
+    <!-- semantic SDK -->
+    <rect x="45" y="215" width="250" height="150" rx="6" fill="#0f172a"/>
+    <rect x="45" y="215" width="250" height="150" rx="6" fill="rgba(8,51,68,0.4)" stroke="#22d3ee" stroke-width="1.5"/>
+    <text x="170" y="237" fill="white" font-size="11" font-weight="600" text-anchor="middle">semantic SDK (ours · ~300 LOC)</text>
+    <text x="57" y="257" fill="#94a3b8" font-size="8">• delegated clicks (data-action)</text>
+    <text x="57" y="273" fill="#94a3b8" font-size="8">• route navigation events</text>
+    <text x="57" y="289" fill="#94a3b8" font-size="8">• window.onerror + unhandledrejection</text>
+    <text x="57" y="305" fill="#94a3b8" font-size="8">• web-vitals: CLS · INP · LCP · FCP · TTFB</text>
+    <text x="57" y="321" fill="#94a3b8" font-size="8">• TanStack Query lifecycle hooks</text>
+    <text x="170" y="347" fill="#22d3ee" font-size="7.5" text-anchor="middle">emits shared-envelope events (type/name)</text>
+
+    <!-- rrweb -->
+    <rect x="45" y="395" width="250" height="115" rx="6" fill="#0f172a"/>
+    <rect x="45" y="395" width="250" height="115" rx="6" fill="rgba(8,51,68,0.4)" stroke="#22d3ee" stroke-width="1.5"/>
+    <text x="170" y="417" fill="white" font-size="11" font-weight="600" text-anchor="middle">rrweb recorder (MIT)</text>
+    <text x="170" y="435" fill="#94a3b8" font-size="8.5" text-anchor="middle">@rrweb/record · ~23 KB gz</text>
+    <text x="170" y="451" fill="#94a3b8" font-size="8.5" text-anchor="middle">+ console plugin · + network plugin</text>
+    <text x="170" y="469" fill="#94a3b8" font-size="8" text-anchor="middle">DOM snapshot + mutations + inputs</text>
+    <text x="170" y="487" fill="#22d3ee" font-size="7.5" text-anchor="middle">checkoutEveryNms bounds the buffer</text>
+
+    <!-- axios interceptor -->
+    <rect x="325" y="80" width="235" height="105" rx="6" fill="#0f172a"/>
+    <rect x="325" y="80" width="235" height="105" rx="6" fill="rgba(8,51,68,0.4)" stroke="#22d3ee" stroke-width="1.5"/>
+    <text x="442" y="102" fill="white" font-size="11" font-weight="600" text-anchor="middle">axios interceptor</text>
+    <text x="442" y="120" fill="#94a3b8" font-size="8.5" text-anchor="middle">mints requestId per call</text>
+    <text x="442" y="134" fill="#94a3b8" font-size="8.5" text-anchor="middle">emits api_request / api_response</text>
+    <text x="442" y="152" fill="#94a3b8" font-size="8" text-anchor="middle">sends X-Request-Id · X-Session-Id</text>
+    <text x="442" y="170" fill="#22d3ee" font-size="7.5" text-anchor="middle">sessionId minted once per session</text>
+
+    <!-- transport -->
+    <rect x="325" y="215" width="235" height="150" rx="6" fill="#0f172a"/>
+    <rect x="325" y="215" width="235" height="150" rx="6" fill="rgba(251,146,60,0.3)" stroke="#fb923c" stroke-width="1.5"/>
+    <text x="442" y="237" fill="white" font-size="11" font-weight="600" text-anchor="middle">telemetry transport</text>
+    <text x="337" y="257" fill="#94a3b8" font-size="8">• in-memory event buffer</text>
+    <text x="337" y="273" fill="#94a3b8" font-size="8">• flush: fetch every ~5s / 100 events</text>
+    <text x="337" y="289" fill="#94a3b8" font-size="8">• sendBeacon on visibilitychange/hide</text>
+    <text x="337" y="305" fill="#94a3b8" font-size="8">• never blocks UI · drops on overflow</text>
+    <text x="337" y="321" fill="#94a3b8" font-size="8">• semantic events + rrweb chunks</text>
+    <text x="442" y="347" fill="#fb923c" font-size="7.5" text-anchor="middle">→ POST /api/telemetry/events</text>
+
+    <!-- /debug/replay -->
+    <rect x="325" y="395" width="235" height="115" rx="6" fill="#0f172a"/>
+    <rect x="325" y="395" width="235" height="115" rx="6" fill="rgba(8,51,68,0.4)" stroke="#22d3ee" stroke-width="1.5" stroke-dasharray="5,3"/>
+    <text x="442" y="417" fill="white" font-size="11" font-weight="600" text-anchor="middle">/debug/replay (debug-only)</text>
+    <text x="442" y="435" fill="#94a3b8" font-size="8.5" text-anchor="middle">@rrweb/replay · 58 KB gz · lazy route</text>
+    <text x="442" y="453" fill="#94a3b8" font-size="8.5" text-anchor="middle">loads session events from backend</text>
+    <text x="442" y="471" fill="#94a3b8" font-size="8" text-anchor="middle">pixel-perfect human review</text>
+    <text x="442" y="489" fill="#22d3ee" font-size="7.5" text-anchor="middle">never shipped in the main bundle</text>
+
+    <!-- privacy/volume notes -->
+    <text x="45" y="560" fill="#64748b" font-size="7.5">privacy: password inputs masked (rrweb default) · single-user local app, no consent stack</text>
+    <text x="45" y="576" fill="#64748b" font-size="7.5">volume: checkoutEveryNms = 60s (O2) · /api/profile* request bodies masked from network plugin</text>
+    <text x="45" y="592" fill="#64748b" font-size="7.5">offline: localhost backend — in-memory buffer suffices (no IndexedDB queue needed)</text>
+
+    <!-- ============ backend boundary ============ -->
+    <rect x="610" y="45" width="290" height="600" rx="12" fill="rgba(52,211,153,0.03)" stroke="#34d399" stroke-width="1" stroke-dasharray="8,4"/>
+    <text x="622" y="62" fill="#34d399" font-size="9" font-weight="600">express · AsyncLocalStorage request context</text>
+
+    <!-- request-context middleware -->
+    <rect x="625" y="80" width="260" height="95" rx="6" fill="#0f172a"/>
+    <rect x="625" y="80" width="260" height="95" rx="6" fill="rgba(6,78,59,0.4)" stroke="#34d399" stroke-width="1.5"/>
+    <text x="755" y="102" fill="white" font-size="11" font-weight="600" text-anchor="middle">request-context middleware</text>
+    <text x="755" y="120" fill="#94a3b8" font-size="8.5" text-anchor="middle">AsyncLocalStorage per request</text>
+    <text x="755" y="134" fill="#94a3b8" font-size="8.5" text-anchor="middle">honour inbound X-Request-Id · echo back</text>
+    <text x="755" y="152" fill="#34d399" font-size="8" text-anchor="middle">stamps EVERY log line (requestId+sessionId)</text>
+
+    <!-- routes -->
+    <rect x="625" y="205" width="260" height="70" rx="6" fill="#0f172a"/>
+    <rect x="625" y="205" width="260" height="70" rx="6" fill="rgba(6,78,59,0.4)" stroke="#34d399" stroke-width="1.5"/>
+    <text x="755" y="227" fill="white" font-size="11" font-weight="600" text-anchor="middle">routes + handlers</text>
+    <text x="755" y="245" fill="#94a3b8" font-size="8.5" text-anchor="middle">business logic unchanged</text>
+    <text x="755" y="261" fill="#94a3b8" font-size="8.5" text-anchor="middle">request-completed line: status · ms · bytes</text>
+
+    <!-- errorHandler -->
+    <rect x="625" y="305" width="260" height="70" rx="6" fill="#0f172a"/>
+    <rect x="625" y="305" width="260" height="70" rx="6" fill="rgba(6,78,59,0.4)" stroke="#34d399" stroke-width="1.5"/>
+    <text x="755" y="327" fill="white" font-size="11" font-weight="600" text-anchor="middle">errorHandler (AppError)</text>
+    <text x="755" y="345" fill="#94a3b8" font-size="8.5" text-anchor="middle">error event: code · stack · requestId</text>
+    <text x="755" y="361" fill="#34d399" font-size="8" text-anchor="middle">joins to the client action that caused it</text>
+
+    <!-- telemetry ingest -->
+    <rect x="625" y="405" width="260" height="95" rx="6" fill="#0f172a"/>
+    <rect x="625" y="405" width="260" height="95" rx="6" fill="rgba(6,78,59,0.4)" stroke="#34d399" stroke-width="1.5"/>
+    <text x="755" y="427" fill="white" font-size="11" font-weight="600" text-anchor="middle">POST /api/telemetry/events</text>
+    <text x="755" y="445" fill="#94a3b8" font-size="8.5" text-anchor="middle">zod-validate batch (shared envelope)</text>
+    <text x="755" y="459" fill="#94a3b8" font-size="8.5" text-anchor="middle">append to day-file · rrweb → session dir</text>
+    <text x="755" y="479" fill="#34d399" font-size="7.5" text-anchor="middle">malformed: drop + warn — never 500, never block UI</text>
+
+    <!-- winston envelope transport -->
+    <rect x="625" y="530" width="260" height="80" rx="6" fill="#0f172a"/>
+    <rect x="625" y="530" width="260" height="80" rx="6" fill="rgba(6,78,59,0.4)" stroke="#34d399" stroke-width="1.5"/>
+    <text x="755" y="552" fill="white" font-size="11" font-weight="600" text-anchor="middle">winston + envelope transport</text>
+    <text x="755" y="570" fill="#94a3b8" font-size="8.5" text-anchor="middle">existing logger kept (no pino migration)</text>
+    <text x="755" y="586" fill="#94a3b8" font-size="8.5" text-anchor="middle">every line mirrored into the timeline</text>
+    <text x="755" y="600" fill="#34d399" font-size="7.5" text-anchor="middle">source: "server" · same envelope as client events</text>
+
+    <!-- ============ store ============ -->
+    <!-- unified events store -->
+    <rect x="940" y="80" width="220" height="140" rx="6" fill="#0f172a"/>
+    <rect x="940" y="80" width="220" height="140" rx="6" fill="rgba(76,29,149,0.4)" stroke="#a78bfa" stroke-width="1.5"/>
+    <text x="1050" y="100" fill="white" font-size="10.5" font-weight="600" text-anchor="middle">logs/events/YYYY-MM-DD.jsonl</text>
+    <text x="1050" y="116" fill="#a78bfa" font-size="8" text-anchor="middle">ONE unified envelope timeline</text>
+    <text x="952" y="133" fill="#94a3b8" font-size="7.5">• client semantic events (ui.* nav.* …)</text>
+    <text x="952" y="147" fill="#94a3b8" font-size="7.5">• api_request / api_response pairs</text>
+    <text x="952" y="161" fill="#94a3b8" font-size="7.5">• server log lines (envelope mirror)</text>
+    <text x="952" y="175" fill="#94a3b8" font-size="7.5">• errors (category-named, stack in payload)</text>
+    <text x="952" y="189" fill="#94a3b8" font-size="7.5">• web-vitals + lifecycle events</text>
+    <text x="1050" y="208" fill="#a78bfa" font-size="7.5" text-anchor="middle">+ index.json manifest (file · startTs · endTs · count)</text>
+
+    <!-- sessions store -->
+    <rect x="940" y="260" width="220" height="90" rx="6" fill="#0f172a"/>
+    <rect x="940" y="260" width="220" height="90" rx="6" fill="rgba(76,29,149,0.4)" stroke="#a78bfa" stroke-width="1.5"/>
+    <text x="1050" y="282" fill="white" font-size="10.5" font-weight="600" text-anchor="middle">logs/sessions/&lt;id&gt;/rrweb-*.jsonl</text>
+    <text x="1050" y="300" fill="#94a3b8" font-size="8" text-anchor="middle">DOM fidelity, per session</text>
+    <text x="1050" y="316" fill="#94a3b8" font-size="8" text-anchor="middle">plain JSON chunks (greppable)</text>
+    <text x="1050" y="334" fill="#a78bfa" font-size="7.5" text-anchor="middle">feeds /debug/replay + agent inspection</text>
+
+    <!-- retention -->
+    <rect x="940" y="390" width="220" height="90" rx="6" fill="#0f172a"/>
+    <rect x="940" y="390" width="220" height="90" rx="6" fill="rgba(120,53,15,0.3)" stroke="#fbbf24" stroke-width="1.5"/>
+    <text x="1050" y="412" fill="white" font-size="10.5" font-weight="600" text-anchor="middle">retention job (on boot)</text>
+    <text x="1050" y="430" fill="#94a3b8" font-size="8" text-anchor="middle">events: gzip &gt;14d · delete &gt;90d</text>
+    <text x="1050" y="446" fill="#94a3b8" font-size="8" text-anchor="middle">rrweb: gzip &gt;7d · delete &gt;30d</text>
+    <text x="1050" y="464" fill="#fbbf24" font-size="7.5" text-anchor="middle">archive/ stays zcat | jq -able</text>
+
+    <!-- envelope schema card -->
+    <rect x="940" y="510" width="220" height="135" rx="6" fill="#0f172a"/>
+    <rect x="940" y="510" width="220" height="135" rx="6" fill="rgba(30,41,59,0.5)" stroke="#94a3b8" stroke-width="1.2" stroke-dasharray="4,3"/>
+    <text x="1050" y="530" fill="white" font-size="9.5" font-weight="600" text-anchor="middle">shared envelope (@job-aggregator/shared)</text>
+    <text x="952" y="548" fill="#94a3b8" font-size="7.5">ts · seq · sessionId · requestId · actor</text>
+    <text x="952" y="562" fill="#94a3b8" font-size="7.5">source: client|server · type (CLOSED):</text>
+    <text x="952" y="576" fill="#22d3ee" font-size="7.5">click input navigation api_request</text>
+    <text x="952" y="590" fill="#22d3ee" font-size="7.5">api_response error log lifecycle</text>
+    <text x="952" y="604" fill="#94a3b8" font-size="7.5">name (OPEN): ui.click · error.http · …</text>
+    <text x="952" y="618" fill="#94a3b8" font-size="7.5">payload: type-specific (~1 level deep)</text>
+    <text x="1050" y="636" fill="#64748b" font-size="7" text-anchor="middle">ISO-8601 ts → lexicographic sort == chronological</text>
+
+    <!-- ============ consumers ============ -->
+    <!-- AI agent -->
+    <rect x="610" y="685" width="290" height="85" rx="6" fill="#0f172a"/>
+    <rect x="610" y="685" width="290" height="85" rx="6" fill="rgba(30,41,59,0.5)" stroke="#94a3b8" stroke-width="1.5"/>
+    <text x="755" y="707" fill="white" font-size="11" font-weight="600" text-anchor="middle">AI agent — primary consumer</text>
+    <text x="755" y="725" fill="#94a3b8" font-size="8" text-anchor="middle">events request &lt;id&gt; · session &lt;id&gt; · around &lt;ts&gt; · stats</text>
+    <text x="755" y="741" fill="#94a3b8" font-size="8" text-anchor="middle">thin CLI over grep + jq on day-files</text>
+    <text x="755" y="757" fill="#22d3ee" font-size="7.5" text-anchor="middle">click → api_request → backend logs → error → toast</text>
+
+    <!-- human -->
+    <rect x="940" y="685" width="220" height="85" rx="6" fill="#0f172a"/>
+    <rect x="940" y="685" width="220" height="85" rx="6" fill="rgba(30,41,59,0.5)" stroke="#94a3b8" stroke-width="1.5"/>
+    <text x="1050" y="707" fill="white" font-size="11" font-weight="600" text-anchor="middle">human</text>
+    <text x="1050" y="725" fill="#94a3b8" font-size="8" text-anchor="middle">/debug/replay?session=&lt;id&gt;</text>
+    <text x="1050" y="741" fill="#94a3b8" font-size="8" text-anchor="middle">pixel-perfect session replay</text>
+    <text x="1050" y="757" fill="#94a3b8" font-size="8" text-anchor="middle">+ events stats for trends</text>
+
+    <!-- ============ legend (outside boundaries) ============ -->
+    <text x="30" y="676" fill="white" font-size="10" font-weight="600">Legend</text>
+    <rect x="30" y="688" width="16" height="10" rx="2" fill="rgba(8,51,68,0.4)" stroke="#22d3ee" stroke-width="1"/>
+    <text x="52" y="696" fill="#94a3b8" font-size="8">client</text>
+    <rect x="105" y="688" width="16" height="10" rx="2" fill="rgba(6,78,59,0.4)" stroke="#34d399" stroke-width="1"/>
+    <text x="127" y="696" fill="#94a3b8" font-size="8">backend</text>
+    <rect x="190" y="688" width="16" height="10" rx="2" fill="rgba(76,29,149,0.4)" stroke="#a78bfa" stroke-width="1"/>
+    <text x="212" y="696" fill="#94a3b8" font-size="8">store</text>
+    <rect x="260" y="688" width="16" height="10" rx="2" fill="rgba(251,146,60,0.3)" stroke="#fb923c" stroke-width="1"/>
+    <text x="282" y="696" fill="#94a3b8" font-size="8">event transport</text>
+    <rect x="380" y="688" width="16" height="10" rx="2" fill="rgba(30,41,59,0.5)" stroke="#94a3b8" stroke-width="1"/>
+    <text x="402" y="696" fill="#94a3b8" font-size="8">consumer / schema</text>
+    <rect x="500" y="688" width="16" height="10" rx="2" fill="rgba(120,53,15,0.3)" stroke="#fbbf24" stroke-width="1"/>
+    <text x="522" y="696" fill="#94a3b8" font-size="8">retention</text>
+    <text x="30" y="790" fill="#64748b" font-size="7.5">correlation: client mints sessionId (per session) + requestId (per API call) → X-Session-Id / X-Request-Id headers → AsyncLocalStorage stamps every server line</text>
+    <text x="30" y="806" fill="#64748b" font-size="7.5">reconstruction: grep '"requestId":"&lt;id&gt;"' logs/events/*.jsonl | sort — or: events request &lt;id&gt;</text>
+  </svg>
+  </div>
+
+  <!-- Info Cards -->
+  <div class="cards">
+    <div class="card">
+      <div class="card-header"><div class="card-dot cyan"></div><h3>Why rrweb, not a platform</h3></div>
+      <ul>
+        <li>• Sentry, PostHog &amp; Highlight all build replay ON rrweb — using it directly gets the same fidelity</li>
+        <li>• Platform self-host floors: OpenReplay 8 GB · Highlight 8 GB + Kafka/ClickHouse · PostHog 16 GB &amp; officially unsupported · Sentry 16 GB + 40 containers</li>
+        <li>• rrweb is MIT, ~23 KB gz record-side, plain JSON events — greppable without vendor APIs</li>
+        <li>• web-vitals (3 KB, Apache-2.0) adds CLS/INP/LCP/FCP/TTFB</li>
+      </ul>
+    </div>
+    <div class="card">
+      <div class="card-header"><div class="card-dot emerald"></div><h3>One envelope, one timeline</h3></div>
+      <ul>
+        <li>• Fixed envelope: ts · seq · sessionId · requestId · actor · source · type · name · payload</li>
+        <li>• type is a CLOSED enum (validated by zod); name is an OPEN dot-vocabulary (ui.click, error.http)</li>
+        <li>• Store: one JSONL file per UTC day + index.json manifest — grep/jq IS the query language</li>
+        <li>• requestId doubles as trace-id; real W3C traceparent is one middleware line away if OTel ever lands</li>
+      </ul>
+    </div>
+    <div class="card">
+      <div class="card-header"><div class="card-dot violet"></div><h3>Phases &amp; escape hatches</h3></div>
+      <ul>
+        <li>• P0 correlation foundation (ALS + X-Request-Id + request-completed line) — useful alone</li>
+        <li>• P1 semantic timeline (SDK + ingest + events CLI) · P2 DOM replay (rrweb + /debug/replay) · P3 analytics niceties</li>
+        <li>• winston kept; pino optional (O1) · Spotlight-by-Sentry = documented add-on if error grouping hurts (O3)</li>
+        <li>• If human dashboards ever matter: migrate to OpenReplay — never build dashboards here</li>
+      </ul>
+    </div>
+  </div>
+
+  <p class="footer">job-aggregator · ADR-0013 companion · research verified against primary sources 2026-08-16 (npm registry, GitHub LICENSE/docs) · MIT/Apache-2.0 only</p>
+</div>
+</body>
+</html>
