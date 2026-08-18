@@ -88,6 +88,10 @@ export function ResumeStudioPage() {
   // through `set` (editDoc) and commits through markSaved/commitTitle/applyRestore.
   const [draft, setDraft] = useState(createDraftState)
   const { doc, title, dirty, committedRevision } = draft
+  // E8.7: the Save gate is ONE source of truth — enforced title validity OR
+  // snapshot-dirty + pending. Nothing else blocks (advisory never blocks).
+  const titleBlocked = !!titleError(title)
+  const saveBlocked = !dirty || saveResume.isPending || titleBlocked
   const [activeSection, setActiveSection] = useState<SectionKey>(stepFromRoute(step))
   const [report, setReport] = useState<AtsReport | null>(null)
   const [lintOpen, setLintOpen] = useState(false)
@@ -128,9 +132,8 @@ export function ResumeStudioPage() {
   }
 
   const handleSave = async () => {
-      // ADR-0011 enforced core: the resume name is the ONE blocking field. With a
-      // blocked title, do not persist (the Save button is also disabled).
-      if (titleError(title)) return
+      // ADR-0011 enforced core + ADR-0009 clean baseline: the ONE blocking gate.
+      if (titleBlocked) return
       // ADR-0009: persist the current name (title) if it changed from the committed
     // baseline, then commit the draft as a new immutable version. The draft is NOT
     // re-hydrated afterward — it already IS the committed content.
@@ -266,7 +269,7 @@ export function ResumeStudioPage() {
         <Button variant="outline" size="sm" onClick={() => setVersionsOpen(true)}>
           <History className="mr-2 h-4 w-4" /> Versions ({Math.max(0, committedRevision)})
         </Button>
-        <Button size="sm" onClick={handleSave} disabled={!dirty || saveResume.isPending || !!titleError(title)}>
+        <Button size="sm" onClick={handleSave} disabled={saveBlocked}>
           {saveResume.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
           Save
         </Button>
