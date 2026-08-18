@@ -1,5 +1,6 @@
 import axios from 'axios'
 import { ApiError, fromResponseBody } from './errors'
+import { setupApiTelemetry } from '../telemetry/axios'
 import type {
   JobListResponse,
   JobDetailResponse,
@@ -14,6 +15,9 @@ const api = axios.create({
   baseURL: import.meta.env.VITE_API_URL || 'http://localhost:3000/api',
   timeout: 30_000,
 })
+
+// E9.3 (T11): mint + stamp X-Request-Id/X-Session-Id and emit api.request/api.response
+setupApiTelemetry(api)
 
 // ---------------------------------------------------------------------------
 // Request interceptor

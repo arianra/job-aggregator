@@ -116,7 +116,10 @@ app.use('/api/boards', createBoardsRouter(storage))
 const eventStore = new EventStore({
   baseDir: process.env.EVENTS_DIR || path.join(process.cwd(), 'logs', 'events'),
 })
-app.use('/api/telemetry', createTelemetryRouter({ eventStore }))
+app.use('/api/telemetry', createTelemetryRouter({
+  eventStore,
+  sessionsDir: process.env.EVENTS_DIR || path.join(process.cwd(), 'logs', 'sessions'),
+}))
 
 // Also mount health at /api/health for frontend compatibility
 app.use('/api/health', createHealthRouter(adapters, rateLimiter, config.hasDatabase))

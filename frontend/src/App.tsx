@@ -13,6 +13,7 @@ import { ApplicationsPage } from './pages/ApplicationsPage'
 import { BoardsPage } from './pages/BoardsPage'
 import { ResumeOverviewPage } from './pages/ResumeOverviewPage'
 import { ResumeStudioPage } from './pages/ResumeStudioPage'
+import DebugReplay from './pages/DebugReplay'
 
 /**
  * Global error policy — the app-wide contract for toasts:
@@ -75,6 +76,7 @@ function App() {
               <Route path="/resume/:id/:step?" element={<ResumeStudioPage />} />
               <Route path="/applications" element={<ApplicationsPage />} />
               <Route path="/boards" element={<BoardsPage />} />
+              <Route path="/debug/replay" element={<DebugReplay />} />
               <Route path="/settings" element={<Navigate to="/profile" replace />} />
             </Routes>
           </AppLayout>

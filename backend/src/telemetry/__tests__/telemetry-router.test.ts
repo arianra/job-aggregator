@@ -9,15 +9,17 @@ import { createTelemetryRouter } from '../../routes/telemetry.js'
 import type { EventEnvelope } from '@job-aggregator/shared'
 
 let dir: string
+let sessionsDir: string
 let store: EventStore
 let app: express.Express
 
 beforeEach(() => {
   dir = fs.mkdtempSync(path.join(os.tmpdir(), 'tel-'))
+  sessionsDir = path.join(dir, 'sessions')
   store = new EventStore({ baseDir: dir })
   app = express()
   app.use(express.json())
-  app.use('/api/telemetry', createTelemetryRouter({ eventStore: store }))
+  app.use('/api/telemetry', createTelemetryRouter({ eventStore: store, sessionsDir }))
 })
 afterEach(() => {
   fs.rmSync(dir, { recursive: true, force: true })
@@ -81,5 +83,29 @@ describe('T5/T6 — POST /api/telemetry/events ingest', () => {
     const found = await store.query({ requestId: 'req-1' })
     expect(found[0].type).toBe('api_response')
     expect(found[0].source).toBe('client')
+  })
+})
+
+describe('T13 — rrweb session replay chunks', () => {
+  it('POST stores a chunk; GET returns the ordered events for the session', async () => {
+    const post = await request(app)
+      .post('/api/telemetry/sessions/sess-1/rrweb')
+      .send({ events: [{ type: 2, timestamp: 1 }, { type: 4, timestamp: 2 }] })
+    expect(post.status).toBe(200)
+    expect(post.body).toEqual({ accepted: 2, id: 'sess-1' })
+
+    const got = await request(app).get('/api/telemetry/sessions/sess-1/rrweb')
+    expect(got.status).toBe(200)
+    expect(got.body.events).toHaveLength(2)
+    expect(got.body.events[0].timestamp).toBe(1)
+    // a chunk file was written for the session
+    const dir = path.join(sessionsDir, 'sess-1')
+    expect(fs.readdirSync(dir).some((f) => f.startsWith('rrweb-') && f.endsWith('.jsonl'))).toBe(true)
+  })
+
+  it('returns empty events for an unknown session', async () => {
+    const got = await request(app).get('/api/telemetry/sessions/nope/rrweb')
+    expect(got.status).toBe(200)
+    expect(got.body.events).toEqual([])
   })
 })
