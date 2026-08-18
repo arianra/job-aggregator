@@ -70,4 +70,35 @@ describe('T9 — events CLI (ADR-0013 agent-consumable surface)', () => {
     const { lines } = await run(['stats', '--by', 'type'])
     expect(lines[0]).toBe('2\tclick')
   })
+
+  it('T17 — stats --type error filters to error envelopes only', async () => {
+    await store.append([
+      mk({ type: 'error', name: 'error.http' }),
+      mk({ type: 'error', name: 'error.window' }),
+      mk({ type: 'click', name: 'ui.click' }),
+    ])
+    const { lines } = await run(['stats', '--by', 'name', '--type', 'error'])
+    expect(lines).toHaveLength(2)
+    expect(lines.join('\n')).toContain('error.http')
+    expect(lines.join('\n')).not.toContain('ui.click')
+  })
+
+  it('T17 — errors command rolls up error frequency by name', async () => {
+    await store.append([
+      mk({ type: 'error', name: 'error.http' }),
+      mk({ type: 'error', name: 'error.http' }),
+      mk({ type: 'error', name: 'error.window' }),
+    ])
+    const { lines } = await run(['errors'])
+    expect(lines[0]).toContain('2\terror.http')
+    expect(lines.join('\n')).toContain('error.window')
+  })
+
+  it('T15 — stats still works after index.json is written (manifest-pruned scan)', async () => {
+    await store.append([mk({ type: 'click', name: 'ui.click' }), mk({ type: 'click', name: 'ui.click' })])
+    await store.writeManifest() // E9.4: index.json present
+    expect(fs.existsSync(path.join(dir, 'index.json'))).toBe(true)
+    const { lines } = await run(['stats', '--by', 'name'])
+    expect(lines[0]).toBe('2\tui.click')
+  })
 })

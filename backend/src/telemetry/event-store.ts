@@ -147,9 +147,35 @@ export class EventStore {
         sizeBytes: Buffer.byteLength(raw, 'utf8'),
       })
     }
-    result.manifest.sort((a, b) => (a.file < b.file ? -1 : 1))
-    fs.writeFileSync(path.join(this.baseDir, 'index.json'), JSON.stringify(result.manifest, null, 2) + '\n', 'utf8')
+    await this.writeManifest()
     return result
+  }
+
+  /**
+   * Regenerate index.json for the uncompressed day-files currently present
+   * (written on boot + after rotate so the CLI can prune its file scan).
+   */
+  async writeManifest(): Promise<void> {
+    if (!fs.existsSync(this.baseDir)) return
+    const manifest: { file: string; startTs: string; endTs: string; count: number; sizeBytes: number }[] = []
+    for (const dayKey of this.listDayFiles()) {
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(dayKey)) continue
+      const full = this.dayFile(dayKey)
+      if (!fs.existsSync(full)) continue
+      const raw = fs.readFileSync(full, 'utf8')
+      const lines = raw.split('\n').filter((l) => l.trim())
+      const first = lines.length ? (JSON.parse(lines[0]) as EventEnvelope) : null
+      const last = lines.length ? (JSON.parse(lines[lines.length - 1]) as EventEnvelope) : null
+      manifest.push({
+        file: `${dayKey}.jsonl`,
+        startTs: first?.ts ?? '',
+        endTs: last?.ts ?? '',
+        count: lines.length,
+        sizeBytes: Buffer.byteLength(raw, 'utf8'),
+      })
+    }
+    manifest.sort((a, b) => (a.file < b.file ? -1 : 1))
+    fs.writeFileSync(path.join(this.baseDir, 'index.json'), JSON.stringify(manifest, null, 2) + '\n', 'utf8')
   }
 }
 

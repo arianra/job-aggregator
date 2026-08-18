@@ -116,6 +116,8 @@ app.use('/api/boards', createBoardsRouter(storage))
 const eventStore = new EventStore({
   baseDir: process.env.EVENTS_DIR || path.join(process.cwd(), 'logs', 'events'),
 })
+// E9.4 (T15): index.json manifest on boot so the events CLI can prune its file scan.
+void eventStore.writeManifest().catch(() => {})
 app.use('/api/telemetry', createTelemetryRouter({
   eventStore,
   sessionsDir: process.env.EVENTS_DIR || path.join(process.cwd(), 'logs', 'sessions'),

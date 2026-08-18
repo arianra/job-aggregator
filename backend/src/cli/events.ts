@@ -12,24 +12,41 @@ const USAGE = `events CLI (ADR-0013) — unified timeline over logs/events/*.jso
   events request <requestId>            print the full client+server chain for one request (THE keystone)
   events session <sessionId>            unified, ts-sorted timeline for a session
   events around <iso-ts> [--window Nm]  events within ±N minutes of a timestamp
-  events stats [--by type|source|name]  counts by a field`
+  events stats [--by type|source|name] [--type T]   counts by a field (optionally filtered by type, e.g. error)
+  events errors                         error-frequency rollup by name (error.http, error.window, …)`
 
-function parseWindowArg(args: string[]): { windowMin: number; rest: string[] } {
-  const rest: string[] = []
-  let windowMin = 5
-  for (let i = 0; i < args.length; i++) {
-    if (args[i] === '--window' && i + 1 < args.length) {
-      const v = args[i + 1]
-      windowMin = /^(\d+)m$/.exec(v) ? Number(/^(\d+)m$/.exec(v)![1]) : Number(v)
-      i++
-    } else rest.push(args[i])
+const byTs = (a: EventEnvelope, b: EventEnvelope) => (a.ts < b.ts ? -1 : a.ts > b.ts ? 1 : 0)
+
+/** Read the current uncompressed day-files, preferring index.json (T15 prune). */
+async function readCurrent(deps: CliDeps): Promise<EventEnvelope[]> {
+  const manifestPath = path.join(deps.baseDir, 'index.json')
+  const store = new EventStore({ baseDir: deps.baseDir })
+  if (fs.existsSync(manifestPath)) {
+    try {
+      const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8')) as { file: string }[]
+      const events: EventEnvelope[] = []
+      for (const { file } of manifest) {
+        const p = path.join(deps.baseDir, file)
+        if (!fs.existsSync(p)) continue
+        for (const line of fs.readFileSync(p, 'utf8').split('\n')) {
+          if (!line.trim()) continue
+          try {
+            events.push(JSON.parse(line) as EventEnvelope)
+          } catch {
+            /* skip corrupt line */
+          }
+        }
+      }
+      return events.sort(byTs)
+    } catch {
+      /* fall through to readdir scan */
+    }
   }
-  return { windowMin, rest }
+  return store.query() // no manifest: readdir fallback
 }
 
 async function collectAll(deps: CliDeps, { includeArchive = false } = {}): Promise<EventEnvelope[]> {
-  const store = new EventStore({ baseDir: deps.baseDir })
-  let events = await store.query()
+  let events = await readCurrent(deps)
   if (includeArchive) {
     const archiveDir = path.join(deps.baseDir, 'archive')
     if (fs.existsSync(archiveDir)) {
@@ -40,17 +57,13 @@ async function collectAll(deps: CliDeps, { includeArchive = false } = {}): Promi
           /* skip unreadable */
         }
       }
-      events.sort((a, b) => (a.ts < b.ts ? -1 : a.ts > b.ts ? 1 : 0))
+      events.sort(byTs)
     }
   }
   return events
 }
 
 export async function runCli(argv: string[], deps: CliDeps): Promise<string> {
-  if (deps.baseDir.includes('__NO_DIR__')) {
-    deps.log(USAGE)
-    return USAGE
-  }
   const [cmd, ...rest] = argv
   switch (cmd) {
     case 'request': {
@@ -70,8 +83,15 @@ export async function runCli(argv: string[], deps: CliDeps): Promise<string> {
       return all.map((e) => JSON.stringify(e)).join('\n')
     }
     case 'around': {
-      const { windowMin, rest: aroundRest } = parseWindowArg(rest)
-      const target = Date.parse(aroundRest[0])
+      let windowMin = 5
+      const positionals: string[] = []
+      for (let i = 0; i < rest.length; i++) {
+        if (rest[i] === '--window' && i + 1 < rest.length) {
+          windowMin = /^(\d+)m$/.exec(rest[i + 1]) ? Number(/^(\d+)m$/.exec(rest[i + 1])![1]) : Number(rest[i + 1])
+          i++
+        } else positionals.push(rest[i])
+      }
+      const target = Date.parse(positionals[0])
       if (Number.isNaN(target)) {
         deps.log('usage: events around <iso-ts> [--window Nm]')
         return 'usage: events around <iso-ts> [--window Nm]'
@@ -84,16 +104,43 @@ export async function runCli(argv: string[], deps: CliDeps): Promise<string> {
       return all.map((e) => JSON.stringify(e)).join('\n')
     }
     case 'stats': {
-      const by = rest.find((x) => x.startsWith('--by='))?.split('=')[1] ?? (rest[0]?.startsWith('--by') ? rest[1] : 'type')
+      let by = 'type'
+      let typeFilter: string | null = null
+      const positionals: string[] = []
+      for (let i = 0; i < rest.length; i++) {
+        if (rest[i] === '--by' && i + 1 < rest.length) {
+          by = rest[i + 1]
+          i++
+        } else if (rest[i].startsWith('--by=')) {
+          by = rest[i].split('=')[1]
+        } else if (rest[i] === '--type' && i + 1 < rest.length) {
+          typeFilter = rest[i + 1]
+          i++
+        } else if (rest[i].startsWith('--type=')) {
+          typeFilter = rest[i].split('=')[1]
+        } else positionals.push(rest[i])
+      }
+      by = (by || (positionals[0] ?? 'type'))
       const field = (by as 'type' | 'source' | 'name') || 'type'
       const counts = new Map<string, number>()
       for (const e of await collectAll(deps, { includeArchive: true })) {
+        if (typeFilter && e.type !== typeFilter) continue
         const key = String(e[field] ?? '')
         counts.set(key, (counts.get(key) ?? 0) + 1)
       }
+      return emitCounts(counts, deps)
+    }
+    case 'errors': {
+      // T17 — error frequency rollup by name (frequency + tail source hint).
+      const counts = new Map<string, { count: number; last: string }>()
+      for (const e of await collectAll(deps, { includeArchive: true })) {
+        if (e.type !== 'error') continue
+        const prev = counts.get(e.name)
+        counts.set(e.name, { count: (prev?.count ?? 0) + 1, last: e.ts })
+      }
       const lines = [...counts.entries()]
-        .sort((a, b) => b[1] - a[1])
-        .map(([k, n]) => `${n}\t${k}`)
+        .sort((a, b) => b[1].count - a[1].count)
+        .map(([name, { count, last }]) => `${count}\t${name}\tlast=${last}`)
       lines.forEach((l) => deps.log(l))
       return lines.join('\n')
     }
@@ -101,6 +148,14 @@ export async function runCli(argv: string[], deps: CliDeps): Promise<string> {
       deps.log(USAGE)
       return USAGE
   }
+}
+
+function emitCounts(counts: Map<string, number>, deps: CliDeps): string {
+  const lines = [...counts.entries()]
+    .sort((a, b) => b[1] - a[1])
+    .map(([k, n]) => `${n}\t${k}`)
+  lines.forEach((l) => deps.log(l))
+  return lines.join('\n')
 }
 
 // Direct invocation: node dist/cli/events.js <cmd> … (defaults to <cwd>/logs/events)
