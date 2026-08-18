@@ -33,9 +33,10 @@ export interface FieldHealth {
   tone: 'green' | 'orange' | 'grey'
 }
 
-/** Normalize a concrete field path ('experience[0].bullets') to a catalog scope ('experience[].bullets'). */
+/** Normalize a concrete field path to a catalog scope ('experience[0].bullets' -> 'experience[].bullets');
+ *  'certifications[0].year' -> 'certs[].year' (the catalog names the element 'certs'). */
 function scopeForPath(path: string): FieldScope | null {
-  const norm = path.replace(/\[\d+\]/g, '[]') as FieldScope
+  const norm = (path.replace(/\[\d+\]/g, '[]').replace(/^certifications/, 'certs')) as FieldScope
   return FIELD_RULES.some((r) => ruleAppliesToScope(r, norm)) ? norm : null
 }
 
@@ -106,14 +107,19 @@ export function fieldFindings(doc: ResumeDoc, path: string): FieldFinding[] {
       }
     }
 
-    const failing = lines.filter((l) => l.trim()).some((l) => !r.evaluate(l))
-    const pass = !failing
+    // Bullets: FAIL if any non-empty line fails; report the exact bullet indices.
+    const trimmedLines = lines.map((l, i) => ({ l, i })).filter((x) => x.l.trim().length > 0)
+    const failingIdxs = trimmedLines.filter((x) => !r.evaluate(x.l)).map((x) => x.i + 1)
+    const pass = failingIdxs.length === 0
+    const bulletsNote = isBulletsScope(scope) && failingIdxs.length > 0
+      ? ` — bullet${failingIdxs.length > 1 ? 's' : ''} ${failingIdxs.join(', ')}`
+      : ''
     return {
       code: r.code,
       title: r.title,
       severity: r.severity,
       status: pass ? 'pass' : 'fail',
-      message: pass ? r.title : r.message,
+      message: pass ? r.title : `${r.message}${bulletsNote}`,
       suggestion: pass ? undefined : r.suggestion,
     }
   })

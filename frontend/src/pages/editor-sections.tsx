@@ -2,7 +2,6 @@ import { useState } from 'react'
 import { GripVertical, Plus } from 'lucide-react'
 import { Button } from '../components/ui/button'
 import { Input } from '../components/ui/input'
-import { Label } from '../components/ui/label'
 import { Textarea } from '../components/ui/textarea'
 import { ConfirmDialog } from '../components/ConfirmDialog'
 import { FormField } from '../forms/field'
@@ -10,13 +9,13 @@ import type { ResumeDoc } from '../types'
 
 /**
  * Resume Studio editor seam (ADR-0012: the "editor is the bug seam").
- *
- * Extracted from ResumeStudioPage so the controlled textareas that produce the
- * structured ResumeDoc can be component-tested in isolation (vitest + jsdom).
- * E8.1 guards these transforms lossless-first; ADR-0011/E8.3+ replaces the
- * hand-rolled forms with the shared TanStack/FormField system and deletes the
- * leftover cardLint() here.
- */
+  *
+  * Extracted from ResumeStudioPage so the controlled textareas that produce the
+  * structured ResumeDoc can be component-tested in isolation (vitest + jsdom).
+  * E8.1 guards these transforms lossless-first; ADR-0011/E8.3+ threads the shared
+  * FormField advisory system (E8.5 summary/skills, E8.6 groups incl. per-bullet
+  * Q-advice; cardLint removed E8.6). Field edits stay draft-driven.
+  */
 
 // --- Summary (VERBATIM per ADR-0012 D4; advisory via FormField, E8.5) ---
 export function SummarySection({ doc, set }: { doc: ResumeDoc; set: (p: (d: ResumeDoc) => void) => void }) {
@@ -139,23 +138,20 @@ export function GroupSection({ doc, set, kind }: { doc: ResumeDoc; set: (p: (d: 
               <div className="space-y-3 border-t p-3">
                 <div className="max-w-md space-y-2">
                   {spec.fields.map((f) => (
-                    <div key={f.key}>
-                      <Label className="text-xs">{f.label}</Label>
+                    <FormField key={f.key} label={f.label} path={`${key}[${idx}].${f.key}`} doc={doc}>
                       <Input value={typeof it[f.key] === 'string' ? (it[f.key] as string) : ''} onChange={(e) => updateItem(idx, { [f.key]: e.target.value })} />
-                    </div>
+                    </FormField>
                   ))}
                   {spec.hasBullets && (
-                    <div>
-                      <Label className="text-xs">Bullets (one per line)</Label>
+                    <FormField label="Bullets (one per line)" path={`${key}[${idx}].bullets`} doc={doc} fieldAlign="top">
                       {/* ADR-0012 D3/D4: LOSSLESS binding — raw lines go into `bullets`
                           during editing (empty slot + whitespace preserved). Empty lines
                           are dropped/trimmed only at the render/export/save boundary via
                           normalizeBullets, never here. */}
                       <Textarea value={bullets.join('\n')} onChange={(e) => updateItem(idx, { bullets: e.target.value.split('\n') })} rows={4} />
-                    </div>
+                    </FormField>
                   )}
                 </div>
-                {spec.hasBullets && bullets.length > 0 && <CardLint bullets={bullets} />}
                 <div className="text-[11px] text-muted-foreground">Auto-captured in this resume — no per-entry save. A global save + version control applies.</div>
               </div>
             )}
@@ -182,41 +178,4 @@ export function GroupSection({ doc, set, kind }: { doc: ResumeDoc; set: (p: (d: 
       />
     </div>
   )
-}
-
-// Per-card ATS lint (prototype cardLint — to be deleted in E8.6; kept for parity now)
-function CardLint({ bullets }: { bullets: string[] }) {
-  const findings = cardLint(bullets)
-  const errs = findings.filter((x) => x.sev === 'e').length
-  const warns = findings.filter((x) => x.sev === 'w').length
-  const cls = errs ? 'border-red-500' : warns ? 'border-amber-500' : 'border-emerald-500'
-  return (
-    <div className={`rounded-lg border px-3 py-2 text-xs ${cls}`}>
-      {findings.map((f, i) => (
-        <div key={i} className="flex items-center gap-2 py-0.5">
-          <span className={`h-2 w-2 flex-none rounded-full ${f.sev === 'e' ? 'bg-red-500' : f.sev === 'w' ? 'bg-amber-500' : 'bg-emerald-500'}`} />
-          <b className="font-mono text-[11px] text-muted-foreground">{f.code}</b>
-          <span>{f.msg}</span>
-        </div>
-      ))}
-    </div>
-  )
-}
-
-export function cardLint(bullets: string[]): { sev: 'e' | 'w' | 'ok'; code: string; msg: string }[] {
-  const res: ReturnType<typeof cardLint> = []
-  if (!bullets.length) { res.push({ sev: 'w', code: 'ATS-L-002', msg: 'Add achievement bullets' }); return res }
-  const noMetric = bullets.map((b, i) => ({ b, i })).filter((x) => !/\d/.test((x.b || '').trim())).map((x) => x.i + 1)
-  if (noMetric.length) {
-    const noun = noMetric.length > 1 ? 'bullets ' : 'bullet '
-    res.push({ sev: noMetric.length >= Math.ceil(bullets.length / 2) ? 'e' : 'w', code: 'ATS-Q-001', msg: 'Add a metric — ' + noun + noMetric.join(', ') + (noMetric.length > 1 ? ' have' : ' has') + ' no number yet' })
-  } else res.push({ sev: 'ok', code: 'ATS-Q-001', msg: 'Every bullet has a metric' })
-  const weak = /^(functioned|responsible|worked|helped|assisted|participated|tasked|involved)\b/i
-  const weakIdx = bullets.map((b, i) => ({ b, i })).filter((x) => weak.test((x.b || '').trim())).map((x) => x.i + 1)
-  if (weakIdx.length) res.push({ sev: 'w', code: 'ATS-Q-002', msg: 'Weak opener on bullet' + (weakIdx.length > 1 ? 's' : '') + ' ' + weakIdx.join(', ') + ' — prefer Led/Shipped/Built' })
-  else res.push({ sev: 'ok', code: 'ATS-Q-002', msg: 'Strong action-verb openers' })
-  const shortCnt = bullets.filter((b) => { const t = (b || '').trim(); return t.length > 0 && t.length < 45 }).length
-  if (shortCnt) res.push({ sev: 'w', code: 'ATS-C-001', msg: shortCnt + ' bullet' + (shortCnt > 1 ? 's' : '') + ' under ~45 chars — add impact/detail' })
-  else res.push({ sev: 'ok', code: 'ATS-C-001', msg: 'Bullets carry substance' })
-  return res
 }

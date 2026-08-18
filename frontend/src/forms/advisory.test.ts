@@ -106,4 +106,17 @@ describe('fieldFindings (spike README verdict table reproduced)', () => {
     d.skills = { Development: ['TypeScript', 'React'] }
     expect(fieldHealth(fieldFindings(d, 'skills')).tone).toBe('green')
   })
+
+  it('E8.6: bullets advisory reports the exact failing bullet index; education year has T-003', () => {
+    const d = spikeDoc()
+    d.experience = [
+      { role: 'Lead', company: 'Acme', dates: '2020-2021', location: '', bullets: ['Led cut load 40%', 'Responsible for the design system'] },
+    ]
+    d.education = [{ degree: 'BSc', school: 'X', location: '', year: '2030' }]
+    const q = fieldFindings(d, 'experience[0].bullets').find((f) => f.code === 'ATS-Q-001')!
+    expect(q.status).toBe('fail')
+    expect(q.message).toContain('bullet 2') // only the metric-less 2nd bullet
+    const t = fieldFindings(d, 'education[0].year').find((f) => f.code === 'ATS-T-003')!
+    expect(t.status).toBe('fail') // 2030 is in the future
+  })
 })
