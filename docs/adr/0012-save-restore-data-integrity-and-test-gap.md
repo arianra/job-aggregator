@@ -224,12 +224,12 @@ collected.
 
 | # | Item | Recommendation | Status |
 |---|---|---|---|
-| O1 | The two reported bugs get user-visible tickets with loop evidence | File `ResumeStudioPage` bullets trim/filter corruption + summary whitespace collapse | Open |
-| O2 | Component tests: add jsdom + @testing-library/react; config switch; editor-seam round-trip tests | Block fixes on this | Open |
-| O3 | Playwright E2E for the user's exact type→save→reload→restore script | Required for "stay fixed" | Open |
-| O4 | Stale `backend/dist/**/*.test.*` being collected by vitest + `test-resume.pdf` path resolution | Fix test-exclude/cwd; 22 spurious failures poison the green sign | Open |
-| O5 | Field-normalization contract (D4) as a shared policy doc/typed helper | Write alongside the ADR-0011 migration | Open |
-| O6 | Interlock with ADR-0011 (created concurrently 2026-08-16) | This ADR is its premise-confirmation; migrate the editors there | **Coordinated 2026-08-16:** ADR-0011 accepted + `spikes/001-ats-form-seam` VALIDATED (seam, lifecycle, enforced core proven); 0011 O7 now carries this record's O1–O3/O5 into the migration tickets |
+| O1 | The two reported bugs get user-visible tickets with loop evidence | File `ResumeStudioPage` bullets trim/filter corruption + summary whitespace collapse | **Fixed — E8.1** (lossless bullets binding + verbatim summary; `normalization.ts` contract; E2E `lossless-roundtrip` green) |
+| O2 | Component tests: add jsdom + @testing-library/react; config switch; editor-seam round-trip tests | Block fixes on this | **Fixed — E8.1** (jsdom + RTL + vitest pragma; `editor-sections.test.tsx` RED→green) |
+| O3 | Playwright E2E for the user's exact type→save→reload→restore script | Required for "stay fixed" | **Fixed — E8.1** (Playwright config + `lossless-roundtrip.spec.ts`; suite now 5/5) |
+| O4 | Stale `backend/dist/**/*.test.*` being collected by vitest + `test-resume.pdf` path resolution | Fix test-exclude/cwd; 22 spurious failures poison the green sign | **Fixed — E8.1** (dist gitignored + vitest excludes; stale `backend/dist` removed; backend 538/538) |
+| O5 | Field-normalization contract (D4) as a shared policy doc/typed helper | Write alongside the ADR-0011 migration | **Fixed — E8.1** (`frontend/src/lib/normalization.ts` + tests; promoted into the forms system, E8.3+) |
+| O6 | Interlock with ADR-0011 (created concurrently 2026-08-16) | This ADR is its premise-confirmation; migrate the editors there | **Coordinated + Fixed — E8.1–E8.8** (full migration landed: shared catalog/predicates, forms system, Contact/Summary/Skills/Groups via FormField, single-source Save gate; `cardLint` deleted) |
 
 ---
 

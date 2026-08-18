@@ -1,6 +1,6 @@
 # ADR-0011 — Advisory Field-Level ATS Validation & the Form Architecture (TanStack Form + zod + shadcn field family)
 
-- **Status:** Accepted (documentation-only; implementation lands via beads tickets)
+- **Status:** Accepted (documentation-only; implementation lands via beads tickets) — **implemented + verified via E8.1–E8.8 (2026-08-17)**
 - **Date:** 2026-08-16
 - **Owner:** job-aggregator (frontend + shared)
 - **Scope:** How the Resume Studio forms are built, validated, and visually surfaced: form
