@@ -33,8 +33,8 @@ export const compactTemplate: ResumeTemplate = {
     bullet: { sizeHalfPoints: 12, weight: 'regular', spacingPt: 2, line240ths: 278 },
   },
   decorations: {
-    headingBorderTop: { color: '8B8B8B', sizeEighthPt: 4 },
-    headingBorderBottom: { color: '000000', sizeEighthPt: 4 },
+    headingBorderTop: { color: 'E5E7EB', sizeEighthPt: 4 },
+    headingBorderBottom: { color: '000000', sizeEighthPt: 12 },
   },
   sectionOrder: ['contact', 'summary', 'experience', 'education', 'skills', 'certifications'],
   layout: { jobSeparator: true },

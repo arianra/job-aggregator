@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach } from 'vitest'
 import JSZip from 'jszip'
 import { buildDocx } from '../../services/docx-builder.js'
-import { compactTemplate } from '@job-aggregator/shared'
+import { compactTemplate, resolve } from '@job-aggregator/shared'
 import type { ResumeDoc } from '@job-aggregator/shared'
 
 /**
@@ -39,7 +39,7 @@ let docFont = ''
 let firstSz = ''
 
 beforeEach(async () => {
-  const res = await buildDocx(makeDoc())
+  const res = await buildDocx(makeDoc(), resolve(compactTemplate, makeDoc().settings))
   const zip = await JSZip.loadAsync(res.bytes)
   docXml = await zip.file('word/document.xml')!.async('string')
   stylesXml = ((await zip.file('word/styles.xml')?.async('string')) ?? '') || ''
@@ -63,19 +63,20 @@ describe('G1 — structural gate against the `compact` template', () => {
   })
 
   describe('no-drift properties (builder already matches the template)', () => {
-    it('name slot size = 26 half-points (13pt)', () => {
-      expect(firstSz).toBe(String(compactTemplate.slots.name.sizeHalfPoints))
+    it('name slot size equals the RESOLVED half-point size (scaled by settings)', () => {
+      const resolvedName = resolve(compactTemplate, makeDoc().settings).slots.name.sizeHalfPoints
+      expect(firstSz).toBe(String(resolvedName))
     })
   })
 
-  describe('G1 drift baseline — the CURRENT builder diverges (expected-failure; converges via E7.3)', () => {
-    it.fails('PAPER-SIZE drift: document.xml carries the template Letter width (12240)', () => {
+  describe('G1 structural — builder emits the template config exactly (E7.3)', () => {
+    it('PAPER-SIZE: document.xml carries the template Letter width (12240)', () => {
       expect(resolvedPageW).toBe(String(compactTemplate.page.widthTwips))
     })
-    it.fails('MARGIN drift: top margin equals the template 720 twips', () => {
+    it('MARGIN: top margin equals the template 720 twips', () => {
       expect(marginsTop).toBe(String(compactTemplate.page.marginTopTwips))
     })
-    it.fails('FONT drift: docDefaults body font is the template Merriweather Light', () => {
+    it('FONT: docDefaults body font equals the template Merriweather Light', () => {
       expect(docFont).toBe(compactTemplate.fonts.body)
     })
     // Heading-border/job-separator fidelity is ferried to G2 (pixel/snapshot)

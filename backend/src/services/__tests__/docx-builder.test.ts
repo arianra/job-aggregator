@@ -3,6 +3,7 @@ import path from 'node:path'
 import fs from 'node:fs'
 import os from 'node:os'
 import { buildDocx } from '../docx-builder.js'
+import { resolve, compactTemplate } from '@job-aggregator/shared'
 import {
   extractDocxParagraphs,
   hasComplexLayout,
@@ -31,17 +32,18 @@ function goldenFile(): string | null {
 }
 
 const golden = goldenResumeDoc()
+const rFor = (d: typeof golden) => resolve(compactTemplate, d.settings)
 
 describe('buildDocx (E3) — pure renderer', () => {
   it('produces a non-empty DOCX buffer (zip magic)', async () => {
-    const { bytes } = await buildDocx(golden)
+    const { bytes } = await buildDocx(golden, rFor(golden))
     expect(bytes.length).toBeGreaterThan(1000)
     // DOCX = PK zip
     expect(bytes.subarray(0, 2).toString('utf8')).toBe('PK')
   })
 
   it('round-trips: canonical section order and content are present', async () => {
-    const { bytes } = await buildDocx(golden)
+    const { bytes } = await buildDocx(golden, rFor(golden))
     const paras = (await extractDocxParagraphs(bytes)).map(norm).filter(Boolean)
 
     const joined = paras.join('\n')
@@ -65,7 +67,7 @@ describe('buildDocx (E3) — pure renderer', () => {
   })
 
   it('renders every experience bullet and skill as text lines (no tables/images)', async () => {
-    const { bytes } = await buildDocx(golden)
+    const { bytes } = await buildDocx(golden, rFor(golden))
     const joined = norm((await extractDocxParagraphs(bytes)).join(' '))
     const totalBullets = golden.experience.reduce((n, e) => n + e.bullets.length, 0)
     expect(totalBullets).toBeGreaterThan(0)
@@ -77,13 +79,11 @@ describe('buildDocx (E3) — pure renderer', () => {
   })
 
   it('certifications section renders only when present (optional, ADR-0004 O2)', async () => {
-    const noCerts = await buildDocx(golden)
+    const noCerts = await buildDocx(golden, rFor(golden))
     expect(norm((await extractDocxParagraphs(noCerts.bytes)).join(' '))).not.toContain('CERTIFICATIONS')
 
-    const withCerts = await buildDocx({
-      ...golden,
-      certifications: [{ title: 'AWS Certified', issuer: 'Amazon', year: '2024' }],
-    })
+    const withCertsDoc = { ...golden, certifications: [{ title: 'AWS Certified', issuer: 'Amazon', year: '2024' }] }
+    const withCerts = await buildDocx(withCertsDoc, rFor(withCertsDoc))
     const wc = norm((await extractDocxParagraphs(withCerts.bytes)).join(' '))
     expect(wc).toContain('CERTIFICATIONS')
     expect(wc).toContain('AWS Certified')
@@ -91,8 +91,8 @@ describe('buildDocx (E3) — pure renderer', () => {
 
   it('fit-control scaling changes the emitted size half-points', async () => {
     const biggerDoc = { ...JSON.parse(JSON.stringify(golden)) as typeof golden, settings: { ...golden.settings, fontSize: 9 } }
-    const base = await buildDocx(golden)
-    const bigger = await buildDocx(biggerDoc)
+    const base = await buildDocx(golden, rFor(golden))
+    const bigger = await buildDocx(biggerDoc, rFor(biggerDoc))
     const bxml = await (await import('jszip')).default.loadAsync(base.bytes)
     const btext = await bxml.file('word/document.xml')!.async('string')
     const xxml = await (await import('jszip')).default.loadAsync(bigger.bytes)
@@ -106,13 +106,13 @@ describe('buildDocx (E3) — pure renderer', () => {
   it('omits hidden contact lines from the rendered doc (visibility)', async () => {
     const doc = JSON.parse(JSON.stringify(golden)) as typeof golden
     doc.contact.visibility = { ...doc.contact.visibility, email: false, phone: false, linkedin: false }
-    const text = (await extractDocxParagraphs((await buildDocx(doc)).bytes)).map(norm).join(' ')
+    const text = (await extractDocxParagraphs((await buildDocx(doc, rFor(doc))).bytes)).map(norm).join(' ')
     expect(text).not.toContain('arian99@gmail.com')
     expect(text).not.toContain('+1 (707) 771-6645')
   })
 
   it('renders section headings with a divider rule (restores the dividing lines — bug 6)', async () => {
-    const { bytes } = await buildDocx(golden)
+    const { bytes } = await buildDocx(golden, rFor(golden))
     const zip = await (await import('jszip')).default.loadAsync(bytes)
     const xml = await zip.file('word/document.xml')!.async('string')
     expect(xml).toContain('<w:pBdr>') // paragraph border
@@ -125,13 +125,13 @@ describe('buildDocx (E3) — pure renderer', () => {
     // docx.js stamps a creation time in the package core-properties, so raw
     // bytes are not byte-identical between runs; the REQUIREMENT is that the
     // rendered document content is deterministic (E3 "achievable assertions").
-    const a = (await extractDocxParagraphs((await buildDocx(golden)).bytes)).map(norm)
-    const b = (await extractDocxParagraphs((await buildDocx(golden)).bytes)).map(norm)
+    const a = (await extractDocxParagraphs((await buildDocx(golden, rFor(golden))).bytes)).map(norm)
+    const b = (await extractDocxParagraphs((await buildDocx(golden, rFor(golden))).bytes)).map(norm)
     expect(a).toEqual(b)
   })
 
   it('reports pageCount >= 1 for the golden data', async () => {
-    const { pageCount } = await buildDocx(golden)
+    const { pageCount } = await buildDocx(golden, rFor(golden))
     expect(pageCount).toBeGreaterThanOrEqual(1)
   })
 })
@@ -144,7 +144,7 @@ describe('golden test vs cv2026/003 (E3.2)', () => {
     const gparas = (await extractDocxParagraphs(gbuf)).map(norm)
     const gJoined = norm(gparas.join('\n'))
 
-    const { bytes } = await buildDocx(golden)
+    const { bytes } = await buildDocx(golden, rFor(golden))
     const mine = norm((await extractDocxParagraphs(bytes)).join('\n'))
 
     // Section headings must appear in both.

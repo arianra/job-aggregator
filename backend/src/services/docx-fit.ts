@@ -6,7 +6,7 @@
  * hit the floor. Never silently truncates: on failure it returns the smallest
  * attempt + its pageCount so the caller can surface a warning.
  */
-import type { ResumeDoc } from '@job-aggregator/shared'
+import type { ResumeDoc, ResolvedTemplate } from '@job-aggregator/shared'
 import type { DocxResult } from './docx-builder.js'
 
 export interface FitResult {
@@ -22,10 +22,11 @@ export interface FitOptions {
   minFontSize?: number // floor in pt (default 4)
   maxRetries?: number
   /** DI seam so the pure helper stays I/O-free. */
-  render: (doc: ResumeDoc) => Promise<DocxResult>
+  render: (doc: ResumeDoc, resolved: ResolvedTemplate) => Promise<DocxResult>
 }
 
 import { buildDocx } from './docx-builder.js'
+import { resolve, compactTemplate } from '@job-aggregator/shared'
 
 export async function buildDocxOnePage(
   resumeDoc: ResumeDoc,
@@ -44,7 +45,7 @@ export async function buildDocxOnePage(
   })
 
   let attempts = 0
-  let result = await render(withSize(fontSize))
+  let result = await render(withSize(fontSize), resolve(compactTemplate, withSize(fontSize).settings))
   if (result.pageCount === 1) {
     return { result, attempts, fit: true, appliedFontSize: fontSize }
   }
@@ -52,7 +53,7 @@ export async function buildDocxOnePage(
   while (fontSize > minFontSize && attempts < maxRetries) {
     fontSize = Math.max(minFontSize, +(fontSize - step).toFixed(2))
     attempts++
-    result = await render(withSize(fontSize))
+    result = await render(withSize(fontSize), resolve(compactTemplate, withSize(fontSize).settings))
     if (result.pageCount === 1) {
       return { result, attempts, fit: true, appliedFontSize: fontSize }
     }

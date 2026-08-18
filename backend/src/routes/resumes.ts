@@ -23,6 +23,7 @@ import {
   parseResultToResumeDoc,
 } from '../services/resume-service.js'
 import { buildDocx } from '../services/docx-builder.js'
+import { resolve, compactTemplate } from '@job-aggregator/shared'
 import { convertDocxToPdf } from '../services/pdf-deriver.js'
 import { lintResume } from '../services/ats-linter.js'
 import { atsAdvice } from '../services/ats-advice.js'
@@ -473,7 +474,7 @@ export function createResumesRouter(storage: Storage): Router {
         return
       }
       const data = resume.data ?? emptyResumeDoc()
-      const { bytes } = await buildDocx(data)
+      const { bytes } = await buildDocx(data, resolve(compactTemplate, data.settings))
       const ext = '.docx'
       res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document')
       res.setHeader('Content-Disposition', `attachment; filename="${safeFilename(resume.title)}${ext}"`)
@@ -493,7 +494,7 @@ export function createResumesRouter(storage: Storage): Router {
         return
       }
       const data = resume.data ?? emptyResumeDoc()
-      const { bytes } = await buildDocx(data)
+      const { bytes } = await buildDocx(data, resolve(compactTemplate, data.settings))
       const pdf = await convertDocxToPdf(Buffer.from(bytes))
       res.setHeader('Content-Type', 'application/pdf')
       res.setHeader('Content-Disposition', `attachment; filename="${safeFilename(resume.title)}.pdf"`)
@@ -520,7 +521,7 @@ export function createResumesRouter(storage: Storage): Router {
         res.status(400).json({ error: 'A valid ResumeDoc body (with contact) is required for preview' })
         return
       }
-      const { bytes } = await buildDocx(data)
+      const { bytes } = await buildDocx(data, resolve(compactTemplate, data.settings))
       const pdf = await convertDocxToPdf(Buffer.from(bytes))
       res.setHeader('Content-Type', 'application/pdf')
       res.setHeader('Cache-Control', 'no-store')
