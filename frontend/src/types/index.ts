@@ -175,9 +175,52 @@ export interface ApplicationResponse {
 }
 
 // ============================================================================
-// Resume (ADR-0008) — mirrors @job-aggregator/shared Resume types
+// Resume (ADR-0008) + ATS (E4) — re-exported from @job-aggregator/shared (SSOT).
+// The manual mirror was deleted in E8.2 (kill-type-mirror); these names resolve
+// to the shared single source of truth.
 // ============================================================================
+// Resume (ADR-0008) + ATS (E4) — imported/re-exported from @job-aggregator/shared
+// (SSOT). The manual mirror was deleted in E8.2 (kill-type-mirror); these names
+// resolve to the shared single source of truth.
+// ============================================================================
+import type {
+  ResumeMeta,
+  ResumeDoc,
+  ResumeVersionSummary,
+  ResumeFormat,
+  ResumeStatus,
+  ResumeSettings,
+  AtsSeverity,
+  AtsCategory,
+  AtsRuleResult,
+  AtsCategoryScore,
+  AtsReport,
+  ResumeExperience,
+  ResumeEducation,
+  ResumeCertification,
+} from '@job-aggregator/shared'
 
+export type {
+  ResumeMeta,
+  ResumeDoc,
+  ResumeVersionSummary,
+  ResumeFormat,
+  ResumeStatus,
+  ResumeSettings,
+  AtsSeverity,
+  AtsCategory,
+  AtsRuleResult,
+  AtsCategoryScore,
+  AtsReport,
+}
+// Aliased to the legacy frontend entry names so existing import sites are unchanged.
+export type {
+  ResumeExperience as ResumeExperienceEntry,
+  ResumeEducation as ResumeEducationEntry,
+  ResumeCertification as ResumeCertificationEntry,
+}
+
+/** Kept local: frontend form view (uses frontend Location, not shared's). */
 export type ProfilePreferences = {
   remote_ok?: boolean
   hybrid_ok?: boolean
@@ -189,9 +232,12 @@ export type ProfilePreferences = {
   keywords?: string[]
 }
 
-export type ResumeFormat = 'compact'
-export type ResumeStatus = 'NEW' | 'SAVED' | 'ARCHIVED'
+/** Frontend view model: a resume's meta + its latest saved data. */
+export interface ResumeWithData extends ResumeMeta {
+  data: ResumeDoc
+}
 
+/** Frontend form view of the contact block (fields + show-on-resume toggles). */
 export interface ResumeContact {
   name: string
   email: string
@@ -201,111 +247,4 @@ export interface ResumeContact {
   state: string
   city: string
   visibility: { email: boolean; phone: boolean; linkedin: boolean }
-}
-
-export interface ResumeExperienceEntry {
-  role: string
-  company: string
-  dates: string
-  location: string
-  bullets: string[]
-}
-
-export interface ResumeEducationEntry {
-  degree: string
-  school: string
-  location: string
-  year: string
-}
-
-export interface ResumeCertificationEntry {
-  title: string
-  issuer: string
-  year: string
-}
-
-export interface ResumeSettings {
-  fontSize: number
-  lineHeight: number
-  spacing: number
-  typeface: 'serif' | 'sans'
-  paperA4: boolean
-}
-
-export interface ResumeDoc {
-  contact: ResumeContact
-  summary: string
-  experience: ResumeExperienceEntry[]
-  education: ResumeEducationEntry[]
-  skills: Record<string, string[]>
-  certifications: ResumeCertificationEntry[]
-  sections: { order: string[]; visibility: Record<string, boolean> }
-  settings: ResumeSettings
-}
-
-/** The list-card / meta shape returned by GET /resumes. */
-export interface ResumeMeta {
-  id: string
-  profile_id: string
-  title: string
-  format: ResumeFormat
-  status: ResumeStatus
-  primary: boolean
-  created_at: string
-  updated_at: string
-  revision: number
-}
-
-/** A resume with its latest saved data (GET /resumes/:id). */
-export interface ResumeWithData extends ResumeMeta {
-  data: ResumeDoc
-}
-
-export interface ResumeVersionSummary {
-  id: string
-  revision: number
-  created_at: string
-}
-
-// --- ATS report (E4) ---
-export type AtsSeverity = 'error' | 'warning' | 'info'
-export type AtsCategory =
-  | 'parseability'
-  | 'contact'
-  | 'structure'
-  | 'timeline'
-  | 'keywords'
-  | 'content'
-  | 'grammar'
-
-export interface AtsRuleResult {
-  code: string
-  category: AtsCategory
-  title: string
-  severity: AtsSeverity
-  status: 'pass' | 'fail' | 'skipped'
-  maxPoints: number
-  earnedPoints: number
-  message: string
-  suggestion?: string
-  evidence?: string[]
-  count?: number
-}
-
-export interface AtsCategoryScore {
-  category: AtsCategory
-  weight: number
-  percent: number
-  maxPoints: number
-  earnedPoints: number
-  errors: number
-  warnings: number
-}
-
-export interface AtsReport {
-  overall: { score: number; grade: 'A' | 'B' | 'C' | 'D' | 'F'; label: string }
-  byCategory: AtsCategoryScore[]
-  rules: AtsRuleResult[]
-  summary: string[]
-  advice?: { area: string; advice: string }[]
 }

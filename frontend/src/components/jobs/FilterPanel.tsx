@@ -5,31 +5,41 @@ import { Label } from '../../components/ui/label'
 import { Switch } from '../../components/ui/switch'
 import { Search, X } from 'lucide-react'
 import { useJobs, useSearch } from '../../hooks/useJobs'
+import { useFilterStore } from '../../stores/filterStore'
 
 export function FilterPanel() {
-  const [filters, setFilters] = useState({
+  // Local DRAFT for the inputs (so typing doesn't thrash the shared store /
+  // refetch on every keystroke). The store is written ONLY on Search / Clear.
+  const [draft, setDraft] = useState({
     keywords: '',
     location: '',
     remote: false,
   })
+  const setStoreFilters = useFilterStore((s) => s.setFilters)
+  const clearStoreFilters = useFilterStore((s) => s.clearFilters)
 
   const searchMutation = useSearch()
   const { refetch } = useJobs(1, 20)
 
   const handleSearch = () => {
-    searchMutation.mutate({
-      keywords: filters.keywords || undefined,
-      location: filters.location || undefined,
-      remote: filters.remote || undefined,
-    })
+    // ADR-0011 ③: FilterPanel is the WRITER of the shared store (the source
+    // useJobs reads) — commit the draft so the job list refetches filtered.
+    const applied = {
+      keywords: draft.keywords || undefined,
+      location: draft.location || undefined,
+      remote: draft.remote || undefined,
+    }
+    setStoreFilters(applied)
+    searchMutation.mutate(applied)
   }
 
   const handleClear = () => {
-    setFilters({ keywords: '', location: '', remote: false })
+    setDraft({ keywords: '', location: '', remote: false })
+    clearStoreFilters()
     refetch()
   }
 
-  const hasActiveFilters = filters.keywords || filters.location || filters.remote
+  const hasActiveFilters = draft.keywords || draft.location || draft.remote
 
   return (
     <div className="border border-border rounded-lg p-6 bg-card space-y-4">
@@ -39,8 +49,8 @@ export function FilterPanel() {
           <Input
             id="keywords"
             placeholder="e.g., React, TypeScript"
-            value={filters.keywords}
-            onChange={(e) => setFilters({ ...filters, keywords: e.target.value })}
+            value={draft.keywords}
+            onChange={(e) => setDraft({ ...draft, keywords: e.target.value })}
           />
         </div>
 
@@ -49,8 +59,8 @@ export function FilterPanel() {
           <Input
             id="location"
             placeholder="e.g., San Francisco, Remote"
-            value={filters.location}
-            onChange={(e) => setFilters({ ...filters, location: e.target.value })}
+            value={draft.location}
+            onChange={(e) => setDraft({ ...draft, location: e.target.value })}
           />
         </div>
 
@@ -58,8 +68,8 @@ export function FilterPanel() {
           <Label>Remote Only</Label>
           <div className="flex items-center h-10">
             <Switch
-              checked={filters.remote}
-              onCheckedChange={(checked) => setFilters({ ...filters, remote: checked })}
+              checked={draft.remote}
+              onCheckedChange={(checked) => setDraft({ ...draft, remote: checked })}
             />
           </div>
         </div>

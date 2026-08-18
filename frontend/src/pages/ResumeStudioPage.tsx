@@ -467,7 +467,7 @@ function SectionForm(props: {
   report: AtsReport | null
   primary: boolean
   revision: number
-  updatedAt?: string | null
+  updatedAt?: string | Date | null
   onTogglePrimary: (p: boolean) => void
   onAskLifecycle: (k: LifecycleKind) => void
   onUpload: (f: File) => void
@@ -504,7 +504,7 @@ function DetailsSection(props: {
   setTitle: (t: string) => void
   primary: boolean
   revision: number
-  updatedAt?: string | null
+  updatedAt?: string | Date | null
   onTogglePrimary: (p: boolean) => void
   onAskLifecycle: (k: LifecycleKind) => void
   onUpload: (f: File) => void
@@ -863,7 +863,7 @@ function LintDrawer({ open, onClose, report }: { open: boolean; onClose: () => v
 function VersionsDrawer({ open, onClose, versions, loading, onRestore }: {
   open: boolean
   onClose: () => void
-  versions: { id: string; revision: number; created_at: string }[] | undefined
+  versions: { id: string; revision: number; created_at: string | Date }[] | undefined
   loading: boolean
   onRestore: (revision: number) => void
 }) {
