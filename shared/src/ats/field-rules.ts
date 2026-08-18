@@ -37,6 +37,7 @@ export type FieldScope =
   | 'contact.linkedin'
   | 'contact.location'
   | 'summary'
+  | 'skills'
   | 'experience[].bullets'
   | 'education[].year'
   | 'certs[].year'
@@ -46,7 +47,8 @@ export type FieldSeverity = 'error' | 'warning' | 'info'
 export interface FieldRule {
   code: string
   title: string
-  scope: FieldScope
+  /** One or more scopes the rule applies to (a single code may span scopes). */
+  scope: FieldScope | readonly FieldScope[]
   severity: FieldSeverity
   /** true = PASS. Must be a pure function of a single field value. */
   evaluate: (value: string) => boolean
@@ -157,7 +159,7 @@ export const FIELD_RULES: readonly FieldRule[] = [
   {
     code: 'ATS-G-003',
     title: 'No placeholder/lorem text',
-    scope: 'summary',
+    scope: ['summary', 'skills'] as const,
     severity: 'error',
     evaluate: (v) => !hasPlaceholder(v),
     message: 'Placeholder or lorem-ipsum text detected.',
@@ -165,7 +167,12 @@ export const FIELD_RULES: readonly FieldRule[] = [
   },
 ]
 
+/** True if a rule applies to the given scope (handles single + array scope). */
+export function ruleAppliesToScope(rule: FieldRule, scope: FieldScope): boolean {
+  return Array.isArray(rule.scope) ? (rule.scope as readonly FieldScope[]).includes(scope) : rule.scope === scope
+}
+
 /** Convenience: rules that apply to a given element scope. */
 export function rulesForScope(scope: FieldScope): readonly FieldRule[] {
-  return FIELD_RULES.filter((r) => r.scope === scope && !r.deprecated)
+  return FIELD_RULES.filter((r) => !r.deprecated && ruleAppliesToScope(r, scope))
 }

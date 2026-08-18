@@ -1,4 +1,4 @@
-import { FIELD_RULES, isEmailFormat, type FieldScope, type FieldSeverity } from '@job-aggregator/shared'
+import { FIELD_RULES, isEmailFormat, ruleAppliesToScope, type FieldScope, type FieldSeverity } from '@job-aggregator/shared'
 import type { ResumeDoc } from '../types'
 
 /**
@@ -36,7 +36,7 @@ export interface FieldHealth {
 /** Normalize a concrete field path ('experience[0].bullets') to a catalog scope ('experience[].bullets'). */
 function scopeForPath(path: string): FieldScope | null {
   const norm = path.replace(/\[\d+\]/g, '[]') as FieldScope
-  return FIELD_RULES.some((r) => r.scope === norm) ? norm : null
+  return FIELD_RULES.some((r) => ruleAppliesToScope(r, norm)) ? norm : null
 }
 
 /** Pull the current string value at a path; array/line fields join with '\n'. */
@@ -45,6 +45,13 @@ export function fieldValue(doc: ResumeDoc, path: string): string {
   // the combined city/state/country so the shared 'contact.location' scope holds.
   if (path === 'contact.location') {
     return [doc.contact.city, doc.contact.state, doc.contact.country].filter(Boolean).join(', ')
+  }
+  // Skills are an ordered map (category -> skills[]); G-003 scopes 'skills'.
+  if (path === 'skills') {
+    return Object.values(doc.skills ?? {})
+      .flat()
+      .filter(Boolean)
+      .join('\n')
   }
   const parts = path.replace(/\[(\d+)\]/g, '.$1').split('.')
   let cur: unknown = doc
@@ -62,7 +69,7 @@ const isBulletsScope = (s: FieldScope) => s === 'experience[].bullets'
 export function fieldFindings(doc: ResumeDoc, path: string): FieldFinding[] {
   const scope = scopeForPath(path)
   if (!scope) return []
-  const rules = FIELD_RULES.filter((r) => r.scope === scope)
+  const rules = FIELD_RULES.filter((r) => ruleAppliesToScope(r, scope))
   const value = fieldValue(doc, path)
 
   return rules.map((r) => {

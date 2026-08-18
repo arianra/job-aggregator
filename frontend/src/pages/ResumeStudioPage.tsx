@@ -19,6 +19,7 @@ import { setTopBarHeader } from '../components/layout/topbar-header'
 import { SummarySection, GroupSection } from './editor-sections'
 import { ContactSection } from '../forms/contact-section'
 import { TitleField } from '../forms/title-field'
+import { FormField } from '../forms/field'
 import { titleError } from '../forms/enforced'
 import { normalizeBullets } from '../lib/normalization'
 import type { ResumeDoc, AtsReport, AtsCategory } from '../types'
@@ -632,9 +633,9 @@ function SkillsSection({ doc, set }: { doc: ResumeDoc; set: (p: (d: ResumeDoc) =
   }
 
   return (
-    <div className="max-w-xl space-y-2 text-sm">
-      <div>
-        <Label>Skills — grouped by category</Label>
+    <FormField label="Skills" path="skills" doc={doc} fieldAlign="top">
+          <div className="max-w-xl space-y-2 text-sm">
+            <Label>Skills — grouped by category</Label>
         <div className="mt-0.5 text-xs text-muted-foreground">Each category renders as its own line on the DOCX. Type to search, Enter to add, × to remove.</div>
       </div>
       {cats.map(([cat, skills], idx) => {
@@ -677,11 +678,11 @@ function SkillsSection({ doc, set }: { doc: ResumeDoc; set: (p: (d: ResumeDoc) =
         )
       })}
       <Button variant="outline" size="sm" onClick={addCat}><Plus className="mr-1 h-3.5 w-3.5" /> Add category</Button>
-    </div>
-  )
-}
+                </FormField>
+              )
+            }
 
-function SkillAdder({ cat, doc, set }: { cat: string; doc: ResumeDoc; set: (p: (d: ResumeDoc) => void) => void }) {
+      function SkillAdder({ cat, doc, set }: { cat: string; doc: ResumeDoc; set: (p: (d: ResumeDoc) => void) => void }) {
   const [q, setQ] = useState('')
   const pool = (SKILL_TAX[cat] || []).filter((x) => !(doc.skills[cat] || []).includes(x))
   const suggestions = (q ? pool.filter((o) => o.toLowerCase().includes(q.toLowerCase())) : pool).slice(0, 8)

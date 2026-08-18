@@ -5,6 +5,7 @@ import { Input } from '../components/ui/input'
 import { Label } from '../components/ui/label'
 import { Textarea } from '../components/ui/textarea'
 import { ConfirmDialog } from '../components/ConfirmDialog'
+import { FormField } from '../forms/field'
 import type { ResumeDoc } from '../types'
 
 /**
@@ -17,18 +18,16 @@ import type { ResumeDoc } from '../types'
  * leftover cardLint() here.
  */
 
-// --- Summary (VERBATIM per ADR-0012 D4) ---
+// --- Summary (VERBATIM per ADR-0012 D4; advisory via FormField, E8.5) ---
 export function SummarySection({ doc, set }: { doc: ResumeDoc; set: (p: (d: ResumeDoc) => void) => void }) {
   return (
     <div className="max-w-xl space-y-3">
-      <div>
-        <Label>Professional summary</Label>
-        <Textarea value={doc.summary} onChange={(e) => set((d) => void (d.summary = e.target.value))} rows={5} className="mt-1" />
-        <div className="mt-1 text-xs text-muted-foreground">Live-reflected to the DOCX/render as you type.</div>
-      </div>
-      <div className="rounded-md border-l-[3px] border-emerald-600 bg-emerald-50 px-3 py-2 text-xs text-emerald-800">
-        <b className="font-mono">ATS summary</b> — Passed: length &gt; 200 chars · keywords found.
-      </div>
+      {/* E8.5: hardcoded "ATS summary — Passed" badge removed; real advisory
+          (G-003, grey n/a until evaluable) derives from the draft. */}
+      <FormField label="Professional summary" path="summary" doc={doc} fieldAlign="top">
+        <Textarea rows={5} value={doc.summary} onChange={(e) => set((d) => void (d.summary = e.target.value))} />
+      </FormField>
+      <p className="text-xs text-muted-foreground">Live-reflected to the DOCX/render as you type. ATS findings above are advice only.</p>
     </div>
   )
 }

@@ -75,8 +75,9 @@ describe('ATS field-rules catalog (shared)', () => {
       // predicate results are booleans (PASS contract)
       expect(typeof r.evaluate('')).toBe('boolean')
     }
-    for (const s of new Set(FIELD_RULES.map((r) => r.scope))) {
-      expect(rulesForScope(s).length).toBeGreaterThan(0)
+    const scopes = new Set(FIELD_RULES.flatMap((r) => (Array.isArray(r.scope) ? r.scope : [r.scope])))
+    for (const s of scopes) {
+      expect(rulesForScope(s as (typeof scopes extends Set<infer T> ? T : never)).length).toBeGreaterThan(0)
     }
   })
 

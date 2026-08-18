@@ -94,4 +94,16 @@ describe('fieldFindings (spike README verdict table reproduced)', () => {
   it('unscoped/unknown path yields no findings', () => {
     expect(fieldFindings(spikeDoc(), 'contact.notafield')).toEqual([])
   })
+
+  it('skills: G-003 flags placeholder text, passes on clean skills (E8.5)', () => {
+    const d = spikeDoc()
+    d.skills = { Development: ['TypeScript', 'tbd', 'React'] }
+    const fs = fieldFindings(d, 'skills')
+    expect(fs.map((f) => f.code)).toEqual(['ATS-G-003'])
+    expect(fs[0].status).toBe('fail')
+    expect(fieldHealth(fs).tone).toBe('orange')
+
+    d.skills = { Development: ['TypeScript', 'React'] }
+    expect(fieldHealth(fieldFindings(d, 'skills')).tone).toBe('green')
+  })
 })

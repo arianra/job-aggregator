@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { describe, it, expect, beforeEach } from 'vitest'
-import { render, fireEvent } from '@testing-library/react'
+import { render, fireEvent, screen } from '@testing-library/react'
 import { emptyResumeDoc } from '../lib/resume-doc'
 import { GroupSection, SummarySection } from './editor-sections'
 import type { ResumeDoc } from '../types'
@@ -107,5 +107,18 @@ describe('SummarySection (verbatim)', () => {
     fireEvent.change(ta, { target: { value: 'A Lead frontend engineer' } })
     // "A " -> "A " prefix space preserved; Summary is never trimmed.
     expect(captured.summary).toBe('A Lead frontend engineer')
+  })
+
+  it('E8.5: has NO hardcoded "ATS summary — Passed" badge; shows a real advisory trigger', () => {
+    const doc = experienceDoc()
+    render(<SummarySection doc={doc} set={() => {}} />)
+    // hardcoded badge killed
+    expect(screen.queryByText(/ATS summary/i)).toBeNull()
+    expect(screen.queryByText(/Passed/i)).toBeNull()
+    // real advisory from the draft (G-003): verbatim summary has no placeholder -> green trigger
+    const trigger = screen.getByRole('button', { name: /ATS checks for Professional summary/ })
+    expect(trigger.getAttribute('aria-label')).toContain('0 advice')
+    // summary textarea still present + verbatim
+    expect((document.querySelector('textarea') as HTMLTextAreaElement).value).toBe(doc.summary)
   })
 })
