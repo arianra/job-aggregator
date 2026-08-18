@@ -33,6 +33,7 @@ resumes/
 *.docx
 !docs/**/*.pdf
 !docs/**/*.docx
+!backend/src/templates/sources/**/*.docx
 
 # IDE & Editor
 .vscode/
