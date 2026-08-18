@@ -1,5 +1,6 @@
 import type { ResumeSettings } from '../types.js'
 import { ptToHalfPoints, ptToTwips } from './conversions.js'
+import { getTemplate, compactTemplate } from './templates/index.js'
 import type {
   ResolvedTemplate,
   ResumeTemplate,
@@ -79,6 +80,16 @@ export function resolve(template: ResumeTemplate, settings: ResumeSettings): Res
 
 /** Small pure helpers re-exported for the two renderer adapters (docx.js/CSS). */
 export const templateSizing = { ptToHalfPoints, ptToTwips }
+
+const DEFAULT_SETTINGS: ResumeSettings = { fontSize: 6.5, lineHeight: 1.16, spacing: 1, typeface: 'serif', paperA4: false }
+
+/**
+ * Resolve the template a resume's `format` selects (falling back to `compact`),
+ * applying the doc's settings. Use everywhere a renderer picks a style.
+ */
+export function resolveResume(resume: { settings?: ResumeSettings }, format?: string): ResolvedTemplate {
+  return resolve(getTemplate(format ?? 'compact') ?? compactTemplate, resume.settings ?? DEFAULT_SETTINGS)
+}
 
 function round2(n: number): number {
   return Math.round(n * 100) / 100

@@ -1,9 +1,9 @@
 import type { ResumeDoc } from '../types'
-import { resolve, compactTemplate, halfPointsToCssPx, type ResolvedTemplate } from '@job-aggregator/shared'
+import { resolveResume, halfPointsToCssPx, type ResolvedTemplate } from '@job-aggregator/shared'
 
-/** Resolve the compact template against a doc's settings (E7.4 preview side). */
-export function resolveResumeForDoc(doc: ResumeDoc): ResolvedTemplate {
-  return resolve(compactTemplate, doc.settings ?? { fontSize: 6.5, lineHeight: 1.16, spacing: 1, typeface: 'serif', paperA4: false })
+/** Resolve the template a resume's `format` selects (compact fallback). */
+export function resolveResumeForDoc(doc: ResumeDoc, format?: string): ResolvedTemplate {
+  return resolveResume(doc, format)
 }
 
 /** Escape HTML in a string for safe inline rendering. */

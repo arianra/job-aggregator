@@ -242,8 +242,8 @@ export function ResumeStudioPage() {
     }
   }
 
-  const html = useMemo(() => renderResumeHtml(doc, resolveResumeForDoc(doc)), [doc])
-    const pStyle = useMemo(() => previewStyle(doc, resolveResumeForDoc(doc)), [doc])
+  const html = useMemo(() => renderResumeHtml(doc, resolveResumeForDoc(doc, resume?.format)), [doc, resume?.format])
+      const pStyle = useMemo(() => previewStyle(doc, resolveResumeForDoc(doc, resume?.format)), [doc, resume?.format])
 
   // Auto-fit: shrink font size until forecasted 1-page (bounded; no truncation).
   const handleAutoFit = () => {
@@ -356,11 +356,23 @@ export function ResumeStudioPage() {
                 onChange={(e) => set((x) => void (x.settings.typeface = e.target.value as 'serif' | 'sans'))}
               >
                 <option value="serif">Serif</option>
-                <option value="sans">Sans</option>
-              </select>
-            </span>
-            <span className="h-5 w-px bg-border" />
-            <span className="inline-flex overflow-hidden rounded-md border">
+                                <option value="sans">Sans</option>
+                              </select>
+                            </span>
+                            <span className="h-5 w-px bg-border" />
+                            <span className="flex items-center gap-1.5">
+                              Template
+                              <select
+                                className="rounded border bg-card px-1.5 py-1 text-xs"
+                                value={resume?.format ?? 'compact'}
+                                onChange={(e) => void updateMeta.mutateAsync({ format: e.target.value })}
+                              >
+                                <option value="compact">Compact</option>
+                                <option value="harvard">Harvard</option>
+                              </select>
+                            </span>
+                            <span className="h-5 w-px bg-border" />
+                            <span className="inline-flex overflow-hidden rounded-md border">
               <button onClick={() => setPreviewMode('live')} className={`px-2.5 py-1 text-xs ${previewMode === 'live' ? 'bg-primary text-primary-foreground' : 'bg-card'}`}>Live HTML</button>
               <button onClick={() => { setPreviewMode('docx'); void handleAccurateRender() }} className={`px-2.5 py-1 text-xs ${previewMode === 'docx' ? 'bg-primary text-primary-foreground' : 'bg-card'}`}>.docx render</button>
             </span>

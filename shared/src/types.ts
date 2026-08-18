@@ -384,7 +384,7 @@ export interface ApplicationCount {
 
 export type ResumeStatus = 'NEW' | 'SAVED' | 'ARCHIVED'
 
-export type ResumeFormat = 'compact'
+export type ResumeFormat = 'compact' | 'harvard'
 
 export type ResumeTypeface = 'serif' | 'sans'
 
