@@ -1,0 +1,37 @@
+{
+  "audit": {
+    "pass": true,
+    "failures": [],
+    "warnings": [
+      "inline images/shapes present (tolerated if truly inline)"
+    ]
+  },
+  "findings": [],
+  "ambiguities": [
+    "extra distinct sizes beyond 5: 0"
+  ],
+  "page": {
+    "widthTwips": 12240,
+    "heightTwips": 15840,
+    "marginTopTwips": 720,
+    "marginRightTwips": 720,
+    "marginBottomTwips": 720,
+    "marginLeftTwips": 720
+  },
+  "fonts": {
+    "body": "Merriweather Light",
+    "bold": "Merriweather",
+    "fallbacks": [
+      "Georgia",
+      "serif"
+    ]
+  },
+  "sizesHalfPoints": {
+    "name": 26,
+    "heading": 18,
+    "role": 16,
+    "company": 13,
+    "body": 12
+  },
+  "line240ths": 280
+}
