@@ -6,7 +6,7 @@
  * hit the floor. Never silently truncates: on failure it returns the smallest
  * attempt + its pageCount so the caller can surface a warning.
  */
-import type { ResumeDoc, ResolvedTemplate } from '@job-aggregator/shared'
+import type { ResumeDoc, ResolvedTemplate, ResumeSettings } from '@job-aggregator/shared'
 import type { DocxResult } from './docx-builder.js'
 
 export interface FitResult {
@@ -36,16 +36,16 @@ export async function buildDocxOnePage(
   const minFontSize = opts.minFontSize ?? 4
   const maxRetries = opts.maxRetries ?? 8
 
-  let fontSize = opts.startFontSize ?? resumeDoc.settings?.fontSize ?? 6.5
+  // O8 retarget: scale the RESOLVED template's scale factor directly via
+  // resolve() — never clone/mutate the source doc (ADR-0010).
+  const settings: ResumeSettings = resumeDoc.settings ?? { fontSize: 6.5, lineHeight: 1.16, spacing: 1, typeface: 'serif', paperA4: false }
+  let fontSize = opts.startFontSize ?? settings.fontSize ?? 6.5
   const step = fontSize - minFontSize > 1 ? 0.5 : 0.25
-
-  const withSize = (size: number): ResumeDoc => ({
-    ...resumeDoc,
-    settings: { ...(resumeDoc.settings ?? {}), fontSize: size } as ResumeDoc['settings'],
-  })
+  const resolveAt = (size: number): ResolvedTemplate =>
+    resolve(compactTemplate, { ...settings, fontSize: size })
 
   let attempts = 0
-  let result = await render(withSize(fontSize), resolve(compactTemplate, withSize(fontSize).settings))
+  let result = await render(resumeDoc, resolveAt(fontSize))
   if (result.pageCount === 1) {
     return { result, attempts, fit: true, appliedFontSize: fontSize }
   }
@@ -53,7 +53,7 @@ export async function buildDocxOnePage(
   while (fontSize > minFontSize && attempts < maxRetries) {
     fontSize = Math.max(minFontSize, +(fontSize - step).toFixed(2))
     attempts++
-    result = await render(withSize(fontSize), resolve(compactTemplate, withSize(fontSize).settings))
+    result = await render(resumeDoc, resolveAt(fontSize))
     if (result.pageCount === 1) {
       return { result, attempts, fit: true, appliedFontSize: fontSize }
     }

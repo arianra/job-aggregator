@@ -5,7 +5,7 @@ import {
 } from 'lucide-react'
 import { useResume, useSaveResume, useUpdateMeta, useLint, useResumeVersions, useDuplicateResume, useArchiveResume, useDeleteResume, useUploadIntoResume } from '../hooks/useResumes'
 import * as resumeApi from '../api/resumes'
-import { renderResumeHtml, previewStyle } from '../lib/resume-render'
+import { renderResumeHtml, previewStyle, resolveResumeForDoc } from '../lib/resume-render'
 import { createDraftState, hydrateResume, editDoc, editTitle, commitTitle, markSaved, applyRestore, applyUpload } from '../lib/resume-draft'
 import { notify } from '../lib/notify'
 import { Button } from '../components/ui/button'
@@ -242,8 +242,8 @@ export function ResumeStudioPage() {
     }
   }
 
-  const html = useMemo(() => renderResumeHtml(doc), [doc])
-  const pStyle = useMemo(() => previewStyle(doc), [doc])
+  const html = useMemo(() => renderResumeHtml(doc, resolveResumeForDoc(doc)), [doc])
+    const pStyle = useMemo(() => previewStyle(doc, resolveResumeForDoc(doc)), [doc])
 
   // Auto-fit: shrink font size until forecasted 1-page (bounded; no truncation).
   const handleAutoFit = () => {
