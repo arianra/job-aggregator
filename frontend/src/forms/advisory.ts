@@ -41,6 +41,11 @@ function scopeForPath(path: string): FieldScope | null {
 
 /** Pull the current string value at a path; array/line fields join with '\n'. */
 export function fieldValue(doc: ResumeDoc, path: string): string {
+  // Production ResumeDoc has no single `contact.location` — C-005 derives from
+  // the combined city/state/country so the shared 'contact.location' scope holds.
+  if (path === 'contact.location') {
+    return [doc.contact.city, doc.contact.state, doc.contact.country].filter(Boolean).join(', ')
+  }
   const parts = path.replace(/\[(\d+)\]/g, '.$1').split('.')
   let cur: unknown = doc
   for (const p of parts) {

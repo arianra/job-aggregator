@@ -17,6 +17,9 @@ import { ConfirmDialog } from '../components/ConfirmDialog'
 import { timeAgo, fmtDateTime } from '../lib/dates'
 import { setTopBarHeader } from '../components/layout/topbar-header'
 import { SummarySection, GroupSection } from './editor-sections'
+import { ContactSection } from '../forms/contact-section'
+import { TitleField } from '../forms/title-field'
+import { titleError } from '../forms/enforced'
 import { normalizeBullets } from '../lib/normalization'
 import type { ResumeDoc, AtsReport, AtsCategory } from '../types'
 
@@ -124,7 +127,10 @@ export function ResumeStudioPage() {
   }
 
   const handleSave = async () => {
-    // ADR-0009: persist the current name (title) if it changed from the committed
+      // ADR-0011 enforced core: the resume name is the ONE blocking field. With a
+      // blocked title, do not persist (the Save button is also disabled).
+      if (titleError(title)) return
+      // ADR-0009: persist the current name (title) if it changed from the committed
     // baseline, then commit the draft as a new immutable version. The draft is NOT
     // re-hydrated afterward — it already IS the committed content.
     if (title.trim() && title.trim() !== draft.committedTitle) {
@@ -259,7 +265,7 @@ export function ResumeStudioPage() {
         <Button variant="outline" size="sm" onClick={() => setVersionsOpen(true)}>
           <History className="mr-2 h-4 w-4" /> Versions ({Math.max(0, committedRevision)})
         </Button>
-        <Button size="sm" onClick={handleSave} disabled={!dirty || saveResume.isPending}>
+        <Button size="sm" onClick={handleSave} disabled={!dirty || saveResume.isPending || !!titleError(title)}>
           {saveResume.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
           Save
         </Button>
@@ -513,10 +519,8 @@ function DetailsSection(props: {
   return (
     <div className="max-w-xl space-y-3 text-sm">
       <div className="field">
-        <Label>Resume name</Label>
-        <Input value={props.title} onChange={(e) => props.setTitle(e.target.value)} placeholder="e.g. Lead Frontend Engineer 2026" className="mt-1" />
-        <div className="mt-1 text-xs text-muted-foreground">This is how the resume appears in your list and exports.</div>
-      </div>
+              <TitleField title={props.title} onChange={props.setTitle} />
+            </div>
       <div className={`flex items-center justify-between rounded-lg border p-3 ${props.primary ? 'border-amber-400 bg-amber-500/10 dark:bg-amber-400/15' : ''}`}>
         <div>
           <div className="flex items-center gap-2">
@@ -576,44 +580,6 @@ function MetaRow({ label, hint, onClick, children, danger }: { label: string; hi
 }
 
 // --- Contact ---
-function ContactSection({ doc, set }: { doc: ResumeDoc; set: (p: (d: ResumeDoc) => void) => void }) {
-  const c = doc.contact
-  type StringField = 'name' | 'email' | 'phone' | 'linkedin' | 'country' | 'state' | 'city'
-  const field = (key: StringField, label: string) => (
-    <div className="field">
-      <Label>{label}</Label>
-      <Input value={c[key]} onChange={(e) => set((d) => void (d.contact[key] = e.target.value))} className="mt-1" />
-    </div>
-  )
-  return (
-    <div className="max-w-xl space-y-3">
-      <div>
-        <Label>Full name</Label>
-        <Input value={c.name} onChange={(e) => set((d) => void (d.contact.name = e.target.value))} className="mt-1" />
-      </div>
-      <div className="grid grid-cols-2 gap-3">
-        {field('email', 'Email')}
-        {field('phone', 'Phone')}
-      </div>
-      {field('linkedin', 'LinkedIn')}
-      <div className="grid grid-cols-3 gap-3">
-        {field('country', 'Country')}
-        {field('state', 'State')}
-        {field('city', 'City')}
-      </div>
-      <div className="flex gap-4">
-        {(['email', 'phone', 'linkedin'] as const).map((k) => (
-          <label key={k} className="flex items-center gap-1.5 text-xs text-muted-foreground">
-            <Switch size="sm" checked={!!c.visibility[k]} onCheckedChange={(v) => set((d) => void (d.contact.visibility[k] = v))} />
-            Show {k}
-          </label>
-        ))}
-      </div>
-      <p className="text-[11px] text-muted-foreground">Per-field "Show on resume" toggles — kept only on Contact, per ADR-0007.</p>
-    </div>
-  )
-}
-
 // --- Skills ---
 const SKILL_TAX: Record<string, string[]> = {
   Development: ['TypeScript', 'React', 'Node.js', 'GraphQL', 'Next.js', 'Redux', 'SQL', 'HTML & CSS', 'Vite', 'Webpack', 'Jest', 'Playwright'],

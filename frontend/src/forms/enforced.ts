@@ -25,3 +25,12 @@ export function titleError(title: string): string | undefined {
   const r = titleSchema.safeParse(title)
   return r.success ? undefined : r.error.issues[0]?.message
 }
+
+/**
+ * Fallback-safe filename (ADR-0011): strips special characters for the export
+ * name. NOTE — the enforced regex tests the CLEANED string directly and never
+ * relies on this function's 'resume' fallback (spike finding #1).
+ */
+export function safeFilename(title: string): string {
+  return title.replace(/[^\w\s-]/g, '').replace(/\s+/g, ' ').trim() || 'resume'
+}
