@@ -3,6 +3,7 @@ import cors from 'cors'
 import 'express-async-errors'
 import { config } from './config.js'
 import { errorHandler } from './middleware/errorHandler.js'
+import { requestContextMiddleware } from './middleware/request-context.js'
 import { createHealthRouter } from './routes/health.js'
 import { createJobsRouter } from './routes/jobs.js'
 import { createProfileRouter } from './routes/profile.js'
@@ -28,16 +29,14 @@ const app = express()
 // Middleware
 // ---------------------------------------------------------------------------
 
+// E9.1: request-context first so every request (incl. under cors/json) is
+// correlated — honour/mint+echo X-Request-Id, stamp ALS store, and emit the
+// single structured request:COMPLETED line (replaces the old start-of-request
+// info log below).
+app.use(requestContextMiddleware)
+
 app.use(cors({ origin: config.frontendUrl, exposedHeaders: ['Content-Disposition'] }))
 app.use(express.json())
-
-app.use((req, _res, next) => {
-  logger.info(`${req.method} ${req.path}`, {
-    ip: req.ip,
-    userAgent: req.get('user-agent'),
-  })
-  next()
-})
 
 // ---------------------------------------------------------------------------
 // Data layer

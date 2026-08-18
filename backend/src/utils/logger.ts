@@ -1,7 +1,19 @@
 import winston from 'winston'
 import path from 'path'
+import { getRequestContext } from '../middleware/request-context-store.js'
 
 const { combine, timestamp, printf, colorize, errors } = winston.format
+
+// Stamps every log line with the ALS request context (requestId+sessionId) with
+// ZERO call-site changes across the 24 logger importers (ADR-0013 Backend 1).
+const contextInjector = winston.format((info) => {
+  const ctx = getRequestContext()
+  if (ctx) {
+    info.requestId = ctx.requestId
+    info.sessionId = ctx.sessionId
+  }
+  return info
+})()
 
 // Custom format for console output
 const consoleFormat = printf(({ level, message, timestamp, stack, ...meta }) => {
@@ -31,9 +43,9 @@ const fileFormat = printf(({ level, message, timestamp, stack, ...meta }) => {
   })
 })
 
-const logger = winston.createLogger({
+export const logger = winston.createLogger({
   level: process.env.LOG_LEVEL || 'info',
-  format: combine(errors({ stack: true }), timestamp({ format: 'YYYY-MM-DD HH:mm:ss' })),
+  format: combine(errors({ stack: true }), timestamp({ format: 'YYYY-MM-DD HH:mm:ss' }), contextInjector),
   transports: [
     // Console transport with colors
     new winston.transports.Console({

@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { errorHandler, AppError } from '../errorHandler'
+import { ERROR_CODES } from '@job-aggregator/shared'
 import logger from '../../utils/logger'
 import { Request, Response, NextFunction } from 'express'
 
@@ -54,12 +55,13 @@ describe('errorHandler', () => {
 
       errorHandler(error, mockReq as Request, mockRes as Response, mockNext)
 
-      expect(logger.error).toHaveBeenCalledWith('Unhandled error', {
+      expect(logger.error).toHaveBeenCalledWith('request:ERROR', {
+        code: ERROR_CODES.INTERNAL,
         error: 'Bad request',
         stack: expect.any(String),
         path: '/test',
         method: 'GET',
-        ip: '127.0.0.1',
+        isOperational: true,
       })
     })
 
@@ -103,12 +105,13 @@ describe('errorHandler', () => {
 
       errorHandler(error, mockReq as Request, mockRes as Response, mockNext)
 
-      expect(logger.error).toHaveBeenCalledWith('Unhandled error', {
+      expect(logger.error).toHaveBeenCalledWith('request:ERROR', {
+        code: ERROR_CODES.INTERNAL,
         error: 'Unexpected error',
         stack: expect.any(String),
         path: '/test',
         method: 'GET',
-        ip: '127.0.0.1',
+        isOperational: false,
       })
     })
   })
