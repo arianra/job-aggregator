@@ -4,7 +4,7 @@ import os from 'os'
 import path from 'path'
 import { execFileSync } from 'child_process'
 import { buildDocx } from '../docx-builder.js'
-import { resolve, compactTemplate } from '@job-aggregator/shared'
+import { resolve, compactTemplate, resolveResume } from '@job-aggregator/shared'
 import { goldenResumeDoc } from './docx-test-utils.js'
 
 /**
@@ -63,5 +63,33 @@ describe.skipIf(!available)('G2 snapshot harness (E7.5) — DOCX→PDF→PNG→d
     // Fidelity gap surfaced by G2: the crude estimatePages said 1, but the real
     // raster is 2 pages at default settings — auto-fit is the convergence fix.
     expect(Number(m![1])).toBeGreaterThanOrEqual(1)
+  })
+})
+
+describe.skipIf(!available)('G2 — second admitted template (harvard) renders + is stable (E7.6e)', () => {
+  const htmp = fs.mkdtempSync(path.join(os.tmpdir(), 'g2h-'))
+  const hpdf = path.join(htmp, 'harvard.pdf')
+  const hraster = (png: string): string => execFileSync(VENV_PY, [SCRIPT, hpdf, png], { encoding: 'utf8' }).trim()
+
+  beforeAll(async () => {
+    const golden = goldenResumeDoc()
+    const bytes = (await buildDocx(golden, resolveResume(golden, 'harvard'))).bytes
+    fs.writeFileSync(path.join(htmp, 'harvard.docx'), bytes)
+    execFileSync('libreoffice', ['--headless', '--convert-to', 'pdf', '--outdir', htmp, path.join(htmp, 'harvard.docx')], { stdio: 'pipe' })
+  })
+
+  it('rasterizes as US-Letter and reports a real page count', () => {
+    const out = hraster(path.join(htmp, 'h.png'))
+    expect(out).toContain('p0 612.0x792.0')
+    expect(/pages (\d+)/.exec(out)).toBeTruthy()
+  })
+
+  it('is deterministic: same harvard PDF rasterizes to identical pixels', () => {
+    const ref = path.join(htmp, 'h0.png')
+    hraster(ref)
+    const d = execFileSync(VENV_PY, [SCRIPT, hpdf, path.join(htmp, 'h1.png'), '--diff', ref], { encoding: 'utf8' }).trim()
+    const f = /diff ([\d.]+)/.exec(d)
+    expect(f).toBeTruthy()
+    expect(parseFloat(f![1])).toBeLessThan(0.001)
   })
 })
