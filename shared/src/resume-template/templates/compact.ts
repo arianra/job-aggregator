@@ -39,12 +39,3 @@ export const compactTemplate: ResumeTemplate = {
   sectionOrder: ['contact', 'summary', 'experience', 'education', 'skills', 'certifications'],
   layout: { jobSeparator: true },
 }
-
-/** Registry — extend when a second template is admitted end-to-end (E7.6). */
-export const TEMPLATES: Record<string, ResumeTemplate> = {
-  [compactTemplate.id]: compactTemplate,
-}
-
-export function getTemplate(id: string): ResumeTemplate | undefined {
-  return TEMPLATES[id]
-}

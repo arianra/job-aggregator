@@ -1,0 +1,35 @@
+{
+  "id": "harvard",
+  "derivedFrom": "/home/aria/resume-template-candidates/harvard-bullet-2025.docx",
+  "page": {
+    "widthTwips": 12240,
+    "heightTwips": 15840,
+    "marginTopTwips": 720,
+    "marginRightTwips": 605,
+    "marginBottomTwips": 274,
+    "marginLeftTwips": 605
+  },
+  "fonts": {
+    "body": "Calibri",
+    "bold": "Times New Roman",
+    "fallbacks": [
+      "Georgia",
+      "serif"
+    ]
+  },
+  "sizesHalfPoints": {
+    "name": 24,
+    "heading": 23,
+    "role": 21,
+    "company": 16,
+    "body": 8
+  },
+  "line240ths": 20,
+  "decorations": {},
+  "report": {
+    "findings": [],
+    "ambiguities": [
+      "extra distinct sizes beyond 5: 2"
+    ]
+  }
+}

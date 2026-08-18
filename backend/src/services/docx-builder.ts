@@ -101,7 +101,23 @@ export async function buildDocx(doc: ResumeDoc, resolved: ResolvedTemplate): Pro
       first = false
       if (e.role) p([{ text: e.role, size: slots.roleTitle.sizeHalfPoints, bold: true }])
       const meta = [e.company, e.dates, e.location].filter(Boolean).join('   ')
-      if (meta) p([{ text: meta, size: slots.companyLine.sizeHalfPoints, bold: true }])
+      if (meta) {
+        const ts = slots.companyLine.tabStop
+        if (ts) {
+          // Harvard family: `Company·year<TAB>City` with a right-aligned tab stop.
+          const left = [e.company, e.dates].filter(Boolean).join('  ')
+          const right = e.location ?? ''
+          p(
+            [
+              { text: left, size: slots.companyLine.sizeHalfPoints, bold: true },
+              { text: right ? '\t' + right : '', size: slots.companyLine.sizeHalfPoints, bold: true },
+            ],
+            { tabStops: [{ type: ts.alignment === 'right' ? 'right' : 'left', position: ts.positionTwips }] }
+          )
+        } else {
+          p([{ text: meta, size: slots.companyLine.sizeHalfPoints, bold: true }])
+        }
+      }
       for (const b of e.bullets || []) {
         if (b) p([{ text: '•  ', size: slots.bullet.sizeHalfPoints }, { text: b, size: slots.bullet.sizeHalfPoints }])
       }

@@ -13,6 +13,7 @@
   "exclude": [
     "node_modules",
     "dist",
-    "src/resume-template/__tests__/extract-template.test.ts"
+    "src/resume-template/__tests__/extract-template.test.ts",
+    "src/resume-template/__tests__/template-harvard.test.ts"
   ]
 }

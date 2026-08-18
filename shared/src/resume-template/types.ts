@@ -29,6 +29,13 @@ export interface SlotStyle {
   /** Line height in 240ths-of-line. */
   line240ths?: number
   color?: string
+  /**
+   * O1 (ADR-0010) minimal extension: a right/left-aligned tab stop so a meta
+   * line like `Company<TAB>City` right-aligns the trailing segment (Harvard
+   * family). positionTwips is the absolute tab position; alignment is the
+   * trailing segment's edge.
+   */
+  tabStop?: { positionTwips: number; alignment: 'left' | 'right' }
 }
 
 export interface TemplateSlots {
