@@ -1,9 +1,12 @@
 import express from 'express'
 import cors from 'cors'
+import path from 'path'
 import 'express-async-errors'
 import { config } from './config.js'
 import { errorHandler } from './middleware/errorHandler.js'
 import { requestContextMiddleware } from './middleware/request-context.js'
+import { createTelemetryRouter } from './routes/telemetry.js'
+import { EventStore } from './telemetry/event-store.js'
 import { createHealthRouter } from './routes/health.js'
 import { createJobsRouter } from './routes/jobs.js'
 import { createProfileRouter } from './routes/profile.js'
@@ -108,6 +111,12 @@ app.use('/api/profile/resumes', createResumesRouter(storage))
 app.use('/api/applications', createApplicationsRouter(storage))
 app.use('/api/dashboard', createDashboardRouter(storage))
 app.use('/api/boards', createBoardsRouter(storage))
+
+// E9.2: unified telemetry timeline — client event ingest (ADR-0013 Backend change 3).
+const eventStore = new EventStore({
+  baseDir: process.env.EVENTS_DIR || path.join(process.cwd(), 'logs', 'events'),
+})
+app.use('/api/telemetry', createTelemetryRouter({ eventStore }))
 
 // Also mount health at /api/health for frontend compatibility
 app.use('/api/health', createHealthRouter(adapters, rateLimiter, config.hasDatabase))

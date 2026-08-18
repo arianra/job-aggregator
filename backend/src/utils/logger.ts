@@ -1,6 +1,7 @@
 import winston from 'winston'
 import path from 'path'
 import { getRequestContext } from '../middleware/request-context-store.js'
+import { EnvelopeTransport } from '../telemetry/envelope-transport.js'
 
 const { combine, timestamp, printf, colorize, errors } = winston.format
 
@@ -67,6 +68,12 @@ export const logger = winston.createLogger({
       format: fileFormat,
       maxsize: 5242880, // 5MB
       maxFiles: 5,
+    }),
+
+    // E9.2: mirror every log line into the unified timeline as source=server envelope
+    // (ADR-0013 Backend change 6). EVENTS_DIR overridable for tests/locality.
+    new EnvelopeTransport({
+      baseDir: process.env.EVENTS_DIR || path.join(process.cwd(), 'logs', 'events'),
     }),
   ],
 })
