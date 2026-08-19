@@ -5,13 +5,22 @@ interface ScoreBadgeProps {
   className?: string
 }
 
+/**
+ * Callback ScoreBadge — semantic score chip (RESEARCH §7 / ADR-0015 xim.3).
+ * The throwaway excellent/good/fair/poor green/amber/orange/red ramp is gone
+ * (ground rule #10); thresholds now map to semantic state roles:
+ *   ≥80 success · 60–79 warn · <60 danger
+ * Cut-corner tile with mono text stays (the "instrument readout" honesty layer).
+ */
 export function ScoreBadge({ score, className }: ScoreBadgeProps) {
   const config = getScoreConfig(score)
 
   return (
     <span
+      data-slot="score-badge"
       className={cn(
-        'inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold',
+        'inline-flex items-center rounded-md px-2 py-0.5 text-xs font-semibold font-[var(--font-mono)]',
+        '[clip-path:polygon(0_0,calc(100%-8px)_0,100%_8px,100%_100%,0_100%)]',
         config.className,
         className
       )}
@@ -21,24 +30,23 @@ export function ScoreBadge({ score, className }: ScoreBadgeProps) {
   )
 }
 
-function getScoreConfig(score: number) {
+type ScoreRole = 'success' | 'warn' | 'danger'
+
+function getScoreConfig(score: number): { className: string; role: ScoreRole } {
   if (score >= 80) {
     return {
-      className:
-        'bg-excellent-100 text-excellent-700 dark:bg-excellent-500/20 dark:text-excellent-400',
+      role: 'success',
+      className: 'bg-[var(--success-surface)] text-[var(--success-ink)]',
     }
   }
   if (score >= 60) {
     return {
-      className: 'bg-good-100 text-good-700 dark:bg-good-500/20 dark:text-good-400',
-    }
-  }
-  if (score >= 40) {
-    return {
-      className: 'bg-fair-100 text-fair-700 dark:bg-fair-500/20 dark:text-fair-400',
+      role: 'warn',
+      className: 'bg-[var(--warn-surface)] text-[var(--warn-ink)]',
     }
   }
   return {
-    className: 'bg-poor-100 text-poor-700 dark:bg-poor-500/20 dark:text-poor-400',
+    role: 'danger',
+    className: 'bg-[var(--danger-surface)] text-[var(--danger-ink)]',
   }
 }

@@ -91,30 +91,6 @@
   --color-input: hsl(var(--input));
   --color-ring: hsl(var(--ring));
 
-  --color-excellent-50: #f0fdf4;
-  --color-excellent-100: #dcfce7;
-  --color-excellent-500: #22c55e;
-  --color-excellent-600: #16a34a;
-  --color-excellent-700: #15803d;
-
-  --color-good-50: #fefce8;
-  --color-good-100: #fef9c3;
-  --color-good-500: #eab308;
-  --color-good-600: #ca8a04;
-  --color-good-700: #a16207;
-
-  --color-fair-50: #fff7ed;
-  --color-fair-100: #ffedd5;
-  --color-fair-500: #f97316;
-  --color-fair-600: #ea580c;
-  --color-fair-700: #c2410c;
-
-  --color-poor-50: #fef2f2;
-  --color-poor-100: #fee2e2;
-  --color-poor-500: #ef4444;
-  --color-poor-600: #dc2626;
-  --color-poor-700: #b91c1c;
-
   --radius-lg: var(--radius);
   --radius-sm: calc(var(--radius) - 4px);
   --radius-md: calc(var(--radius) - 2px);
@@ -295,4 +271,67 @@
 }
 .preview-doc .sk {
   margin: 0.2em 0;
+}
+
+/* =====================================================================
+   BUTTON MICRO-INTERACTIONS (ADR-0015 s6.3 / glass-material.css sF)
+   The "fluid glass" feel: snappy hover growth, press-down, and a one-shot
+   specular ripple from the centre. Disabled ignored; reduced-motion kills both.
+   ===================================================================== */
+[data-slot="button"] {
+  transition:
+    transform 0.16s cubic-bezier(0.3, 0.9, 0.4, 1),
+    background var(--dur-fast) var(--ease),
+    color var(--dur-fast) var(--ease),
+    box-shadow var(--dur-fast) var(--ease);
+}
+[data-slot="button"]:not(:disabled):hover {
+  transform: scale(1.035);
+}
+[data-slot="button"]:not(:disabled):active {
+  transform: scale(0.96);
+}
+[data-slot="button"]::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 120%;
+  aspect-ratio: 1;
+  transform: translate(-50%, -50%) scale(0);
+  opacity: 0;
+  border-radius: 50%;
+  pointer-events: none;
+  will-change: transform, opacity;
+  background: radial-gradient(
+    circle,
+    color-mix(in oklch, currentColor 24%, transparent),
+    transparent 62%
+  );
+}
+/* voice/info/sun fills use a lighter specular (prototype sF) */
+[data-slot="button"][data-verb-fill]::after {
+  background: radial-gradient(circle, rgba(255, 255, 255, 0.55), transparent 62%);
+}
+[data-slot="button"]:not(:disabled):active::after {
+  animation: material-bubble 0.4s ease-out forwards;
+}
+@keyframes material-bubble {
+  0% {
+    transform: translate(-50%, -50%) scale(0);
+    opacity: 0.85;
+  }
+  100% {
+    transform: translate(-50%, -50%) scale(1.9);
+    opacity: 0;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  [data-slot="button"]::after {
+    display: none;
+  }
+  [data-slot="button"]:not(:disabled):hover,
+  [data-slot="button"]:not(:disabled):active {
+    transform: none;
+  }
 }
