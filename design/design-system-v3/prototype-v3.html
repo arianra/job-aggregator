@@ -1,0 +1,635 @@
+<!doctype html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Callback — Design System V3 (Liquid Glass, full-app)</title>
+<!--
+  Design System V3 — LEADING visual reference.
+  Liquid Glass is the ONLY surface material (the "Dry Poster" variant is dropped).
+  Drives entirely off the V3 token vocabulary (design/design-system-v3/APP-HIERARCHY.md)
+  and the brand SSOT (design/brand/tokens.json). Every app surface is enumerated here.
+-->
+<style>
+/* ============ V3 TOKENS (mirror frontend/src/theme/semantic.css + material.css) ============ */
+:root,[data-theme="light"]{
+  --space-1:4px;--space-2:8px;--space-3:12px;--space-4:16px;--space-5:20px;--space-6:24px;--space-8:32px;--space-10:40px;--space-12:48px;
+  --dur-fast:120ms;--dur:180ms;--dur-slow:260ms;--ease:cubic-bezier(.4,0,.2,1);--ease-pop:cubic-bezier(.2,.9,.3,1.15);
+  --font-display:'Archivo Black','Arial Black',sans-serif;--font-sans:'Inter Variable','Inter',system-ui,'Segoe UI',sans-serif;--font-mono:ui-monospace,'SFMono-Regular',Menlo,Consolas,monospace;
+  --background:#FAF6EC;--surface:#FFFFFF;--surface-2:#EAE8E2;--text:#191713;--muted:#777165;--border:#D4D1C8;
+  --wh:var(--font-sans);
+  --normal:var(--font-sans);
+  --vermilion-50:#FFE7DC;--vermilion-100:#FFD2C2;--vermilion-200:#FFB29C;--vermilion-300:#FF8970;--vermilion-400:#F15F44;--vermilion-500:#E8482B;--vermilion-600:#C83310;--vermilion-700:#A71D00;
+  --ultramarine-50:#E5F6FF;--ultramarine-100:#CEE8FF;--ultramarine-200:#ABD1FF;--ultramarine-300:#83B2FF;--ultramarine-400:#5D90FC;--ultramarine-500:#2C5FD3;--ultramarine-600:#306BD7;--ultramarine-700:#1354B7;
+  --sun-50:#FFF5D1;--sun-100:#FAE7B1;--sun-200:#E8CF86;--sun-300:#D1B151;--sun-400:#B59100;--sun-500:#FBCF3C;--sun-600:#8F6D00;--sun-700:#735700;
+  --grey-50:#F7F5F1;--grey-100:#EAE8E2;--grey-200:#D4D1C8;--grey-300:#B9B4A9;--grey-400:#9A9589;--grey-500:#8A8477;--grey-600:#777165;--grey-700:#5F5A50;--grey-800:#49453B;
+  --neutral-50:#FAF6EC;--neutral-100:#DBD8CE;--neutral-200:#BBB8AF;--neutral-300:#9C9991;--neutral-400:#807D75;--neutral-500:#65635C;--neutral-600:#504D47;--neutral-700:#3B3933;--neutral-800:#2C2A24;--neutral-900:#22201B;--neutral-950:#191713;
+  --night-800:#2C291F;--night-850:#221F17;--night-900:#18160F;--night-950:#0F0D08;
+  --success-50:#DFF0E2;--success-200:#B9DCC2;--success-600:#2E5A38;--success-800:#21472A;
+  --voice:var(--vermilion-600);--voice-fill:var(--vermilion-500);--on-fill:#191713;
+  --info:var(--ultramarine-600);--info-fill:var(--ultramarine-500);--on-info:#FFFFFF;
+  --notify:var(--sun-600);--notify-fill:var(--sun-500);--on-sun:#191713;
+  --hairline:var(--grey-200);--hairline-strong:var(--grey-300);
+  --danger:var(--vermilion-700);--success:var(--success-600);--warn:var(--sun-700);
+  --info-surface:#E5F6FF;--info-ink:#1354B7;--success-surface:#DFF0E2;--success-ink:#2E5A38;--warn-surface:#FFF5D1;--warn-ink:#735700;--danger-surface:#FFE7DC;--danger-ink:#A71D00;
+  --glass-blur:20px;--glass-saturate:1.55;
+  --glass-bg:color-mix(in oklch,var(--surface) 55%,transparent);
+  --glass-bg-strong:color-mix(in oklch,var(--surface) 74%,transparent);
+  --glass-border:color-mix(in oklch,var(--hairline) 60%,transparent);
+  --glass-edge:inset 0 1px 0 0 rgba(255,255,255,.42);
+  --glass-edge-soft:inset 0 1px 0 0 rgba(255,255,255,.30);
+  --glass-shadow:0 18px 50px -12px rgba(33,31,26,.28),0 2px 10px rgba(33,31,26,.10);
+  --glass-amb-blur:90px;--glass-amb-opacity:.22;
+  --rail-shadow:0 18px 50px -12px rgba(33,31,26,.18),0 2px 10px rgba(33,31,26,.06);
+  --tip-shadow:0 10px 34px -8px rgba(33,31,26,.22);
+}
+[data-theme="dark"]{
+  --background:var(--night-950);--surface:var(--night-900);--surface-2:var(--night-850);--text:var(--neutral-100);--muted:var(--grey-400);--border:var(--night-800);
+  --voice:var(--vermilion-500);--voice-fill:var(--vermilion-500);--on-fill:#FFE7DC;
+  --info:var(--ultramarine-400);--info-fill:var(--ultramarine-400);--on-info:#01264f;
+  --notify:var(--sun-400);--notify-fill:var(--sun-400);--on-sun:#2a2200;
+  --hairline:var(--night-800);--hairline-strong:#4b4534;
+  --danger:var(--vermilion-300);--success:var(--success-200);--warn:var(--sun-300);
+  --info-surface:color-mix(in oklch,var(--ultramarine-400) 20%,transparent);--info-ink:var(--ultramarine-200);
+  --success-surface:color-mix(in oklch,var(--success-200) 20%,transparent);--success-ink:var(--success-50);
+  --warn-surface:color-mix(in oklch,var(--sun-400) 20%,transparent);--warn-ink:var(--sun-200);
+  --danger-surface:color-mix(in oklch,var(--vermilion-400) 20%,transparent);--danger-ink:var(--vermilion-200);
+  --glass-saturate:1.35;
+  --glass-bg:color-mix(in oklch,var(--night-900) 46%,transparent);
+  --glass-bg-strong:color-mix(in oklch,var(--night-900) 80%,transparent);
+  --glass-border:color-mix(in oklch,var(--night-800) 60%,transparent);
+  --glass-edge:inset 0 1px 0 0 rgba(255,255,255,.07);
+  --glass-edge-soft:inset 0 1px 0 0 rgba(255,255,255,.05);
+  --glass-shadow:0 18px 50px -12px rgba(0,0,0,.6),0 2px 10px rgba(0,0,0,.4);
+  --glass-amb-opacity:.16;
+  --rail-shadow:0 18px 50px -12px rgba(0,0,0,.55),0 2px 10px rgba(0,0,0,.35);
+  --tip-shadow:0 10px 34px -8px rgba(0,0,0,.6);
+}
+@supports not ((backdrop-filter:blur(1px)) or (-webkit-backdrop-filter:blur(1px))){
+  :root{--glass-bg-strong:color-mix(in oklch,var(--surface) 96%,transparent);--glass-bg:color-mix(in oklch,var(--surface) 96%,transparent)}
+  [data-theme="dark"]{--glass-bg-strong:color-mix(in oklch,var(--night-900) 96%,transparent);--glass-bg:color-mix(in oklch,var(--night-900) 96%,transparent)}
+}
+
+/* ============ BASE ============ */
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{font-family:var(--font-sans);color:var(--text);background:var(--background);line-height:1.45;-webkit-font-smoothing:antialiased;transition:background var(--dur) var(--ease),color var(--dur) var(--ease)}
+a{color:inherit;text-decoration:none}
+button{font-family:inherit;cursor:pointer;border:0;background:none;color:inherit}
+.glass{background:var(--glass-bg);-webkit-backdrop-filter:blur(var(--glass-blur)) saturate(var(--glass-saturate));backdrop-filter:blur(var(--glass-blur)) saturate(var(--glass-saturate))}
+
+/* ambient field + sheen (V3 runtime) */
+.material-ambient{position:fixed;inset:0;z-index:-2;overflow:hidden;background:var(--background);pointer-events:none}
+.material-ambient>i{position:absolute;border-radius:50%;filter:blur(var(--glass-amb-blur));mix-blend-mode:multiply;opacity:var(--glass-amb-opacity)}
+.material-ambient>i:nth-child(1){width:52vmax;height:52vmax;top:-18vmax;left:-12vmax;background:radial-gradient(circle at center,var(--vermilion-400),transparent 65%)}
+.material-ambient>i:nth-child(2){width:46vmax;height:46vmax;bottom:-16vmax;right:-10vmax;background:radial-gradient(circle at center,var(--ultramarine-400),transparent 65%)}
+.material-ambient>i:nth-child(3){width:30vmax;height:30vmax;top:34%;right:22%;background:radial-gradient(circle at center,var(--sun-400),transparent 65%);opacity:calc(var(--glass-amb-opacity)*.64)}
+[data-theme="dark"] .material-ambient>i{mix-blend-mode:screen}
+@keyframes drift-a{0%,100%{transform:translate(0,0) scale(1)}50%{transform:translate(4vmax,2vmax) scale(1.08)}}
+@keyframes drift-b{0%,100%{transform:translate(0,0) scale(1)}50%{transform:translate(-3vmax,-2.5vmax) scale(1.06)}}
+.material-ambient>i:nth-child(1){animation:drift-a 26s ease-in-out infinite}
+.material-ambient>i:nth-child(2){animation:drift-b 32s ease-in-out infinite}
+.material-ambient>i:nth-child(3){animation:drift-a 20s ease-in-out infinite}
+.material-sheen{position:fixed;inset:0;z-index:-1;pointer-events:none;opacity:0;transition:opacity .5s ease;background:radial-gradient(circle 340px at var(--px,50%) var(--py,50%),color-mix(in oklch,var(--vermilion-200) 34%,transparent),transparent 62%)}
+[data-theme="dark"] .material-sheen{background:radial-gradient(circle 340px at var(--px,50%) var(--py,50%),color-mix(in oklch,var(--neutral-100) 10%,transparent),transparent 62%)}
+.material-sheen.on{opacity:.6}
+@media (prefers-reduced-motion:reduce){.material-ambient>i{animation:none}.material-sheen{display:none}}
+
+/* ============ PAGE SHELL ============ */
+.shell{display:flex;min-height:100vh}
+.rail{width:256px;flex:0 0 256px;position:fixed;top:0;bottom:0;left:0;z-index:40;display:flex;flex-direction:column;background:var(--glass-bg);border-right:1px solid var(--glass-border);-webkit-backdrop-filter:blur(20px) saturate(var(--glass-saturate));backdrop-filter:blur(20px) saturate(var(--glass-saturate));box-shadow:var(--glass-edge),var(--glass-shadow)}
+.rail.collapsed{width:88px;flex:0 0 88px}
+.pagewrap{padding-left:256px;flex:1;width:100%}
+.pagewrap.collapsed{padding-left:88px}
+.page{margin:0;max-width:none;padding:0 28px 48px}
+.brand{display:flex;align-items:center;gap:10px;padding:18px 16px;border-bottom:1px solid var(--glass-border)}
+.brandmark{width:28px;height:28px;flex:0 0 auto}
+.brandmark svg{width:100%;height:100%}
+.brandword{font-family:var(--font-display);font-size:18px;letter-spacing:-.04em;color:var(--text);white-space:nowrap;overflow:hidden}
+.brandword b{color:var(--voice);font-weight:400}
+.nav{flex:1;overflow-y:auto;padding:12px;display:flex;flex-direction:column;gap:2px}
+.navlabel{font-family:var(--font-mono);font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);padding:10px 10px 6px}
+.navitem{display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:8px;color:var(--muted);font-size:13.5px;transition:background var(--dur-fast) var(--ease),color var(--dur-fast) var(--ease)}
+.navitem:hover{background:var(--glass-bg-strong);color:var(--text)}
+.navitem.active{background:var(--glass-bg-strong);color:var(--text);box-shadow:inset 2px 0 0 var(--voice)}
+.navitem svg{width:16px;height:16px;flex:0 0 auto}
+.navitem .lbl{flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rail.collapsed .lbl,.rail.collapsed .navlabel{display:none}
+.rail.collapsed .navitem{justify-content:center}
+/* resume tree */
+.res-row{display:flex;align-items:center;gap:8px;padding:6px 10px;border-radius:8px;color:var(--muted);font-size:13px;cursor:pointer}
+.res-row:hover{background:var(--glass-bg-strong);color:var(--text)}
+.res-row.open{color:var(--text)}
+.res-row .dot{width:7px;height:7px;flex:0 0 auto;border-radius:50%;background:var(--border)}
+.res-row.primary .dot{background:var(--voice)}
+.res-row .t{flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.res-row .prim{font-family:var(--font-mono);font-size:8.5px;color:var(--voice);letter-spacing:.05em}
+.res-row .caret{transition:transform var(--dur) var(--ease)}
+.res-row.open .caret{transform:rotate(90deg)}
+.steps{padding:2px 0 6px 22px;display:flex;flex-direction:column;gap:1px}
+.step{display:flex;align-items:center;gap:8px;padding:4px 8px;border-radius:6px;color:var(--muted);font-size:12.5px}
+.step:hover{background:var(--glass-bg-strong);color:var(--text)}
+.step .num{font-family:var(--font-mono);font-size:10px;color:var(--muted);width:14px}
+.step.cur{border-left:2px solid var(--voice);color:var(--text)}
+.rail-foot{border-top:1px solid var(--glass-border);padding:10px 12px;display:flex;justify-content:space-between;align-items:center}
+.iconbtn{width:32px;height:32px;border-radius:8px;display:flex;align-items:center;justify-content:center;color:var(--muted);transition:background var(--dur-fast) var(--ease)}
+.iconbtn:hover{background:var(--glass-bg-strong);color:var(--text)}
+.iconbtn svg{width:16px;height:16px}
+
+/* ============ PAGE GRAMMAR ============ */
+.eyebrow{font-family:var(--font-mono);font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--voice);margin-bottom:8px}
+.page-title{font-family:var(--font-display);font-size:34px;line-height:1;letter-spacing:-.01em;margin-bottom:8px}
+.page-sub{color:var(--muted);font-size:14px;max-width:72ch;margin-bottom:28px}
+.section-title{font-family:var(--font-mono);font-size:12px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);padding:24px 0 10px}
+.section-desc{color:var(--muted);font-size:13px;max-width:72ch;margin-bottom:12px}
+
+/* ============ POSTER METRICS ============ */
+.grid-metrics{display:grid;grid-template-columns:repeat(4,1fr);gap:16px}
+.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.metric{border:1px solid var(--hairline);border-radius:12px;padding:16px 16px 14px;transition:border-color var(--dur-fast) var(--ease)}
+.m-beta{font-family:var(--font-mono);font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted)}
+.m-glyph{width:22px;height:22px;border-radius:6px;display:flex;align-items:center;justify-content:center;background:var(--grey-200);color:var(--grey-700)}
+.m-glyph svg{width:13px;height:13px}
+.m-val{font-family:var(--font-display);font-size:32px;line-height:1.05;margin-top:2px}
+.m-delta{font-family:var(--font-mono);font-size:11px;color:var(--muted);margin-top:5px}
+.m-delta b{color:var(--success)}
+.metric.voice{background:var(--voice-fill);border-color:var(--voice-fill);box-shadow:0 2px 14px -2px color-mix(in oklch,var(--voice-fill) 55%,transparent)}
+.metric.voice .m-beta{color:color-mix(in oklch,var(--on-fill) 80%,transparent)}
+.metric.voice .m-val{color:var(--on-fill)}
+.metric.voice .m-delta{color:color-mix(in oklch,var(--on-fill) 70%,transparent)}
+.metric.voice .m-delta b{color:var(--on-fill)}
+.metric.info .m-glyph{background:var(--info-fill);color:var(--on-info)}
+.metric.plain .m-glyph{background:var(--grey-200);color:var(--grey-700)}
+/* cards as panes: glass (V3 = glass only) */
+.card,.metric,.job,.rcard,.group-card,.alert,.badge-pill,.flytip,.field-input input,input,select,textarea,.modal,.popover,.sheet-side{
+  background:var(--glass-bg-strong);border:1px solid var(--glass-border);
+  -webkit-backdrop-filter:blur(14px) saturate(var(--glass-saturate));backdrop-filter:blur(14px) saturate(var(--glass-saturate));
+  box-shadow:var(--glass-edge-soft)}
+.metric.voice{-webkit-backdrop-filter:none;backdrop-filter:none}
+
+/* ============ BUTTONS (micro-interactions) ============ */
+.btn{position:relative;overflow:hidden;display:inline-flex;align-items:center;justify-content:center;gap:7px;height:34px;padding:0 14px;border-radius:8px;font-size:13.5px;font-weight:500;border:1px solid transparent;transition:transform .16s cubic-bezier(.3,.9,.4,1),background var(--dur-fast) var(--ease),color var(--dur-fast) var(--ease),box-shadow var(--dur-fast) var(--ease);white-space:nowrap}
+.btn:not(:disabled):hover{transform:scale(1.035)}
+.btn:not(:disabled):active{transform:scale(.96)}
+.btn::after{content:"";position:absolute;left:50%;top:50%;width:120%;aspect-ratio:1;transform:translate(-50%,-50%) scale(0);opacity:0;border-radius:50%;pointer-events:none;background:radial-gradient(circle,color-mix(in oklch,currentColor 24%,transparent),transparent 62%)}
+.btn:not(:disabled):active::after{animation:bubble .4s ease-out forwards}
+@keyframes bubble{0%{transform:translate(-50%,-50%) scale(0);opacity:.85}100%{transform:translate(-50%,-50%) scale(1.9);opacity:0}}
+.btn:disabled{opacity:.5;pointer-events:none}
+@media (prefers-reduced-motion:reduce){.btn::after{display:none}.btn:not(:disabled):hover,.btn:not(:disabled):active{transform:none}}
+.btn--voice{background:var(--voice-fill);color:var(--on-fill);box-shadow:0 2px 14px -2px color-mix(in oklch,var(--voice-fill) 55%,transparent)}
+.btn--voice::after,.btn--info::after,.btn--sun::after{background:radial-gradient(circle,rgba(255,255,255,.55),transparent 62%)}
+.btn--primary45{background:var(--voice-fill);color:var(--on-fill);box-shadow:0 2px 14px -2px color-mix(in oklch,var(--voice-fill) 55%,transparent);clip-path:polygon(0 0,calc(100%-12px) 0,100% 12px,100% 100%,0 100%);border-radius:8px}
+.btn--info{background:var(--info-fill);color:var(--on-info)}
+.btn--sun{background:var(--notify-fill);color:var(--on-sun)}
+.btn--outline{border:1px solid var(--hairline);color:var(--text);background:var(--glass-bg)}
+.btn--outline:hover{background:var(--surface-2)}
+.btn--ghost{color:var(--muted)}
+.btn--ghost:hover{background:var(--glass-bg-strong);color:var(--text)}
+.btn--sm{height:28px;padding:0 10px;font-size:12.5px}
+.btn--icon{width:34px;padding:0;flex:0 0 34px}
+.btn--block{width:100%}
+.btn-group{display:inline-flex;gap:8px}
+
+/* ============ CHIPS / BADGES / SCORE ============ */
+.chip{display:inline-flex;align-items:center;gap:5px;height:22px;padding:0 9px;border-radius:8px;font-size:11.5px;font-weight:500;border:1px solid transparent;font-family:var(--font-sans)}
+.chip--success{background:var(--success-surface);color:var(--success-ink);border-color:color-mix(in oklch,var(--success) 24%,transparent)}
+.chip--warn{background:var(--warn-surface);color:var(--warn-ink);border-color:color-mix(in oklch,var(--warn) 24%,transparent)}
+.chip--danger{background:var(--danger-surface);color:var(--danger-ink);border-color:color-mix(in oklch,var(--danger) 24%,transparent)}
+.chip--info{background:var(--info-surface);color:var(--info-ink);border-color:color-mix(in oklch,var(--info) 24%,transparent)}
+.chip--grey{background:var(--surface-2);color:var(--muted)}
+.chip--voice{background:var(--voice-fill);color:var(--on-fill)}
+.badge-pill{display:inline-flex;align-items:center;height:20px;padding:0 8px;border-radius:999px;font-size:11px;font-weight:500;background:var(--glass-bg-strong)}
+.badge-pill.voice{background:var(--voice-fill);color:var(--on-fill)}
+.score{font-family:var(--font-mono);font-weight:600;clip-path:polygon(0 0,calc(100%-8px) 0,100% 8px,100% 100%,0 100%);padding:2px 10px 2px 8px;font-size:12px;display:inline-flex;align-items:center;height:24px;border:none}
+.score.success{background:var(--success-surface);color:var(--success-ink)}
+.score.warn{background:var(--warn-surface);color:var(--warn-ink)}
+.score.danger{background:var(--danger-surface);color:var(--danger-ink)}
+
+/* ============ JOB CARD ============ */
+.job{padding:16px;border-radius:12px;transition:border-color var(--dur-fast) var(--ease),background var(--dur-fast) var(--ease)}
+.job:hover{border-color:var(--hairline-strong);background:color-mix(in oklch,var(--surface) 90%,var(--surface-2))}
+.job-top{display:flex;justify-content:space-between;gap:12px;align-items:flex-start}
+.job-title{font-size:17px;font-weight:600;letter-spacing:-.01em;color:var(--text)}
+.job-title a:hover{color:var(--voice)}
+.job-company{display:flex;align-items:center;gap:6px;color:var(--muted);font-size:13px;margin-top:3px}
+.job-company svg{width:15px;height:15px}
+.meta{display:flex;gap:14px;color:var(--muted);font-size:13px;flex-wrap:wrap;margin-top:8px}
+.meta>div{display:flex;align-items:center;gap:5px}
+.meta svg{width:14px;height:14px}
+.tags{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px}
+.tag{font-family:var(--font-mono);font-size:10.5px;letter-spacing:.04em;text-transform:uppercase;padding:2px 7px;border-radius:5px;background:var(--surface-2);color:var(--muted)}
+.job-actions{display:flex;justify-content:space-between;align-items:center;margin-top:14px;padding-top:14px;border-top:1px solid var(--hairline)}
+.left{display:flex;gap:8px}
+.src{display:flex;align-items:center;gap:5px;color:var(--voice);font-size:13px}
+.src svg{width:13px;height:13px}
+
+/* ============ FIELDS / FORMS ============ */
+.field{margin-bottom:14px}
+.field-label{display:block;font-size:12px;color:var(--muted);margin-bottom:5px;font-weight:500}
+.field-input{position:relative}
+.field-input input,.field-input textarea,.field-input select,.field-input>select{width:100%;height:36px;border-radius:8px;padding:0 12px;font-size:14px;color:var(--text);outline:none;border:1px solid var(--hairline);background:color-mix(in oklch,var(--surface) 52%,transparent);-webkit-backdrop-filter:blur(8px) saturate(1.2);backdrop-filter:blur(8px) saturate(1.2)}
+.field-input textarea{height:auto;padding:10px 12px;resize:vertical}
+.field-input select{appearance:none}
+.field-input input:focus,.field-input textarea:focus,.field-input select:focus{border-color:var(--voice);box-shadow:0 0 0 3px color-mix(in oklch,var(--voice) 25%,transparent)}
+.field-input input::placeholder,.field-input textarea::placeholder{color:var(--muted)}
+.hint{font-size:11.5px;color:var(--muted);margin-top:4px;font-family:var(--font-mono)}
+.hint.err{color:var(--danger)}
+/* ATS advisory addon */
+.ats-addon{margin-top:6px;display:inline-flex;align-items:center;gap:7px;padding:3px 9px;border-radius:7px;font-size:11px;border:1px solid var(--hairline);color:var(--muted);background:var(--glass-bg)}
+.ats-addon .caret{width:0;height:0;border-top:4px solid transparent;border-bottom:4px solid transparent;border-left:5px solid currentColor}
+.ats-addon--advice{color:var(--warn-ink);background:var(--warn-surface);border-color:color-mix(in oklch,var(--warn) 24%,transparent)}
+.ats-addon--ok{color:var(--success-ink);background:var(--success-surface)}
+.ats-addon--pass{color:var(--info-ink);background:var(--info-surface)}
+.ats-addon .n{font-family:var(--font-mono);font-weight:600}
+
+/* ============ GROUP CARD (resume studio) ============ */
+.group-card{border-radius:12px;overflow:hidden;margin-bottom:12px;transition:border-color var(--dur-fast) var(--ease)}
+.group-card:hover{border-color:var(--hairline-strong)}
+.g-head{display:flex;align-items:center;gap:10px;padding:12px;cursor:pointer}
+.g-grip{color:var(--muted);opacity:.5;width:16px;height:16px}
+.g-title{flex:1;font-size:13.5px;font-weight:600;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.g-title .t{color:var(--text)}
+.g-title .s{display:block;font-size:11.5px;color:var(--muted);font-weight:400}
+.g-close{width:28px;height:28px;border-radius:6px;display:flex;align-items:center;justify-content:center;color:var(--muted);font-size:16px}
+.g-close:hover{background:var(--danger-surface);color:var(--danger-ink)}
+.g-caret{font-size:20px;color:var(--muted);transition:transform var(--dur) var(--ease)}
+.group-card.open .g-caret{transform:rotate(90deg)}
+.g-body{padding:12px;border-top:1px solid var(--hairline)}
+.row-2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+
+/* ============ ATS GAUGE / REPORT ============ */
+.ats-card{display:flex;align-items:center;gap:16px;padding:16px;border-radius:12px}
+.ats-gauge{position:relative;width:72px;height:72px;flex:0 0 auto}
+.ats-gauge svg{width:100%;height:100%;transform:rotate(-90deg)}
+.ats-gauge .track{stroke:var(--surface-2);fill:none;stroke-width:8}
+.ats-gauge .arc{stroke:var(--voice);fill:none;stroke-width:8;stroke-linecap:round}
+.ats-gauge .val{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-family:var(--font-mono);font-weight:700;font-size:20px}
+.ats-rows{flex:1;display:flex;flex-direction:column;gap:6px}
+.ats-row{display:grid;grid-template-columns:110px 1fr 30px;gap:10px;align-items:center;font-size:12.5px;padding:6px 0;border-bottom:1px solid var(--hairline)}
+.ats-row .k{font-family:var(--font-mono);font-size:11px;color:var(--muted)}
+.ats-row .v{color:var(--text)}
+.ats-row .bar{height:5px;border-radius:3px;background:var(--surface-2);overflow:hidden}
+.ats-row .bar>span{display:block;height:100%;background:var(--voice);border-radius:3px}
+.ats-row.alert{display:grid;grid-template-columns:110px 1fr 30px;gap:10px;align-items:center;padding:6px 0;border:none;background:none;font-size:unset}
+.ats-row.alert .bar>span{background:var(--notify-fill)}
+
+/* ============ ALERTS ============ */
+.alert{display:flex;gap:14px;padding:14px 16px;border-radius:12px;font-size:13.5px;margin-bottom:12px;border-width:1px;align-items:center}
+.alert .a-ic{flex:none;display:flex}
+.alert .a-ic svg{width:19px;height:19px}
+.alert .a-body{flex:1;min-width:0}
+.alert .a-body b{display:block;margin-bottom:2px;color:var(--text)}
+.alert .a-body .d{color:var(--muted);font-size:12.5px}
+.alert--success{border-color:var(--success-200);background:var(--success-surface);color:var(--success-ink)}
+.alert--warn{border-color:var(--sun-100);background:var(--warn-surface);color:var(--warn-ink)}
+.alert--danger{border-color:var(--vermilion-100);background:var(--danger-surface);color:var(--danger-ink)}
+.alert--info{border-color:var(--ultramarine-100);background:var(--info-surface);color:var(--info-ink)}
+
+/* ============ MODAL / POPOVER / SHEET (glass) ============ */
+.modal-overlay{position:fixed;inset:0;z-index:100;background:rgba(15,13,8,.35);-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);display:flex;align-items:center;justify-content:center}
+.modal{width:420px;max-width:calc(100% - 2rem);border-radius:12px;padding:20px;border-width:1px;-webkit-backdrop-filter:blur(26px) saturate(var(--glass-saturate));backdrop-filter:blur(26px) saturate(var(--glass-saturate));box-shadow:var(--glass-edge),var(--glass-shadow)}
+.modal-head{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:8px}
+.modal-head h4{font-size:16px}
+.modal-body{color:var(--muted);font-size:13.5px;margin-bottom:16px}
+.modal-foot{display:flex;justify-content:flex-end;gap:8px}
+
+/* ============ EMPTY STATE ============ */
+.empty-state{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:48px 24px;text-align:center;border:1px dashed var(--hairline);border-radius:12px}
+.empty-state .ic{width:48px;height:48px;border-radius:50%;background:var(--surface-2);display:flex;align-items:center;justify-content:center;margin-bottom:16px}
+.empty-state .ic svg{width:24px;height:24px;color:var(--muted)}
+.empty-state h3{font-size:14px;margin-bottom:4px}
+.empty-state p{font-size:13px;color:var(--muted);margin-bottom:20px}
+
+/* ============ TAXONOMY / COMPONENT BLOCK ============ */
+.taxo{display:flex;flex-direction:column;gap:12px}
+.taxo-2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.taxo-3{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+.component-block{display:flex;flex-direction:column;gap:10px;padding:16px;border-radius:12px}
+.c-name{font-family:var(--font-mono);font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
+.c-demo{display:flex;flex-wrap:wrap;gap:8px;align-items:center;font-size:12px}
+.legend{font-family:var(--font-mono);font-size:10.5px;color:var(--muted);letter-spacing:.04em}
+.lg-toggle{position:fixed;bottom:16px;right:16px;z-index:200;padding:8px 14px;border-radius:8px;font-size:12px;font-family:var(--font-mono);color:var(--text);background:var(--glass-bg-strong);border:1px solid var(--glass-border);-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);box-shadow:var(--glass-edge-soft)}
+
+/* ============ STUDY PREVIEW / 2-PANE ============ */
+.studio{display:grid;grid-template-columns:minmax(0,7fr) minmax(0,5fr);gap:16px;align-items:start}
+.scorebar{display:flex;flex-direction:column;gap:12px;position:sticky;top:16px}
+.fittools{display:flex;flex-wrap:wrap;gap:10px;align-items:center;padding:12px;border-radius:12px}
+.fittools .stepper{display:flex;align-items:center;gap:4px}
+.fittools .stepper input{width:46px;height:30px;text-align:center;border-radius:6px;border:1px solid var(--hairline);background:color-mix(in oklch,var(--surface) 52%,transparent);color:var(--text);font-family:var(--font-mono);font-size:12px}
+.fittools .stepper button{width:26px;height:30px;border-radius:6px;border:1px solid var(--hairline);color:var(--muted)}
+.fittools .stepper button:hover{background:var(--surface-2)}
+
+@media(max-width:1100px){
+  .grid-metrics{grid-template-columns:repeat(2,1fr)}
+  .grid-2,.taxo-2,.taxo-3,.studio{grid-template-columns:1fr}
+  .studio .scorebar{position:static}
+}
+</style>
+</head>
+<body>
+<div class="material-ambient"><i></i><i></i><i></i></div>
+<div class="material-sheen" id="sheen"></div>
+
+<div class="shell">
+  <!-- ============ RAIL (hero glass) ============ -->
+  <aside class="rail" id="rail">
+    <div class="brand">
+      <span class="brandmark"><svg viewBox="0 0 512 512"><g transform="rotate(45 256 256)"><path fill="none" stroke="var(--voice)" stroke-width="60" stroke-linejoin="miter" d="M88 224 L208 224 L268 164 L424 164 L424 308 L316 416 L196 416 L88 308 Z"/></g></svg></span>
+      <span class="brandword">call<b>back</b></span>
+    </div>
+    <nav class="nav">
+      <div class="navlabel">Track</div>
+      <a class="navitem active" href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="9"/><rect x="14" y="3" width="7" height="5"/><rect x="14" y="12" width="7" height="9"/><rect x="3" y="16" width="7" height="5"/></svg><span class="lbl">Dashboard</span></a>
+      <a class="navitem" href="#jobs"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="7" width="18" height="13" rx="2"/><path d="M8 7V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg><span class="lbl">Jobs</span></a>
+      <a class="navitem" href="#apps"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg><span class="lbl">Applications</span></a>
+      <a class="navitem" href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="5"/><path d="M20 21a8 8 0 0 0-16 0"/></svg><span class="lbl">Profile</span></a>
+      <div class="navlabel">Resume</div>
+      <a class="navitem" href="#overview"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg><span class="lbl">Overview</span></a>
+      <div class="res-row primary open"><span class="dot"></span><span class="t">Arian · Lead FE</span><span class="prim">PRIMARY</span><span class="caret">›</span></div>
+      <div class="steps">
+        <a class="step cur" href="#studio"><span class="num">01</span>Details</a>
+        <a class="step" href="#studio"><span class="num">02</span>Professional summary</a>
+        <a class="step" href="#studio"><span class="num">03</span>Experience</a>
+        <a class="step" href="#studio"><span class="num">04</span>Education</a>
+        <a class="step" href="#studio"><span class="num">05</span>Skills</a>
+        <a class="step" href="#studio"><span class="num">06</span>Certifications</a>
+        <a class="step" href="#studio"><span class="num">07</span>Preview</a>
+        <a class="step" href="#studio"><span class="num">08</span>Finish &amp; Export</a>
+      </div>
+      <div class="res-row"><span class="dot"></span><span class="t">Resume v2</span><span class="caret">›</span></div>
+      <div class="res-row"><span class="dot"></span><span class="t">Resume v3</span><span class="caret">›</span></div>
+    </nav>
+    <div class="rail-foot">
+      <button class="iconbtn" title="Collapse"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg></button>
+      <span class="legend">v3 · glass</span>
+    </div>
+  </aside>
+
+  <!-- ============ PAGE WRAP ============ -->
+  <div class="pagewrap" id="pagewrap">
+    <main class="page">
+
+      <!-- ===== DASHBOARD (poster) ===== -->
+      <section id="overview">
+        <div class="eyebrow">overview · track</div>
+        <h1 class="page-title">Dashboard</h1>
+        <p class="page-sub">The honest score, never a fake one. Every tracked position, its match truth, its next step.</p>
+
+        <div class="grid-metrics">
+          <div class="metric voice">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px"><span class="m-beta">live jobs</span></div>
+            <div class="m-val">128</div>
+            <div class="m-delta"><b>↑ 12</b> this week</div>
+          </div>
+          <div class="metric plain">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px"><span class="m-beta">applications</span></div>
+            <div class="m-val">53</div>
+            <div class="m-delta">31 submitted</div>
+          </div>
+          <div class="metric info">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px"><span class="m-beta">interviews</span><span class="m-glyph"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M8 12l2 2 4-4"/></svg></span></div>
+            <div class="m-val">09</div>
+            <div class="m-delta">2 this week</div>
+          </div>
+          <div class="metric plain">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px"><span class="m-beta">offers</span></div>
+            <div class="m-val">03</div>
+            <div class="m-delta"><b>+1</b> this month</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ===== JOB CARD (Jobs list) ===== -->
+      <section id="jobs" style="margin-top:16px">
+        <h2 class="section-title">live openings <span style="color:var(--muted)">· components/jobs/JobCard.tsx</span></h2>
+        <p class="section-desc">Cards-as-panes under Liquid Glass; the single loud verb per view stays solid. Rich hover firms the hairline — no shadow elevation.</p>
+        <div class="job">
+          <div class="job-top">
+            <div>
+              <div class="job-title"><a href="#">Senior Frontend Engineer — Design Systems</a></div>
+              <div class="job-company"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 22V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v18"/><path d="M9 7h6M9 11h6M9 15h6"/></svg>Chalk · San Francisco</div>
+              <div class="meta">
+                <div style="display:flex;align-items:center;gap:5px"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13S3 17 3 10a9 9 0 1 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>Remote</div>
+                <div style="display:flex;align-items:center;gap:5px"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>2 days ago</div>
+                <div style="display:flex;align-items:center;gap:5px"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>$170k–$210k</div>
+              </div>
+              <div class="tags"><span class="tag">typescript</span><span class="tag">react</span><span class="tag">shadcn</span><span class="tag">design systems</span><span class="tag">+3</span></div>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:8px;align-items:flex-end">
+              <span class="score success">94% matched</span>
+              <span class="badge-pill voice">saved</span>
+            </div>
+          </div>
+          <div class="job-actions">
+            <div class="left">
+              <button class="btn btn--outline btn--sm"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px;margin-right:2px"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>Save</button>
+              <button class="btn btn--primary45 btn--sm">Apply</button>
+            </div>
+            <a class="src" href="#">View source <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:13px;height:13px"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><path d="M15 3h6v6M10 14L21 3"/></svg></a>
+          </div>
+        </div>
+      </section>
+
+      <!-- ===== COMPONENT TAXONOMY ===== -->
+      <section>
+        <h2 class="section-title">component taxonomy <span style="color:var(--muted)">· primitive kit — components/ui/</span></h2>
+        <p class="section-desc">The full primitive vocabulary under Liquid Glass, mapped 1:1 to the app hierarchy (V3). No color outside the ramps; glass is the only material.</p>
+
+        <div class="taxo-3">
+          <div class="component-block">
+            <span class="c-name">actions · ui/button.tsx</span>
+            <div class="c-demo">
+              <button class="btn btn--primary45">Create resume</button>
+              <button class="btn btn--voice">View ATS report</button>
+              <button class="btn btn--info">Auto-fit</button>
+              <button class="btn btn--sun">Notify</button>
+              <button class="btn btn--outline">Save</button>
+              <button class="btn btn--ghost">Ghost</button>
+              <button class="btn btn--sm">sm</button>
+              <button class="btn btn--icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg></button>
+              <button class="btn" disabled>disabled</button>
+            </div>
+            <div class="btn-group"><button class="btn btn--outline">Save</button><button class="btn btn--outline">Cancel</button><button class="btn btn--ghost">Discard</button></div>
+          </div>
+
+          <div class="component-block">
+            <span class="c-name">chips &amp; score · ui/score-badge · ui/status-badge</span>
+            <div class="c-demo">
+              <span class="chip chip--success">Accepted</span>
+              <span class="chip chip--warn">60–79</span>
+              <span class="chip chip--danger">Rejected</span>
+              <span class="chip chip--info">Screening</span>
+              <span class="chip chip--grey">Archived</span>
+              <span class="chip chip--voice">Active</span>
+              <span class="score success">94%</span>
+              <span class="score warn">68%</span>
+              <span class="score danger">41%</span>
+              <span class="badge-pill">saved</span>
+            </div>
+          </div>
+
+          <div class="component-block">
+            <span class="c-name">alerts · ActionAlert</span>
+            <div class="c-demo" style="flex-direction:column;align-items:stretch">
+              <div class="alert alert--info"><span class="a-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg></span><span class="a-body"><b>Info</b><span class="d">A resource problem, not a toast.</span></span></div>
+              <div class="alert alert--warn"><span class="a-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/></svg></span><span class="a-body"><b>Warn</b><span class="d">Advice only — never blocks save.</span></span></div>
+              <div class="alert alert--success"><span class="a-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6L9 17l-5-5"/></svg></span><span class="a-body"><b>Passed</b><span class="d">Lint is green.</span></span></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="taxo-2" style="margin-top:12px">
+          <div class="component-block">
+            <span class="c-name">forms · field.tsx · AtsStatusButton (advisory)</span>
+            <div>
+              <div class="field">
+                <label class="field-label">Professional summary</label>
+                <div class="field-input"><textarea rows="2">Drove the design-system token migration, cutting visual bugs by 40%.</textarea></div>
+                <span class="ats-addon ats-addon--advice"><span class="caret"></span> advisory · derived from the draft · <span class="n">2</span></span>
+              </div>
+              <div class="row-2">
+                <div class="field">
+                  <label class="field-label">Role title <span style="color:var(--warn)">(enforced)</span></label>
+                  <div class="field-input"><input placeholder="min 30 chars — enforced"></div>
+                  <span class="hint err">Too short — 12/30</span>
+                </div>
+                <div class="field">
+                  <label class="field-label">Company</label>
+                  <div class="field-input"><input placeholder="Company"></div>
+                  <span class="ats-addon ats-addon--ok"><span class="caret"></span> ok · <span class="n">1</span></span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="component-block">
+            <span class="c-name">group card · editor-sections GroupCard</span>
+            <div class="group-card open">
+              <div class="g-head">
+                <span class="g-grip"><svg viewBox="0 0 24 24" fill="currentColor"><circle cx="9" cy="6" r="1.6"/><circle cx="15" cy="6" r="1.6"/><circle cx="9" cy="12" r="1.6"/><circle cx="15" cy="12" r="1.6"/><circle cx="9" cy="18" r="1.6"/><circle cx="15" cy="18" r="1.6"/></svg></span>
+                <span class="g-title"><span class="t">Senior Frontend Engineer</span><span class="s">Chalk · 2019–2024</span></span>
+                <span class="g-close">×</span>
+                <span class="g-caret">›</span>
+              </div>
+              <div class="g-body">
+                <div class="row-2">
+                  <div class="field"><label class="field-label">Role</label><div class="field-input"><input value="Senior Frontend Engineer"></div><span class="ats-addon ats-addon--pass"><span class="caret"></span> pass · <span class="n">4</span></span></div>
+                  <div class="field"><label class="field-label">Company</label><div class="field-input"><input value="Chalk"></div></div>
+                </div>
+                <div class="field"><label class="field-label">Bullets (one per line)</label><div class="field-input"><textarea rows="3">Designed the design-system token layer&#10;Led the V3 Liquid Glass migration&#10;Reduced visual bugs by 40%</textarea></div></div>
+              </div>
+            </div>
+            <div class="group-card">
+              <div class="g-head">
+                <span class="g-grip"><svg viewBox="0 0 24 24" fill="currentColor"><circle cx="9" cy="6" r="1.6"/><circle cx="15" cy="6" r="1.6"/><circle cx="9" cy="12" r="1.6"/><circle cx="15" cy="12" r="1.6"/><circle cx="9" cy="18" r="1.6"/><circle cx="15" cy="18" r="1.6"/></svg></span>
+                <span class="g-title"><span class="t">Staff Engineer, Datameer</span><span class="s">Datameer · 2018–2019</span></span>
+                <span class="g-close">×</span><span class="g-caret">›</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="taxo-3" style="margin-top:12px">
+          <div class="component-block">
+            <span class="c-name">ats gauge · scorebar</span>
+            <div class="ats-card">
+              <div class="ats-gauge">
+                <svg viewBox="0 0 72 72">
+                  <circle class="track" cx="36" cy="36" r="30"/>
+                  <circle class="arc" cx="36" cy="36" r="30" stroke-dasharray="188" stroke-dashoffset="62"/>
+                </svg>
+                <span class="val">78</span>
+              </div>
+              <div class="ats-rows">
+                <div class="ats-row"><span class="k">best practices</span><div class="bar"><span style="width:82%"></span></div><span style="color:var(--success);font-family:var(--font-mono);font-size:11px">9/11</span></div>
+                <div class="ats-row"><span class="k">ATS</span><div class="bar"><span style="width:88%"></span></div><span style="color:var(--text);font-family:var(--font-mono);font-size:11px">AA</span></div>
+                <div class="ats-row alert"><span class="k">keywords</span><div class="bar"><span style="width:55%"></span></div><span style="font-family:var(--font-mono);font-size:11px;color:var(--warn)">6</span></div>
+              </div>
+            </div>
+          </div>
+
+          <div class="component-block">
+            <span class="c-name">empty state · EmptyState</span>
+            <div class="empty-state">
+              <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 12v10H4V12M2 7h20v5H2zM12 22V7M12 7V3M8 3h8"/></svg></div>
+              <h3>No data found</h3>
+              <p>Get started by adding some data.</p>
+              <button class="btn btn--primary45 btn--sm">Create</button>
+            </div>
+          </div>
+
+          <div class="component-block">
+            <span class="c-name">overview card · ResumeOverview</span>
+            <div class="rcard" style="padding:14px;border-radius:12px;border-width:1px;display:flex;gap:12px;align-items:center">
+              <div class="card" style="width:44px;height:56px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-family:var(--font-mono);font-size:10px;color:var(--muted)">CV</div>
+              <div style="flex:1;min-width:0">
+                <div style="font-size:13.5px;font-weight:600">Arian · Lead FE</div>
+                <div style="font-family:var(--font-mono);font-size:10.5px;color:var(--muted);margin-top:3px">updated · rev 04 · a4</div>
+              </div>
+              <a href="#studio" style="font-size:11px;color:var(--voice);opacity:1"><b>Make primary</b></a>
+            </div>
+          </div>
+        </div>
+
+        <!-- ===== RESUME STUDIO (2-pane) ===== -->
+        <h2 class="section-title" id="studio">resume studio <span style="color:var(--muted)">· ResumeStudioPage — 2-pane grid</span></h2>
+        <p class="section-desc">Left: active-section fields. Right (sticky): ATS scorebar → fit tools → live render. Glass panes throughout; the single verb stays solid.</p>
+        <div class="studio">
+          <div>
+            <div class="field"><label class="field-label">Professional summary</label><div class="field-input"><textarea rows="4">Lead frontend engineer; design-system owner; shipped the Callback token layer and the V3 Liquid Glass material.</textarea></div><span class="ats-addon ats-addon--advice"><span class="caret"></span> advisory · derived from the draft · <span class="n">2</span></span></div>
+            <div class="field"><label class="field-label">Role title <span style="color:var(--warn)">(enforced)</span></label><div class="field-input"><input value="Lead Frontend Engineer — Design Systems & Platforms"></div><span class="ats-addon ats-addon--ok"><span class="caret"></span> ok · <span class="n">6</span></span></div>
+            <div class="group-card open"><div class="g-head"><span class="g-grip"><svg viewBox="0 0 24 24" fill="currentColor"><circle cx="9" cy="6" r="1.6"/><circle cx="15" cy="6" r="1.6"/><circle cx="9" cy="12" r="1.6"/><circle cx="15" cy="12" r="1.6"/><circle cx="9" cy="18" r="1.6"/><circle cx="15" cy="18" r="1.6"/></svg></span><span class="g-title"><span class="t">Walmart</span><span class="s">Lead Frontend Engineer · 2022–Present</span></span><span class="g-close">×</span><span class="g-caret">›</span></div><div class="g-body"><div class="row-2"><div class="field"><label class="field-label">Role</label><div class="field-input"><input value="Lead Frontend Engineer"></div></div><div class="field"><label class="field-label">Company</label><div class="field-input"><input value="Walmart"></div></div></div><div class="field"><label class="field-label">Bullets</label><div class="field-input"><textarea rows="2">Owned the design-system token layer across 40+ surfaces</textarea></div></div></div></div>
+          </div>
+          <div class="scorebar">
+            <div class="ats-card">
+              <div class="ats-gauge"><svg viewBox="0 0 72 72"><circle class="track" cx="36" cy="36" r="30"/><circle class="arc" cx="36" cy="36" r="30" stroke-dasharray="188" stroke-dashoffset="50"/></svg><span class="val">84</span></div>
+              <div style="flex:1">
+                <div style="font-weight:600;font-size:14px">ATS score · deterministic</div>
+                <div style="font-family:var(--font-mono);font-size:10.5px;color:var(--muted);margin:3px 0 8px">best practices 10/11</div>
+                <button class="btn btn--voice btn--sm">View ATS report</button>
+              </div>
+            </div>
+            <div class="fittools">
+              <div class="stepper"><button>−</button><input value="11.5"><button>+</button><span style="font-size:11px;color:var(--muted);margin-left:3px">Size</span></div>
+              <div class="stepper"><button>−</button><input value="1.42"><button>+</button><span style="font-size:11px;color:var(--muted);margin-left:3px">Line</span></div>
+              <button class="btn btn--outline btn--sm">Live HTML</button>
+              <button class="btn btn--ghost btn--sm">.docx</button>
+              <button class="btn btn--info btn--sm">Auto-fit</button>
+            </div>
+            <div class="card" style="min-height:220px;border-radius:12px;padding:16px;font-family:var(--font-mono);font-size:11px;color:var(--muted)"><span style="color:var(--voice)">preview</span> · live HTML render resolves here — always visible while editing.</div>
+          </div>
+        </div>
+
+        <!-- ===== MODAL (glass) ===== -->
+        <h2 class="section-title">dialog <span style="color:var(--muted)">· ConfirmDialog</span></h2>
+        <div class="modal-overlay" style="position:static;display:flex;align-items:flex-start;padding:24px 0">
+          <div class="modal">
+            <div class="modal-head"><h4>Discard this resume?</h4><button class="iconbtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg></button></div>
+            <div class="modal-body">This cannot be undone. Your unsaved edits to <b>Professional summary</b> will be lost.</div>
+            <div class="modal-foot"><button class="btn btn--outline">Cancel</button><button class="btn btn--voice">Discard</button></div>
+          </div>
+        </div>
+
+      </section>
+    </main>
+  </div>
+</div>
+
+<button class="lg-toggle" onclick="toggleTheme()">theme: dark? toggle</button>
+
+<script>
+function toggleTheme(){
+  var root=document.documentElement
+  root.setAttribute('data-theme', root.getAttribute('data-theme')==='dark' ? 'light' : 'dark')
+}
+// pointer sheen
+var sheen=document.getElementById('sheen')
+document.addEventListener('mousemove',function(e){
+  sheen.style.setProperty('--px',e.clientX+'px')
+  sheen.style.setProperty('--py',e.clientY+'px')
+  sheen.classList.add('on')
+})
+document.addEventListener('mouseleave',function(){sheen.classList.remove('on')})
+</script>
+</body>
+</html>
