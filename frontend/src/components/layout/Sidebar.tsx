@@ -12,6 +12,7 @@ import {
   ChevronRight,
 } from 'lucide-react'
 import { useUIStore } from '@/stores/uiStore'
+import { BrandLockup } from '@/components/layout/BrandLockup'
 import { useResumes } from '@/hooks/useResumes'
 import { STEPS } from '@/pages/ResumeStudioPage'
 
@@ -46,8 +47,9 @@ export function Sidebar() {
 
   const quick = (
     <aside className="fixed left-0 top-0 z-40 flex h-screen w-16 flex-col border-r border-[var(--glass-border)] bg-[var(--glass-bg)] text-[var(--text)] [-webkit-backdrop-filter:blur(20px)_saturate(var(--glass-saturate))] [backdrop-filter:blur(20px)_saturate(var(--glass-saturate))] shadow-[var(--glass-edge),var(--glass-shadow)]">
-      <div className="flex h-16 items-center justify-center border-b">
-        <Button variant="ghost" size="icon" onClick={toggleSidebar}><ChevronRight className="h-4 w-4" /></Button>
+      <div className="flex h-16 items-center justify-center gap-1 border-b border-[var(--glass-border)]">
+        <BrandLockup showLabel={false} />
+        <Button variant="ghost" size="icon" onClick={toggleSidebar} className="h-8 w-8" aria-label="Expand sidebar"><ChevronRight className="h-4 w-4" /></Button>
       </div>
       <nav className="space-y-1 p-2">
         {[...topNav.slice(0, 4), ...topNav.slice(4)].map((item) => (
@@ -64,9 +66,9 @@ export function Sidebar() {
 
   return (
     <aside className="fixed left-0 top-0 z-40 flex h-screen w-64 flex-col border-r border-[var(--glass-border)] bg-[var(--glass-bg)] text-[var(--text)] [-webkit-backdrop-filter:blur(20px)_saturate(var(--glass-saturate))] [backdrop-filter:blur(20px)_saturate(var(--glass-saturate))] shadow-[var(--glass-edge),var(--glass-shadow)]">
-      <div className="flex h-16 items-center justify-between border-b px-4">
-        <span className="text-lg font-bold">Job Aggregator</span>
-        <Button variant="ghost" size="icon" onClick={toggleSidebar} className="h-8 w-8"><ChevronLeft className="h-4 w-4" /></Button>
+      <div className="flex h-16 items-center justify-between gap-2 border-b border-[var(--glass-border)] px-4">
+        <BrandLockup showLabel />
+        <Button variant="ghost" size="icon" onClick={toggleSidebar} className="h-8 w-8" aria-label="Collapse sidebar"><ChevronLeft className="h-4 w-4" /></Button>
       </div>
 
       <nav className="flex-1 space-y-1 overflow-y-auto p-2">
