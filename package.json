@@ -16,7 +16,9 @@
     "format": "prettier --write .",
     "db:migrate": "npm run db:migrate -w backend",
     "db:push": "npm run db:push -w backend",
-    "db:studio": "npm run db:studio -w backend"
+    "db:studio": "npm run db:studio -w backend",
+    "gen:design-tokens": "node scripts/generate-design-tokens.mjs",
+    "check:design-tokens": "node scripts/generate-design-tokens.mjs --check"
   },
   "devDependencies": {
     "@testing-library/jest-dom": "^7.0.1",

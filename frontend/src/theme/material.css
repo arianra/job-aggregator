@@ -1,0 +1,37 @@
+/* =====================================================================
+   CALLBACK DESIGN SYSTEM — LIQUID GLASS MATERIAL TOKENS (LEADING)
+   Generated from design/brand/tokens.json + RESEARCH §11.2 — matches
+   design/design-system/glass-material.css section A.
+   DO NOT EDIT.
+   ===================================================================== */
+:root,
+[data-theme="light"],
+.light {
+  --glass-blur: 20px;
+  --glass-saturate: 1.55;
+  --glass-bg: color-mix(in oklch, var(--surface) 55%, transparent);
+  --glass-bg-strong: color-mix(in oklch, var(--surface) 74%, transparent);
+  --glass-border: color-mix(in oklch, var(--hairline) 60%, transparent);
+  --glass-edge: inset 0 1px 0 0 rgba(255, 255, 255, .42);
+  --glass-edge-soft: inset 0 1px 0 0 rgba(255, 255, 255, .30);
+  --glass-shadow: 0 18px 50px -12px rgba(33, 31, 26, .28), 0 2px 10px rgba(33, 31, 26, .10);
+  --glass-amb-blur: 90px;
+  --glass-amb-opacity: .22;
+}
+[data-theme="dark"],
+.dark {
+  --glass-blur: 20px;
+  --glass-saturate: 1.35;
+  --glass-bg: color-mix(in oklch, var(--night-900) 46%, transparent);
+  --glass-bg-strong: color-mix(in oklch, var(--night-900) 80%, transparent);
+  --glass-border: color-mix(in oklch, var(--night-800) 60%, transparent);
+  --glass-edge: inset 0 1px 0 0 rgba(255, 255, 255, .07);
+  --glass-edge-soft: inset 0 1px 0 0 rgba(255, 255, 255, .05);
+  --glass-shadow: 0 18px 50px -12px rgba(0, 0, 0, .6), 0 2px 10px rgba(0, 0, 0, .4);
+  --glass-amb-blur: 90px;
+  --glass-amb-opacity: .16;
+}
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  :root { --glass-bg-strong: color-mix(in oklch, var(--surface) 96%, transparent); --glass-bg: color-mix(in oklch, var(--surface) 96%, transparent); }
+  [data-theme="dark"], .dark { --glass-bg-strong: color-mix(in oklch, var(--night-900) 96%, transparent); --glass-bg: color-mix(in oklch, var(--night-900) 96%, transparent); }
+}

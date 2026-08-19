@@ -1,0 +1,157 @@
+/* Callback design-system semantic layer — generated. Dry-Poster aliases + state.
+ * DO NOT EDIT — output of scripts/generate-design-tokens.mjs (tokens.json + RESEARCH §10).
+ */
+:root,
+[data-theme="light"],
+.light {
+  /* ---- spacing scale (4px base) ---- */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-10: 40px;
+  --space-12: 48px;
+  /* ---- motion tokens (subtle) ---- */
+  --dur-fast: 120ms;
+  --dur: 180ms;
+  --dur-slow: 260ms;
+  --ease: cubic-bezier(.4, 0, .2, 1);
+  --ease-pop: cubic-bezier(.2, .9, .3, 1.15);
+  /* ---- typography (family tokens; weight/woff2 self-host lands with fonts pass) ---- */
+  --font-display: 'Archivo Black', 'Arial Black', sans-serif;
+  --font-sans: 'Inter', system-ui, 'Segoe UI', sans-serif;
+  --font-mono: ui-monospace, 'SFMono-Regular', Menlo, Consolas, monospace;
+  --background: var(--neutral-50);
+  --surface: #FFFFFF;
+  --surface-2: var(--grey-50);
+  --text: var(--neutral-950);
+  --muted: var(--grey-600);
+  --border: var(--grey-200);
+  --voice: var(--vermilion-600);
+  --voice-fill: var(--vermilion-500);
+  --info: var(--ultramarine-600);
+  --info-fill: var(--ultramarine-500);
+  --notify: var(--sun-500);
+  --notify-fill: var(--sun-500);
+  --hairline: var(--grey-200);
+  --hairline-strong: var(--grey-300);
+  --navbg: #FFFFFF;
+  --card: #FFFFFF;
+  --danger: var(--vermilion-700);
+  --success: var(--success-600);
+  --warn: var(--sun-700);
+  --on-fill: #191713;
+  --on-info: #FFFFFF;
+  --on-sun: #191713;
+  --rail-shadow: 0 18px 50px -12px rgba(33,31,26,.18), 0 2px 10px rgba(33,31,26,.06);
+  --tip-shadow: 0 10px 34px -8px rgba(33,31,26,.22);
+  --info-surface: var(--ultramarine-50);
+  --info-ink: var(--ultramarine-700);
+  --success-surface: var(--success-50);
+  --success-ink: var(--success-600);
+  --warn-surface: var(--sun-50);
+  --warn-ink: var(--sun-700);
+  --danger-surface: var(--vermilion-50);
+  --danger-ink: var(--vermilion-700);
+  --background-util: var(--neutral-50);
+  --foreground-util: var(--neutral-950);
+  --card-util: #FFFFFF;
+  --card-foreground-util: var(--neutral-950);
+  --popover-util: #FFFFFF;
+  --popover-foreground-util: var(--neutral-950);
+  --primary-util: var(--vermilion-600);
+  --primary-foreground-util: #FAF6EC;
+  --secondary-util: var(--grey-50);
+  --secondary-foreground-util: var(--neutral-950);
+  --muted-util: var(--grey-50);
+  --muted-foreground-util: var(--grey-600);
+  --accent-util: var(--grey-50);
+  --accent-foreground-util: var(--neutral-950);
+  --destructive-util: var(--vermilion-700);
+  --destructive-foreground-util: #FFE7DC;
+  --border-util: var(--grey-200);
+  --input-util: var(--grey-200);
+  --ring-util: color-mix(in oklch, var(--voice) 40%, transparent);
+}
+
+[data-theme="dark"],
+.dark {
+  /* ---- spacing scale (4px base) ---- */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-10: 40px;
+  --space-12: 48px;
+  /* ---- motion tokens (subtle) ---- */
+  --dur-fast: 120ms;
+  --dur: 180ms;
+  --dur-slow: 260ms;
+  --ease: cubic-bezier(.4, 0, .2, 1);
+  --ease-pop: cubic-bezier(.2, .9, .3, 1.15);
+  /* ---- typography (family tokens; weight/woff2 self-host lands with fonts pass) ---- */
+  --font-display: 'Archivo Black', 'Arial Black', sans-serif;
+  --font-sans: 'Inter', system-ui, 'Segoe UI', sans-serif;
+  --font-mono: ui-monospace, 'SFMono-Regular', Menlo, Consolas, monospace;
+  --background: var(--night-950);
+  --surface: #18160F;
+  --surface-2: var(--night-850);
+  --text: var(--neutral-100);
+  --muted: var(--grey-400);
+  --border: var(--night-800);
+  --voice: var(--vermilion-500);
+  --voice-fill: var(--vermilion-500);
+  --info: var(--ultramarine-400);
+  --info-fill: var(--ultramarine-400);
+  --notify: var(--sun-400);
+  --notify-fill: var(--sun-400);
+  --hairline: var(--night-800);
+  --hairline-strong: #4b4534;
+  --navbg: var(--night-900);
+  --card: var(--night-900);
+  --danger: var(--vermilion-300);
+  --success: var(--success-200);
+  --warn: var(--sun-300);
+  --on-fill: #FFE7DC;
+  --on-info: #01264f;
+  --on-sun: #2a2200;
+  --rail-shadow: 0 18px 50px -12px rgba(0,0,0,.55), 0 2px 10px rgba(0,0,0,.35);
+  --tip-shadow: 0 10px 34px -8px rgba(0,0,0,.6);
+  --info-surface: color-mix(in oklch, var(--ultramarine-400) 20%, transparent);
+  --info-ink: var(--ultramarine-200);
+  --success-surface: color-mix(in oklch, var(--success-200) 20%, transparent);
+  --success-ink: var(--success-50);
+  --warn-surface: color-mix(in oklch, var(--sun-400) 20%, transparent);
+  --warn-ink: var(--sun-200);
+  --danger-surface: color-mix(in oklch, var(--vermilion-400) 20%, transparent);
+  --danger-ink: var(--vermilion-200);
+  --background-util: var(--night-950);
+  --foreground-util: var(--neutral-100);
+  --card-util: var(--night-900);
+  --card-foreground-util: var(--neutral-100);
+  --popover-util: var(--night-900);
+  --popover-foreground-util: var(--neutral-100);
+  --primary-util: var(--vermilion-500);
+  --primary-foreground-util: #FAF6EC;
+  --secondary-util: var(--night-850);
+  --secondary-foreground-util: var(--neutral-100);
+  --muted-util: var(--night-850);
+  --muted-foreground-util: var(--grey-400);
+  --accent-util: var(--night-850);
+  --accent-foreground-util: var(--neutral-100);
+  --destructive-util: var(--vermilion-500);
+  --destructive-foreground-util: #FFE7DC;
+  --border-util: var(--night-800);
+  --input-util: var(--night-800);
+  --ring-util: color-mix(in oklch, var(--voice) 50%, transparent);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root { --dur-fast: 0.001ms; --dur: 0.001ms; --dur-slow: 0.001ms; }
+}
