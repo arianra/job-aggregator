@@ -119,20 +119,20 @@ export function GroupSection({ doc, set, kind }: { doc: ResumeDoc; set: (p: (d: 
             onDragEnd={() => setDragIdx(null)}
             onDragOver={(e) => e.preventDefault()}
             onDrop={(e) => { e.preventDefault(); onDrop(idx) }}
-            className={`rounded-lg border bg-card ${dragIdx === idx ? 'opacity-40 border-dashed' : ''}`}
+            className={`rounded-lg border border-[var(--glass-border)] bg-[var(--glass-bg-strong)] transition-[border-color,background-color] duration-[var(--dur-fast)] ease-[var(--ease)] hover:border-[var(--hairline-strong)] hover:bg-[color-mix(in_oklch,var(--surface)_92%,var(--surface-2))] ${dragIdx === idx ? 'opacity-40 border-dashed' : ''}`}
           >
             <div className="gl-head flex cursor-pointer items-center gap-3 p-3" onClick={() => setOpenIdx(open ? null : idx)}>
-              <GripVertical className="h-5 w-5 flex-none text-muted-foreground/50" />
-              <div className="min-w-0 flex-1">
-                <div className="truncate text-[13.5px] font-semibold">{label || `New ${kind}`}</div>
-                <div className="truncate text-[11.5px] text-muted-foreground">{String(spec.subtitle(it as Record<string, unknown>))}</div>
-              </div>
-              <button
-                onClick={(e) => { e.stopPropagation(); setPendingDel(idx) }}
-                className="flex h-8 w-8 flex-none items-center justify-center rounded-md text-lg text-muted-foreground hover:bg-muted hover:text-red-600"
-                aria-label="delete"
-              >×</button>
-              <span className={`flex-none text-2xl text-muted-foreground/70 leading-none transition-transform ${open ? 'rotate-90' : ''}`}>›</span>
+              <GripVertical className="h-5 w-5 flex-none text-[var(--muted)]/50" />
+                            <div className="min-w-0 flex-1">
+                              <div className="truncate text-[13.5px] font-semibold text-[var(--text)]">{label || `New ${kind}`}</div>
+                              <div className="truncate text-[11.5px] text-[var(--muted)]">{String(spec.subtitle(it as Record<string, unknown>))}</div>
+                            </div>
+                            <button
+                              onClick={(e) => { e.stopPropagation(); setPendingDel(idx) }}
+                              className="flex h-8 w-8 flex-none items-center justify-center rounded-md text-lg text-[var(--muted)] hover:bg-[var(--danger-surface)] hover:text-[var(--danger-ink)]"
+                              aria-label="delete"
+                            >×</button>
+                            <span className={`flex-none text-2xl text-[var(--muted)]/70 leading-none transition-transform ${open ? 'rotate-90' : ''}`}>›</span>
             </div>
             {open && (
               <div className="space-y-3 border-t p-3">

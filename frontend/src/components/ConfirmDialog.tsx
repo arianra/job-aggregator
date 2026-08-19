@@ -42,7 +42,7 @@ export function ConfirmDialog({
       <DialogContent className="max-w-md">
         <DialogHeader className="flex flex-row items-start gap-3">
           {tone === 'danger' && (
-            <div className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-destructive/10 text-destructive">
+            <div className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[var(--danger-surface)] text-[var(--danger-ink)]">
               <AlertTriangle className="h-4 w-4" />
             </div>
           )}

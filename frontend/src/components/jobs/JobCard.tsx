@@ -59,22 +59,22 @@ export function JobCard({
   }
 
   return (
-    <Card className="hover:shadow-lg transition-shadow">
+    <Card className="transition-[border-color,background-color] duration-[var(--dur-fast)] ease-[var(--ease)] hover:border-[var(--hairline-strong)] hover:bg-[color-mix(in_oklch,var(--surface)_90%,var(--surface-2))]">
       <CardContent className="pt-6">
         <div className="flex justify-between items-start gap-4">
           <div className="flex-1 space-y-2">
             <Link to={`/jobs/${job.id}`} className="group">
-              <h3 className="font-semibold text-lg group-hover:text-primary transition-colors">
+              <h3 className="font-semibold text-lg text-[var(--text)] group-hover:text-[var(--voice)] transition-colors">
                 {job.title}
               </h3>
             </Link>
 
-            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+            <div className="flex items-center gap-2 text-sm text-[var(--muted)]">
               <Building2 className="h-4 w-4" />
               <span>{job.company.name}</span>
             </div>
 
-            <div className="flex items-center gap-4 text-sm text-muted-foreground flex-wrap">
+            <div className="flex items-center gap-4 text-sm text-[var(--muted)] flex-wrap">
               <div className="flex items-center gap-1">
                 <MapPin className="h-4 w-4" />
                 <span>{formatLocation()}</span>
@@ -124,7 +124,7 @@ export function JobCard({
           </div>
         </div>
 
-        <div className="flex justify-between items-center mt-4 pt-4 border-t border-border">
+        <div className="flex justify-between items-center mt-4 pt-4 border-t border-[var(--hairline)]">
           <div className="flex gap-2">
             {!appStatus && onSave && (
               <Button
@@ -156,7 +156,7 @@ export function JobCard({
               href={job.sources[0].url}
               target="_blank"
               rel="noopener noreferrer"
-              className="text-sm text-primary hover:underline flex items-center gap-1"
+              className="text-sm text-[var(--voice)] hover:underline flex items-center gap-1"
             >
               View Source <ExternalLink className="h-3 w-3" />
             </a>
