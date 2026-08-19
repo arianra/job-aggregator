@@ -5,12 +5,12 @@ interface SkeletonProps {
 }
 
 export function Skeleton({ className }: SkeletonProps) {
-  return <div className={cn('animate-pulse rounded-md bg-muted', className)} />
+  return <div className={cn('animate-pulse rounded-md bg-[var(--surface-2)]', className)} />
 }
 
 export function CardSkeleton() {
   return (
-    <div className="rounded-lg border bg-card p-6">
+    <div className="rounded-lg border border-[var(--hairline)] bg-[var(--surface)] p-6">
       <div className="flex items-center justify-between">
         <Skeleton className="h-4 w-24" />
         <Skeleton className="h-4 w-4 rounded-full" />
@@ -23,7 +23,7 @@ export function CardSkeleton() {
 
 export function JobCardSkeleton() {
   return (
-    <div className="rounded-lg border bg-card p-6">
+    <div className="rounded-lg border border-[var(--hairline)] bg-[var(--surface)] p-6">
       <div className="flex items-start justify-between">
         <div className="flex-1">
           <Skeleton className="h-5 w-3/4" />

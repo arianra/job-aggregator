@@ -45,7 +45,7 @@ export function Sidebar() {
   }
 
   const quick = (
-    <aside className="fixed left-0 top-0 z-40 flex h-screen w-16 flex-col border-r bg-card">
+    <aside className="fixed left-0 top-0 z-40 flex h-screen w-16 flex-col border-r border-[var(--glass-border)] bg-[var(--glass-bg)] text-[var(--text)] [-webkit-backdrop-filter:blur(20px)_saturate(var(--glass-saturate))] [backdrop-filter:blur(20px)_saturate(var(--glass-saturate))] shadow-[var(--glass-edge),var(--glass-shadow)]">
       <div className="flex h-16 items-center justify-center border-b">
         <Button variant="ghost" size="icon" onClick={toggleSidebar}><ChevronRight className="h-4 w-4" /></Button>
       </div>
@@ -63,7 +63,7 @@ export function Sidebar() {
   if (sidebarCollapsed) return quick
 
   return (
-    <aside className="fixed left-0 top-0 z-40 flex h-screen w-64 flex-col border-r bg-card">
+    <aside className="fixed left-0 top-0 z-40 flex h-screen w-64 flex-col border-r border-[var(--glass-border)] bg-[var(--glass-bg)] text-[var(--text)] [-webkit-backdrop-filter:blur(20px)_saturate(var(--glass-saturate))] [backdrop-filter:blur(20px)_saturate(var(--glass-saturate))] shadow-[var(--glass-edge),var(--glass-shadow)]">
       <div className="flex h-16 items-center justify-between border-b px-4">
         <span className="text-lg font-bold">Job Aggregator</span>
         <Button variant="ghost" size="icon" onClick={toggleSidebar} className="h-8 w-8"><ChevronLeft className="h-4 w-4" /></Button>
@@ -83,34 +83,34 @@ export function Sidebar() {
           )
         })}
 
-        <div className="pt-3 text-[10.5px] font-semibold uppercase tracking-wider text-muted-foreground">Resume</div>
+        <div className="pt-3 text-[10.5px] font-semibold uppercase tracking-wider text-[var(--muted)]">Resume</div>
 
         <Link to="/resume">
           <Button variant={location.pathname === '/resume' ? 'secondary' : 'ghost'} className="w-full justify-start">
             <span className="flex items-center gap-2">
-              <span className={cn('h-[7px] w-[7px] flex-none rounded-full', location.pathname === '/resume' ? 'bg-primary' : 'bg-border')} />
+              <span className={cn('h-[7px] w-[7px] flex-none rounded-full', location.pathname === '/resume' ? 'bg-[var(--voice)]' : 'bg-[var(--border-util)]')} />
               Overview
             </span>
           </Button>
         </Link>
 
-        {live.length > 0 && <div className="pt-1 text-[10.5px] font-semibold uppercase tracking-wider text-muted-foreground">My resumes</div>}
+        {live.length > 0 && <div className="pt-1 text-[10.5px] font-semibold uppercase tracking-wider text-[var(--muted)]">My resumes</div>}
         {live.map((r) => {
           const isOpen = openId === r.id || activeId === r.id
           return (
             <div key={r.id}>
               <div
                 className={cn(
-                  'flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-left text-[13px] hover:bg-muted',
-                  activeId === r.id && 'bg-accent font-semibold text-accent-foreground'
+                  'flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-left text-[13px] hover:bg-[var(--surface-2)]',
+                  activeId === r.id && 'bg-[var(--glass-bg-strong)] font-semibold text-[var(--text)]'
                 )}
               >
-                <span className={cn('h-[7px] w-[7px] flex-none rounded-full', r.primary ? 'bg-primary' : 'bg-border')} />
+                <span className={cn('h-[7px] w-[7px] flex-none rounded-full', r.primary ? 'bg-[var(--voice)]' : 'bg-[var(--border-util)]')} />
                 <Link to={`/resume/${r.id}/${lastStepFor(r.id)}`} className="min-w-0 flex-1 truncate" title={r.title}>
                   {r.title}
                 </Link>
-                {r.primary && <span className="flex-none font-mono text-[8.5px] text-accent">PRIMARY</span>}
-                <button onClick={() => toggleOpen(r.id)} className="text-muted-foreground" aria-label="toggle">
+                {r.primary && <span className="flex-none font-mono text-[8.5px] text-[var(--voice)]">PRIMARY</span>}
+                <button onClick={() => toggleOpen(r.id)} className="text-[var(--muted)]" aria-label="toggle">
                   <span className={cn('inline-block transition-transform', isOpen && 'rotate-90')}>›</span>
                 </button>
               </div>
@@ -121,7 +121,7 @@ export function Sidebar() {
                     return (
                       <Link key={s.key} to={`/resume/${r.id}/${s.key}`}>
                         <Button variant={active ? 'secondary' : 'ghost'} className="h-7 w-full justify-start text-xs" onClick={() => setLastStep((p) => ({ ...p, [r.id]: s.key }))}>
-                          <span className="w-4 font-mono text-[10px] text-muted-foreground">{s.number}</span>
+                          <span className="w-4 font-mono text-[10px] text-[var(--muted)]">{s.number}</span>
                           <span className="ml-1">{s.label}</span>
                         </Button>
                       </Link>

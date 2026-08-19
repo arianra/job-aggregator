@@ -14,7 +14,7 @@ export function TopBar() {
   const header = useTopBarHeader()
 
   return (
-    <header className="sticky top-0 z-30 flex h-16 items-center gap-4 border-b bg-card/95 px-6 backdrop-blur supports-[backdrop-filter]:bg-card/60">
+    <header className="sticky top-0 z-30 flex h-16 items-center gap-4 border-b border-[var(--glass-border)] bg-[var(--glass-bg)] px-6 text-[var(--text)] shadow-[var(--glass-edge)] [-webkit-backdrop-filter:blur(20px)_saturate(var(--glass-saturate))] [backdrop-filter:blur(20px)_saturate(var(--glass-saturate))]">
       {/* Page-specific header content (e.g. Resume name/primary/Versions/Save) sits left of theme */}
       <div className="flex min-w-0 flex-1 items-center gap-3">{header}</div>
 

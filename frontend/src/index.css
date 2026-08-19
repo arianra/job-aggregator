@@ -335,3 +335,114 @@
     transform: none;
   }
 }
+
+/* =====================================================================
+   LIQUID GLASS — AMBIENT FIELD + POINTER SHEEN (ADR-0015 s6.4 / glass-material sB,sC)
+   Ambient: a restful drift of the three brand hues behind content so glass
+   has something to refract. Sheen: a faint radial light trailing the cursor
+   (--px/--py from a mousemove watcher). Both reduced-motion gated.
+   ===================================================================== */
+.material-ambient {
+  position: fixed;
+  inset: 0;
+  z-index: -2;
+  overflow: hidden;
+  background: var(--background);
+  transition: background var(--dur) var(--ease);
+  pointer-events: none;
+}
+.material-ambient > i {
+  position: absolute;
+  border-radius: 50%;
+  will-change: transform;
+  filter: blur(var(--glass-amb-blur));
+  mix-blend-mode: multiply;
+  opacity: var(--glass-amb-opacity);
+}
+.material-ambient > i:nth-child(1) {
+  width: 52vmax;
+  height: 52vmax;
+  top: -18vmax;
+  left: -12vmax;
+  background: radial-gradient(circle at center, var(--vermilion-400), transparent 65%);
+}
+.material-ambient > i:nth-child(2) {
+  width: 46vmax;
+  height: 46vmax;
+  bottom: -16vmax;
+  right: -10vmax;
+  background: radial-gradient(circle at center, var(--ultramarine-400), transparent 65%);
+}
+.material-ambient > i:nth-child(3) {
+  width: 30vmax;
+  height: 30vmax;
+  top: 34%;
+  right: 22%;
+  background: radial-gradient(circle at center, var(--sun-400), transparent 65%);
+  opacity: calc(var(--glass-amb-opacity) * 0.64);
+}
+[data-theme='dark'] .material-ambient > i,
+.dark .material-ambient > i {
+  mix-blend-mode: screen;
+  opacity: var(--glass-amb-opacity);
+}
+@keyframes material-drift-a {
+  0%,
+  100% {
+    transform: translate(0, 0) scale(1);
+  }
+  50% {
+    transform: translate(4vmax, 2vmax) scale(1.08);
+  }
+}
+@keyframes material-drift-b {
+  0%,
+  100% {
+    transform: translate(0, 0) scale(1);
+  }
+  50% {
+    transform: translate(-3vmax, -2.5vmax) scale(1.06);
+  }
+}
+.material-ambient > i:nth-child(1) {
+  animation: material-drift-a 26s ease-in-out infinite;
+}
+.material-ambient > i:nth-child(2) {
+  animation: material-drift-b 32s ease-in-out infinite;
+}
+.material-ambient > i:nth-child(3) {
+  animation: material-drift-a 20s ease-in-out infinite;
+}
+
+.material-sheen {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.5s ease;
+  background: radial-gradient(
+    circle 340px at var(--px, 50%) var(--py, 50%),
+    color-mix(in oklch, var(--vermilion-200) 34%, transparent),
+    transparent 62%
+  );
+}
+[data-theme='dark'] .material-sheen,
+.dark .material-sheen {
+  background: radial-gradient(
+    circle 340px at var(--px, 50%) var(--py, 50%),
+    color-mix(in oklch, var(--neutral-100) 10%, transparent),
+    transparent 62%
+  );
+}
+.material-sheen.on {
+  opacity: 0.6;
+}
+@media (prefers-reduced-motion: reduce) {
+  .material-ambient > i {
+    animation: none;
+  }
+  .material-sheen {
+    display: none;
+  }
+}
