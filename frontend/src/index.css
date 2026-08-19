@@ -2,6 +2,15 @@
 @import 'tw-animate-css';
 @import 'shadcn/tailwind.css';
 @import '@fontsource-variable/geist';
+@import './theme/ramps.css';
+@import './theme/semantic.css';
+@import './theme/material.css';
+
+/* Callback Design System theme module (ADR-0015). Imported FIRST so the
+   stock shadcn base blocks below still win for shared token names (--background,
+   --card, --muted, --border, ...) — preserving the un-migrated app (zero blast).
+   Dry-Poster-only aliases (voice, surface, hairline, text, glass, on-fill)
+   resolve from the theme for components already ported (xim.2 pilot). */
 
 @custom-variant dark (&:is(.dark *));
 

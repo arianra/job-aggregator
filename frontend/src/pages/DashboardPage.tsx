@@ -51,6 +51,7 @@ export function DashboardPage() {
               value={totalJobs}
               icon={Briefcase}
               description="Tracked positions"
+              variant="voice"
             />
             <MetricCard
               label="Applications"
