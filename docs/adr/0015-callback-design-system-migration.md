@@ -1,6 +1,6 @@
 # ADR-0015 — Callback Design System v1 Migration ("Dry Poster" + Liquid Glass material)
 
-- **Status:** Accepted
+- **Status:** Accepted · **Validated 2026-08-18** (ADR-0015 §6 phases 1–8 landed via beads xim.1–xim.8; `hermes verify` green — build/lint/backend+frontend suites + live start; both themes render across all 9 routes on the Callback tokens + Liquid Glass material)
 - **Date:** 2026-08-18
 - **Owner:** frontend / design system
 - **Scope:** Migrate the app onto the finalized Callback Design System v1 — the "Dry Poster"
