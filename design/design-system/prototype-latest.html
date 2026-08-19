@@ -1,0 +1,1122 @@
+<!doctype html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Callback — Design System (v1 Liquid Glass · leading material)</title>
+<style>
+/* =====================================================================
+   Callback "Dry Poster" v0.5 — color-breathe pass (De Stijl balance).
+   Vermilion = voice (primary CTA, live). Ultramarine = info/wayfinding
+   (secondary action, reporting). Sun = notify (sparse). Grey/neutral = rest.
+   - Page container expands FLUIDLY when rail collapses
+   - Explicit collapse chevrons (not a naive flip): ‹ collapse / › expand
+   - Collapsed rail: resume = icon arcs + numbered step strip; unified
+     animated fly-out tips show full names/steps on hover
+   - Real ATSStatusButton + GroupCard (drag/collapse/close) components
+   - Custom <select> with chevron hugging the text (not far-right)
+   ===================================================================== */
+
+/* ---------- L1: brand ramps (tokens.json v2) ---------- */
+:root{
+  --vermilion-50:#FFE7DC; --vermilion-100:#FFD2C2; --vermilion-200:#FFB29C;
+  --vermilion-300:#FF8970; --vermilion-400:#F15F44; --vermilion-500:#E8482B;
+  --vermilion-600:#C83310; --vermilion-700:#A71D00; --vermilion-800:#831100;
+  --vermilion-900:#620E00; --vermilion-950:#400600;
+  --ultramarine-50:#E5F6FF; --ultramarine-100:#CEE8FF; --ultramarine-200:#ABD1FF;
+  --ultramarine-300:#83B2FF; --ultramarine-400:#5D90FC; --ultramarine-500:#2C5FD3;
+  --ultramarine-600:#306BD7; --ultramarine-700:#1354B7; --ultramarine-800:#003F95;
+  --ultramarine-900:#002E75; --ultramarine-950:#001C50;
+  --sun-50:#FFF5D1; --sun-100:#FAE7B1; --sun-200:#E8CF86; --sun-300:#D1B151;
+  --sun-400:#B59100; --sun-500:#FBCF3C; --sun-600:#8F6D00; --sun-700:#735700;
+  --sun-800:#574300; --sun-900:#403200; --sun-950:#281F00;
+  --grey-50:#F7F5F1; --grey-100:#EAE8E2; --grey-200:#D4D1C8; --grey-300:#B9B4A9;
+  --grey-400:#9A9589; --grey-500:#8A8477; --grey-600:#777165; --grey-700:#5F5A50;
+  --grey-800:#49453B; --grey-900:#36322B; --grey-950:#211F1A;
+  --neutral-50:#FAF6EC; --neutral-100:#DBD8CE; --neutral-200:#BBB8AF;
+  --neutral-300:#9C9991; --neutral-400:#807D75; --neutral-500:#65635C;
+  --neutral-600:#504D47; --neutral-700:#3B3933; --neutral-800:#2C2A24;
+  --neutral-900:#22201B; --neutral-950:#191713;
+  --night-800:#2C291F; --night-850:#221F17; --night-900:#18160F; --night-950:#0F0D08;
+  --success-l1:#DFF0E2; --success-l2:#B9DCC2; --success-fg:#2E5A38; --success-strong:#21472A;
+  --font-display:'Archivo Black','Arial Black',sans-serif;
+  --font-sans:'Inter',system-ui,'Segoe UI',sans-serif;
+  --font-mono:ui-monospace,'SFMono-Regular',Menlo,Consolas,monospace;
+  /* ---- spacing scale (4px base) ---- */
+  --space-1:4px; --space-2:8px; --space-3:12px; --space-4:16px; --space-5:20px;
+  --space-6:24px; --space-8:32px; --space-10:40px; --space-12:48px;
+  /* ---- motion tokens (subtle) ---- */
+  --dur-fast:120ms; --dur:180ms; --dur-slow:260ms;
+  --ease:cubic-bezier(.4,0,.2,1); --ease-pop:cubic-bezier(.2,.9,.3,1.15);
+}
+/* ---------- L2: semantic ---------- */
+:root,[data-theme="light"]{
+  --background:var(--neutral-50); --surface:#FFFFFF; --surface-2:var(--grey-100);  /* elevation: grey-100 (deeper band) */
+  --text:var(--neutral-950); --muted:var(--grey-700);
+  --border:var(--grey-200);
+  --voice:var(--vermilion-600); --voice-fill:var(--vermilion-500);
+  --info:var(--ultramarine-600); --info-fill:var(--ultramarine-500);
+  --notify:var(--sun-600); --notify-fill:var(--sun-500);
+  --hairline:var(--grey-200); --hairline-strong:var(--grey-300);
+  --navbg:var(--surface); --card:var(--surface);
+  --danger:var(--vermilion-700); --success:var(--success-fg); --warn:var(--sun-700);
+  --on-fill:var(--neutral-950);
+  --on-info:#FFFFFF; --on-sun:var(--neutral-950);
+  --rail-shadow:0 18px 50px -12px rgba(33,31,26,.18), 0 2px 10px rgba(33,31,26,.06);
+  --tip-shadow:0 10px 34px -8px rgba(33,31,26,.22);
+  color-scheme: light;
+}
+[data-theme="dark"]{
+  --background:var(--night-950); --surface:var(--night-900); --surface-2:var(--night-850);
+  --text:var(--neutral-100); --muted:var(--grey-400); --border:var(--night-800);
+  --voice:var(--vermilion-500); --voice-fill:var(--vermilion-500);
+  --info:var(--ultramarine-400); --info-fill:var(--ultramarine-400);
+  --notify:var(--sun-400); --notify-fill:var(--sun-400);
+  --hairline:var(--night-800); --hairline-strong:#4b4534;
+  --navbg:var(--night-900); --card:var(--night-900);
+  --danger:var(--vermilion-300); --success:var(--success-l2); --warn:var(--sun-300);
+  --on-fill:#FFE7DC; --on-info:#01264f; --on-sun:#2a2200;
+  --rail-shadow:0 18px 50px -12px rgba(0,0,0,.55), 0 2px 10px rgba(0,0,0,.35);
+  --tip-shadow:0 10px 34px -8px rgba(0,0,0,.6);
+  color-scheme: dark;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+:focus-visible{outline:2px solid var(--voice);outline-offset:2px;border-radius:4px}
+@media (prefers-reduced-motion: reduce){*,*::before,*::after{transition-duration:.01ms!important;animation-duration:.01ms!important;animation-iteration-count:1!important}}
+html,body{height:100%}
+body{font-family:var(--font-sans);background:var(--background);color:var(--text);-webkit-font-smoothing:antialiased}
+.mono{font-family:var(--font-mono)}
+.display{font-family:var(--font-display);letter-spacing:-0.02em;font-weight:400}
+button{font-family:inherit;cursor:pointer}
+a{color:inherit;text-decoration:none}
+svg{display:block;fill:none;stroke:currentColor;stroke-linecap:round;stroke-linejoin:round}
+
+/* =====================================================================
+   LAYOUT — rail + page; page expands fluidly with rail
+   ===================================================================== */
+.shell{min-height:100vh}
+.rail{position:fixed;top:16px;left:16px;bottom:16px;width:240px;display:flex;flex-direction:column;
+  background:var(--navbg);border:1px solid var(--hairline);border-radius:16px;box-shadow:var(--rail-shadow);
+  transition:width .22s cubic-bezier(.4,0,.2,1);z-index:40;overflow:hidden}
+/* collapsed rail = 76px */
+.rail.collapsed{width:76px}
+/* PAGE: padded by rail width, TRANSITIONS fluidly */
+.pagewrap{padding-left:256px;transition:padding-left .22s cubic-bezier(.4,0,.2,1)}
+.pagewrap.collapsed{padding-left:92px}
+
+.rail.collapsed .hide-c{display:none!important}
+.rail.collapsed .brand{padding:0;justify-content:center}
+.rail.collapsed .navitem,.rail.collapsed .overview-item,.rail.collapsed .res-row{justify-content:center}
+.rail.collapsed .navres-row{justify-content:center;padding:0}
+.rail.collapsed .navres-row .lbl,.rail.collapsed .navres-row .carrot{display:none}
+.rail.collapsed .navlabel,.rail.collapsed .steps-strip-full,.rail.collapsed .theme-switch{display:none}
+
+.brand{display:flex;align-items:center;gap:12px;height:64px;padding:0 18px;flex:none;white-space:nowrap}
+.brandmark{width:34px;height:34px;flex:none}
+.brandword{font-family:var(--font-display);font-size:20px;letter-spacing:-0.04em;line-height:1}
+.brandword b{color:var(--voice);font-weight:400}
+
+.nav{flex:1;overflow-y:auto;overflow-x:hidden;padding:8px 10px 12px;display:flex;flex-direction:column;gap:2px}
+.navlabel{font-family:var(--font-mono);font-size:10px;text-transform:uppercase;letter-spacing:.12em;
+  color:var(--muted);padding:14px 12px 6px;white-space:nowrap}
+
+/* nav item — hover reveals fly-out tip in COLLAPSED mode */
+.navitem{position:relative;display:flex;align-items:center;gap:12px;height:38px;padding:0 12px;border-radius:9px;
+  color:var(--muted);font-size:14px;font-weight:500;border:none;background:none;width:100%;text-align:left;white-space:nowrap}
+.navitem svg{width:18px;height:18px;flex:none}
+.navitem:hover{background:var(--surface-2);color:var(--text)}
+.navitem.active{background:color-mix(in oklch,var(--voice) 12%,var(--surface));color:var(--text);font-weight:600}
+.navitem.active svg{color:var(--voice)}
+.navitem.active::before{content:"";position:absolute;left:0;top:9px;bottom:9px;width:3px;border-radius:2px;background:var(--voice)}
+
+/* unified fly-out tip (collapsed mode hover) */
+.flytip{position:absolute;left:calc(100% + 12px);top:50%;transform:translateY(-50%) translateX(-6px);
+  background:var(--navbg);border:1px solid var(--hairline);border-radius:10px;box-shadow:var(--tip-shadow);
+  padding:8px 12px;min-width:140px;white-space:nowrap;font-size:12.5px;color:var(--text);
+  opacity:0;pointer-events:none;transition:opacity .18s,transform .18s;z-index:60}
+.flytip .tip-title{font-weight:600;font-size:12.5px}
+.flytip .tip-file{font-family:var(--font-mono);font-size:10px;color:var(--muted);margin-top:2px}
+.rail.collapsed .navitem:hover .flytip,
+.rail.collapsed .overview-item:hover .flytip,
+.rail.collapsed .res-row:hover .flytip{opacity:1;transform:translateY(-50%) translateX(0)}
+
+/* overview item — prominent */
+.overview-item{position:relative;display:flex;align-items:center;gap:12px;height:42px;padding:0 12px;border-radius:9px;
+  color:var(--text);font-size:14px;font-weight:700;background:none;border:none;width:100%;text-align:left;white-space:nowrap}
+.overview-item svg{width:19px;height:19px;flex:none;color:var(--voice)}
+.overview-item:hover{background:var(--surface-2)}
+.overview-item.active{background:color-mix(in oklch,var(--voice) 12%,var(--surface))}
+.overview-item.active::before{content:"";position:absolute;left:0;top:10px;bottom:10px;width:3px;border-radius:2px;background:var(--voice)}
+
+/* subtle divide between Resume Overview and the resume-file list */
+.res-divider{height:1px;background:var(--hairline);margin:4px 2px 6px;flex:none}
+.rail.collapsed .res-divider{margin:4px 10px 6px}
+
+/* resume rows (EXPANDED): dot→icon, name, carrot */
+.res-row{position:relative;display:flex;flex-direction:column;gap:1px}
+.navres-row{display:flex;align-items:center;gap:10px;height:34px;padding:0 10px;border-radius:8px;
+  font-size:13px;color:var(--muted);cursor:pointer;white-space:nowrap;background:none;border:none;width:100%;text-align:left}
+.navres-row .r-ic{width:16px;height:16px;flex:none;color:var(--grey-500)}
+.navres-row .r-ic.primary{color:var(--voice)}
+.navres-row .lbl{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis}
+.navres-row .carrot{font-size:10px;color:var(--muted);transition:transform .15s;flex:none}
+.navres-row.open .carrot{transform:rotate(90deg)}
+.navres-row:hover{color:var(--text);background:var(--surface-2)}
+.navres-row.active{background:color-mix(in oklch,var(--voice) 8%,var(--surface));color:var(--text)}
+.navres-row.active::before{content:"";position:absolute;left:0;top:9px;bottom:9px;width:3px;border-radius:2px;background:var(--voice)}
+
+/* sequential steps: connector line centered BEHIND the numbered nodes.
+   Nodes are opaque (surface bg) so the line appears to run behind them. */
+.steps-wrap{position:relative;margin:2px 0 6px;padding-left:22px}
+.steps-line{position:absolute;left:27.5px;top:6px;bottom:6px;width:2px;background:var(--hairline);border-radius:1px}
+.step{display:flex;align-items:center;gap:9px;height:28px;padding:0 8px 0 0;border-radius:6px;
+  font-size:12.5px;color:var(--muted);cursor:pointer;background:none;border:none;width:100%;text-align:left;white-space:nowrap}
+/* node: opaque + border the colour of the rail ground so the line is masked
+   behind it (the "intersects nothing, sits behind" illusion). 13px incl 2px border. */
+.step .node{width:13px;height:13px;border-radius:50%;background:var(--surface);border:2px solid var(--surface);
+  box-shadow:0 0 0 1px var(--hairline);flex:none;z-index:1;position:relative}
+.step .node.done{background:var(--notify-fill);border-color:var(--surface);box-shadow:0 0 0 1px color-mix(in oklch,var(--notify-fill) 45%,transparent)}
+/* current = hollow w/ heavier neutral outline (NOT vermilion — vermilion stays the CTA verb) */
+.step .node.cur{background:var(--surface);border-color:var(--text);box-shadow:0 0 0 3px color-mix(in oklch,var(--notify) 22%,transparent)}
+.step .num{font-family:var(--font-mono);font-size:9.5px;color:var(--grey-400);width:16px;flex:none;text-align:right}
+.step .lbl{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis}
+.step:hover{color:var(--text);background:var(--surface-2)}
+.step.active{color:var(--text);font-weight:600}
+
+/* collapsed: compact numeric step strip (numbers stay visible). Done = yellow
+   BORDER only; text stays theme-aware muted for legibility both themes.
+   Current = vermilion fill w/ bone. */
+.steps-strip{display:none}
+.rail.collapsed .steps-strip{display:flex;flex-direction:column;align-items:center;gap:4px;margin:6px 0}
+.rail.collapsed .steps-strip .s{width:28px;height:22px;display:flex;align-items:center;justify-content:center;
+  font-family:var(--font-mono);font-size:9px;font-weight:700;border-radius:5px;border:1px solid var(--hairline);
+  background:var(--surface-2);color:var(--muted);cursor:pointer}
+.rail.collapsed .steps-strip .s.done{border-color:var(--notify-fill);background:var(--surface-2);color:var(--muted)}
+/* current = hollow w/ heavier outline (NOT vermilion fill — vermilion stays the CTA verb) */
+.rail.collapsed .steps-strip .s.cur{background:var(--surface);border:2px solid var(--text);color:var(--text);box-shadow:0 0 0 3px color-mix(in oklch,var(--notify) 18%,transparent)}
+.steps-strip-full{display:block}
+.rail.collapsed .steps-strip-full{display:none}
+
+/* rail footer */
+.rail-foot{border-top:1px solid var(--hairline);padding:12px;display:flex;flex-direction:column;gap:10px}
+.theme-switch{display:flex;align-items:center;gap:2px;background:var(--surface-2);border:1px solid var(--hairline);border-radius:9px;padding:3px}
+.theme-switch button{border:none;background:none;cursor:pointer;padding:6px 0;border-radius:7px;color:var(--muted);
+  display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600;flex:1}
+.theme-switch button svg{width:15px;height:15px}
+.theme-switch button.on{background:var(--card);color:var(--text);box-shadow:0 0 0 1px var(--hairline)}
+/* collapsed: 3 tight icon buttons still fit 76px easily */
+.rail.collapsed .theme-switch{padding:3px;width:100%}
+.rail.collapsed .theme-switch button{padding:6px 0;flex:1}
+.collapse-btn{display:flex;align-items:center;justify-content:center;gap:9px;width:100%;height:36px;
+  border:1px solid var(--hairline-strong);border-radius:9px;background:var(--card);color:var(--muted);
+  font-size:13px;font-weight:600;transition:color .12s,background .12s}
+.collapse-btn:hover{color:var(--text);background:var(--surface-2)}
+.collapse-btn svg{width:15px;height:15px}
+/* explicit chevrons: expanded shows ‹ (collapse), collapsed shows › (expand) */
+.chev-expand,.chev-collapse{display:none}
+.rail:not(.collapsed) .chev-expand{display:block}
+.rail.collapsed .chev-collapse{display:block}
+.rail.collapsed .collapse-btn{justify-content:center}
+
+/* =====================================================================
+   PAGE
+   ===================================================================== */
+.page{max-width:1120px;margin:0 auto;padding:36px 40px 64px}
+.eyebrow{font-family:var(--font-mono);font-size:11px;text-transform:uppercase;letter-spacing:.14em;color:var(--voice);margin-bottom:8px}
+.page-title{font-family:var(--font-display);font-size:30px;letter-spacing:-0.02em;margin-bottom:4px}
+.page-sub{color:var(--muted);font-size:14px;margin-bottom:26px;max-width:60ch}
+
+/* ---------- buttons (De Stijl: 3 primary families) ---------- */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;font-size:14px;font-weight:600;
+  padding:0 16px;height:36px;border-radius:6px;border:1px solid transparent;transition:background .12s,color .12s,transform .05s,box-shadow .12s;white-space:nowrap}
+.btn svg{width:16px;height:16px}.btn:active{transform:translateY(1px)}
+/* VERMILION — voice / primary CTA / the loudest action (one per view) */
+.btn--voice{background:var(--voice-fill);color:var(--on-fill);
+  clip-path:polygon(0 0,calc(100% - 13px) 0,100% 13px,100% 100%,0 100%);
+  box-shadow:0 2px 12px -2px color-mix(in oklch,var(--voice-fill) 60%,transparent);transition:background var(--dur-fast) var(--ease),color var(--dur-fast) var(--ease),transform .05s}
+.btn--voice:hover{background:var(--vermilion-500);color:#fff;filter:saturate(1.05)} /* warm keeper, not brick */
+/* ULTRAMARINE — info / secondary action / reporting */
+.btn--info{background:var(--info-fill);color:var(--on-info)}
+.btn--info:hover{filter:brightness(1.12)}
+/* SUN — notify (sparse) */
+.btn--sun{background:var(--notify-fill);color:var(--on-sun)}
+.btn--sun:hover{filter:brightness(1.08)}
+.btn--outline{background:var(--surface);color:var(--text);border-color:var(--hairline-strong)}
+.btn--outline:hover{background:var(--surface-2)}
+.btn--ghost{background:transparent;color:var(--muted)}.btn--ghost:hover{color:var(--text);background:var(--surface-2)}
+.btn--sm{height:30px;padding:0 12px;font-size:13px;gap:7px}
+.btn--icon{width:36px;padding:0;justify-content:center}
+.btn--block{width:100%}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.btn-group{display:flex;gap:8px;width:100%}.btn-group .btn{flex:1;min-width:0}
+.btn--lg{height:40px;font-size:15px;padding:0 20px}
+
+/* cards / metrics */
+.grid{display:grid;gap:16px}.grid-metrics{grid-template-columns:repeat(4,1fr)}.grid-2{grid-template-columns:repeat(2,1fr)}
+.line-block{grid-column:1/-1}
+.card{background:var(--card);border:1px solid var(--hairline);border-radius:12px;padding:20px}
+.card h3{font-size:15px;font-weight:700;letter-spacing:-0.01em;margin-bottom:4px}.card .desc{font-size:13px;color:var(--muted);margin-bottom:16px}
+.metric{background:var(--card);border:1px solid var(--hairline);border-radius:12px;padding:16px 16px 14px;transition:border-color var(--dur-fast) var(--ease)}
+.metric .m-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px}
+.metric .m-label{font-family:var(--font-mono);font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted)}
+.metric .m-glyph{width:22px;height:22px;border-radius:6px;display:flex;align-items:center;justify-content:center}
+.metric .m-glyph svg{width:13px;height:13px}
+.metric .m-value{font-family:var(--font-display);font-size:32px;line-height:1.05}
+.metric .m-delta{font-family:var(--font-mono);font-size:11px;color:var(--muted);margin-top:5px}
+.metric .m-delta b{color:var(--success)}
+/* ONE loud verb per view: only the live metric fills with voice; others are neutral */
+.metric.voice{background:var(--voice-fill);border-color:var(--voice-fill)}
+.metric.voice .m-label{color:color-mix(in oklch,var(--on-fill) 80%,transparent)}
+.metric.voice .m-value{color:var(--on-fill)}
+.metric.voice .m-delta{color:color-mix(in oklch,var(--on-fill) 70%,transparent)}
+.metric.voice .m-delta b{color:var(--on-fill);font-weight:700}
+.metric.voice .m-glyph{background:color-mix(in oklch,var(--on-fill) 16%,transparent);color:var(--on-fill)}
+/* informational metric: ultramarine glyph only, card stays neutral (no competing fill) */
+.metric.info .m-glyph{background:var(--info-fill);color:var(--on-info)}
+.metric.info .m-value{color:var(--text)}
+.metric.plain .m-glyph{background:var(--grey-200);color:var(--grey-700)}
+
+/* chips */
+.badge-card{display:flex;flex-wrap:wrap;gap:8px;margin:4px 0 16px;align-items:center}
+.chip{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:600;padding:3px 10px;border-radius:6px;font-family:var(--font-mono)}
+.chip svg{width:12px;height:12px}
+.chip--success{background:var(--success-l1);color:var(--success-strong)}
+.chip--warn{background:var(--sun-100);color:var(--sun-800)}
+.chip--danger{background:var(--vermilion-50);color:var(--vermilion-700)}
+.chip--info{background:var(--ultramarine-50);color:var(--ultramarine-800)}
+.chip--grey{background:var(--grey-200);color:var(--grey-800)}
+.chip--voice{background:var(--vermilion-50);color:var(--vermilion-700)}
+[data-theme="dark"] .chip--success{background:color-mix(in oklch,var(--success) 22%,transparent);color:var(--success-l2)}
+[data-theme="dark"] .chip--warn{background:color-mix(in oklch,var(--sun-500) 22%,transparent);color:var(--sun-300)}
+[data-theme="dark"] .chip--danger{background:color-mix(in oklch,var(--vermilion-500) 22%,transparent);color:var(--vermilion-300)}
+[data-theme="dark"] .chip--info{background:color-mix(in oklch,var(--ultramarine-400) 20%,transparent);color:var(--ultramarine-200)}
+[data-theme="dark"] .chip--grey{background:var(--night-800);color:var(--grey-300)}
+[data-theme="dark"] .chip--voice{background:color-mix(in oklch,var(--vermilion-500) 20%,transparent);color:var(--vermilion-200)}
+.score{display:inline-flex;align-items:center;justify-content:center;min-width:44px;height:30px;
+  font-family:var(--font-display);font-size:15px;border-radius:5px;background:var(--neutral-950);color:var(--neutral-50)}
+[data-theme="dark"] .score{background:var(--neutral-100);color:var(--neutral-900)}
+
+/* ---------- forms ---------- */
+.field{margin-bottom:14px}
+.field label{display:block;font-size:13px;font-weight:600;margin-bottom:6px}
+.field-input{position:relative}
+.field-input input,.field-input textarea,.field-input select{width:100%;height:36px;padding:0 38px 0 12px;font-size:14px;
+  border:1px solid var(--hairline-strong);border-radius:6px;background:var(--card);color:var(--text);font-family:var(--font-sans);transition:border-color .12s;appearance:none}
+.field-input textarea{height:auto;padding-top:10px;padding-bottom:10px;resize:vertical;font-family:var(--font-mono);font-size:13px}
+.field-input input:focus,.field-input textarea:focus,.field-input select:focus{outline:none;border-color:var(--voice);
+  box-shadow:0 0 0 3px color-mix(in oklch,var(--voice) 16%,transparent)}
+.field-input .ats-addon{position:absolute;right:6px;top:50%;transform:translateY(-50%);z-index:2}
+.field-input .caret{position:absolute;right:32px;top:50%;transform:translateY(-50%);width:14px;height:14px;color:var(--muted);pointer-events:none}
+/* Selects carry no ATS addon: slim right padding, chevron hugs the field edge */
+.field-input select{padding:0 36px 0 12px}
+.field-input select + .caret{right:11px}
+.field-input.align-top .ats-addon{top:6px;transform:none}
+.field .hint{font-family:var(--font-mono);font-size:11px;color:var(--muted);margin-top:5px}
+.field .hint.err{color:var(--danger)}
+.row{display:grid;gap:14px}.row-2{grid-template-columns:1fr 1fr}
+
+/* ATS inline addon (forms/field.tsx → AtsStatusButton) — restyled to palette */
+.ats-addon{display:inline-flex;align-items:center;justify-content:center;gap:4px;height:22px;min-width:22px;padding:0 6px;border-radius:6px;
+  font-size:10px;font-weight:800;cursor:pointer;font-family:var(--font-mono)}
+.ats-addon svg{width:13px;height:13px;flex:none}
+.ats-addon--pass{background:var(--success-l1);color:var(--success-strong)}
+.ats-addon--advice{background:var(--sun-100);color:var(--sun-800)}
+.ats-addon--ok{background:var(--grey-200);color:var(--grey-700)}
+
+/* ---------- GROUP CARD (editor-sections.tsx) — drag / collapse / close ---------- */
+.group-card{border:1px solid var(--hairline);border-radius:10px;background:var(--card)}
+.group-card.drag-hint{border-style:dashed;opacity:.5}
+.g-head{display:flex;align-items:center;gap:10px;padding:11px 12px;cursor:pointer;user-select:none}
+.g-grip{width:16px;height:16px;flex:none;color:var(--grey-400)}
+.g-title{min-width:0;flex:1}
+.g-title .t{font-size:13.5px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.g-title .s{font-size:11.5px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.g-close{width:28px;height:28px;flex:none;display:flex;align-items:center;justify-content:center;
+  border:none;background:transparent;color:var(--muted);font-size:17px;border-radius:6px;cursor:pointer;transition:background .12s,color .12s}
+.g-close:hover{color:var(--danger);background:color-mix(in oklch,var(--danger) 12%,transparent)}
+.g-caret{width:22px;height:22px;flex:none;display:flex;align-items:center;justify-content:center;
+  color:var(--muted);border-radius:6px;border:none;background:transparent;transition:background .12s,color .12s;cursor:pointer}
+.g-caret svg{width:14px;height:14px;transition:transform .18s}
+.g-caret:hover{background:var(--surface-2);color:var(--text)}
+.g-caret.open svg{transform:rotate(90deg)}
+.g-body{border-top:1px solid var(--hairline);padding:14px;display:none}
+.g-card.open .g-body{display:block;animation:grow .18s ease}
+@keyframes grow{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:translateY(0)}}
+
+/* ---------- table ---------- */
+table{width:100%;border-collapse:collapse;font-size:13.5px}
+thead th{font-family:var(--font-mono);font-size:10.5px;text-transform:uppercase;letter-spacing:.09em;
+  color:var(--muted);text-align:left;font-weight:500;padding:0 12px 10px;border-bottom:1px solid var(--hairline)}
+tbody td{padding:12px;border-bottom:1px solid var(--hairline);vertical-align:middle}
+tbody tr:last-child td{border-bottom:none}tbody tr:hover td{background:var(--surface-2)}
+.td-title{font-weight:600}.td-sub{font-size:12px;color:var(--muted);margin-top:2px}
+
+/* ---------- alert (action center + impactful) ---------- */
+.alert{display:flex;gap:14px;padding:14px 16px;border-radius:10px;font-size:13.5px;margin-bottom:12px;border:1px solid;align-items:center}
+.alert .a-ic{flex:none;display:flex}.alert .a-ic svg{width:19px;height:19px}
+.alert .a-body{flex:1;min-width:0}.alert .a-body b{display:block;margin-bottom:2px}
+.alert .a-act{flex:none;display:flex;align-items:center}
+.alert--success{border-color:var(--success-l2);background:var(--success-l1);color:var(--success-strong)}
+.alert--warn{border-color:var(--sun-100);background:var(--sun-50);color:var(--sun-800)}
+.alert--danger{border-color:var(--vermilion-100);background:var(--vermilion-50);color:var(--vermilion-700)}
+.alert--info{border-color:var(--ultramarine-100);background:var(--ultramarine-50);color:var(--ultramarine-800)}
+[data-theme="dark"] .alert--success{border-color:color-mix(in oklch,var(--success) 32%,transparent);background:color-mix(in oklch,var(--success) 16%,transparent);color:var(--success-l2)}
+[data-theme="dark"] .alert--warn{border-color:color-mix(in oklch,var(--sun-500) 32%,transparent);background:color-mix(in oklch,var(--sun-500) 14%,transparent);color:var(--sun-300)}
+[data-theme="dark"] .alert--danger{border-color:color-mix(in oklch,var(--vermilion-500) 32%,transparent);background:color-mix(in oklch,var(--vermilion-500) 14%,transparent);color:var(--vermilion-300)}
+[data-theme="dark"] .alert--info{border-color:color-mix(in oklch,var(--ultramarine-400) 32%,transparent);background:color-mix(in oklch,var(--ultramarine-400) 14%,transparent);color:var(--ultramarine-200)}
+
+/* switch / progress / skeleton / avatar / tooltip */
+.switch{position:relative;width:38px;height:22px;border-radius:999px;background:var(--grey-300);border:1px solid var(--hairline);flex:none;cursor:pointer;transition:background .15s}
+.switch::after{content:"";position:absolute;top:2px;left:2px;width:16px;height:16px;border-radius:50%;background:#fff;box-shadow:0 1px 2px rgba(0,0,0,.2);transition:left .15s}
+.switch.on{background:var(--info-fill)}.switch.on::after{left:18px}
+.progress{height:6px;border-radius:99px;background:var(--grey-200);overflow:hidden}
+.progress>span{display:block;height:100%;border-radius:99px;background:var(--info-fill)}
+[data-theme="dark"] .progress{background:var(--night-800)}
+.skel{display:inline-block;height:12px;border-radius:6px;background:var(--grey-200);animation:pulse 1.4s ease-in-out infinite}
+[data-theme="dark"] .skel{background:var(--night-800)}
+@keyframes pulse{0%,100%{opacity:.5}50%{opacity:1}}
+.avatar{width:34px;height:34px;border-radius:9px;background:var(--voice-fill);color:var(--on-fill);
+  display:inline-flex;align-items:center;justify-content:center;font-family:var(--font-display);font-size:14px}
+.tooltip{display:inline-flex;align-items:center;gap:6px;padding:6px 10px;border-radius:6px;font-size:12px;
+  background:var(--neutral-950);color:var(--neutral-50);box-shadow:var(--rail-shadow)}
+[data-theme="dark"] .tooltip{background:var(--neutral-100);color:var(--neutral-950)}
+.pill{display:inline-flex;align-items:center;gap:6px;padding:6px 13px;border-radius:6px;border:1px solid var(--hairline);
+  background:var(--card);font-size:13px;font-weight:600;color:var(--muted)}
+.pill svg{width:14px;height:14px}.pill.on{color:var(--text);border-color:var(--info);background:color-mix(in oklch,var(--info) 10%,var(--card))}
+.pill.on svg{color:var(--info)}
+.badge-pill{display:inline-flex;align-items:center;gap:6px;padding:2px 10px;border-radius:999px;font-size:12px;font-weight:600;border:1px solid var(--hairline);background:var(--card);color:var(--muted)}
+.badge-pill.voice{background:var(--voice-fill);color:var(--on-fill);border-color:transparent}
+.badge-pill.info{background:var(--info-fill);color:var(--on-info);border-color:transparent}
+
+/* job card */
+.job{border:1px solid var(--hairline);border-radius:12px;background:var(--card);padding:18px 20px;transition:border-color .12s,background .12s}
+.job:hover{border-color:var(--hairline-strong);background:color-mix(in oklch,var(--card) 92%,var(--surface-2))}
+.job-top{display:flex;justify-content:space-between;gap:14px}
+.job-title{font-size:16px;font-weight:700;letter-spacing:-0.01em;margin-bottom:4px}
+.job-company{font-size:13px;color:var(--muted);display:flex;align-items:center;gap:6px;margin-bottom:9px}
+.job-company svg{width:14px;height:14px;flex:none}
+.meta{display:flex;gap:16px;flex-wrap:wrap;font-size:13px;color:var(--muted)}
+.meta span{display:inline-flex;align-items:center;gap:5px}.meta svg{width:13px;height:13px}
+.tags{display:flex;gap:6px;flex-wrap:wrap;margin-top:11px}
+.tag{padding:2px 8px;border-radius:4px;font-family:var(--font-mono);font-size:10.5px;background:var(--grey-200);color:var(--grey-800);letter-spacing:.02em}
+[data-theme="dark"] .tag{background:var(--night-800);color:var(--grey-300)}
+.job-actions{display:flex;justify-content:space-between;align-items:center;margin-top:15px;padding-top:13px;border-top:1px solid var(--hairline);gap:12px}
+.job-actions .left{display:flex;gap:8px}
+.job-actions .src{font-size:13px;color:var(--info);display:flex;align-items:center;gap:5px}
+.empty-state{display:flex;flex-direction:column;align-items:center;justify-content:center;border:1.5px dashed var(--hairline-strong);
+  border-radius:12px;padding:40px 20px;text-align:center}
+.empty-state .ic{width:44px;height:44px;border-radius:50%;background:var(--surface-2);display:flex;align-items:center;justify-content:center;color:var(--muted);margin-bottom:12px}
+.empty-state .ic svg{width:22px;height:22px}
+.empty-state h4{font-size:14px;font-weight:600;margin-bottom:4px}
+.empty-state p{font-size:13px;color:var(--muted);max-width:34ch;margin-bottom:16px}
+
+/* modal */
+.modal-overlay{position:fixed;inset:0;background:rgba(15,13,8,.55);backdrop-filter:blur(3px);
+  display:none;align-items:center;justify-content:center;z-index:100;animation:fade .15s}
+.modal-overlay.open{display:flex}
+.modal{width:min(440px,92vw);background:var(--surface);border:1px solid var(--hairline);border-radius:16px;box-shadow:var(--rail-shadow);animation:pop .18s cubic-bezier(.2,.9,.3,1.2)}
+.modal-head{display:flex;align-items:flex-start;justify-content:space-between;padding:18px 20px 0}
+.modal-head h3{font-size:16px;font-weight:700}
+.modal-head .close{background:none;border:none;color:var(--muted);cursor:pointer;font-size:18px;line-height:1;padding:4px}
+.modal-head .close:hover{color:var(--text)}
+.modal-body{padding:16px 20px}
+.modal-foot{display:flex;justify-content:flex-end;gap:8px;padding:0 20px 18px}
+@keyframes fade{from{opacity:0}to{opacity:1}}@keyframes pop{from{transform:scale(.97)}to{transform:scale(1)}}
+
+/* ATS gauge + report */
+.ats-card{display:flex;gap:20px;align-items:center}
+.ats-gauge{width:104px;height:104px;border-radius:50%;position:relative;flex:none;
+  background:conic-gradient(var(--info-fill) 0 74%, var(--grey-200) 74% 100%)}
+[data-theme="dark"] .ats-gauge{background:conic-gradient(var(--info-fill) 0 74%, var(--night-800) 74% 100%)}
+.ats-gauge::after{content:"";position:absolute;inset:10px;border-radius:50%;background:var(--surface)}
+.ats-gauge .val{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:1}
+.ats-gauge .val b{font-family:var(--font-display);font-size:22px}
+.ats-gauge .val span{font-family:var(--font-mono);font-size:9px;color:var(--muted)}
+.ats-rows{flex:1;display:flex;flex-direction:column;gap:10px}
+.ats-row{display:grid;grid-template-columns:110px 1fr 30px;gap:10px;align-items:center}
+.ats-row .k{font-size:12.5px;font-weight:600}
+.ats-row .bar{height:6px;border-radius:99px;background:var(--grey-200);overflow:hidden}
+[data-theme="dark"] .ats-row .bar{background:var(--night-800)}
+.ats-row .bar>span{display:block;height:100%;border-radius:99px;background:var(--info-fill)}
+.ats-row.alert .bar>span{background:var(--notify-fill)}
+.ats-row .v{font-family:var(--font-mono);font-size:11px;color:var(--muted);text-align:right}
+
+/* taxonomy */
+.section-title{font-family:var(--font-display);font-size:22px;letter-spacing:-0.02em;margin:44px 0 4px;display:flex;align-items:center;gap:12px}
+.section-title .mono{font-size:12px;color:var(--muted);font-family:var(--font-mono);letter-spacing:0}
+.section-desc{font-size:14px;color:var(--muted);margin-bottom:20px;max-width:72ch}
+.taxo{display:grid;gap:14px;align-items:start}
+.taxo-2{grid-template-columns:repeat(2,1fr)}
+.taxo-3{grid-template-columns:repeat(3,1fr)}
+.component-block{background:var(--surface);border:1px solid var(--hairline);border-radius:12px;padding:18px}
+.component-block .c-name{font-family:var(--font-mono);font-size:11px;text-transform:uppercase;letter-spacing:.1em;color:var(--voice);margin-bottom:12px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.component-block .c-name .file{color:var(--muted);text-transform:none;letter-spacing:0}
+.component-block .c-demo{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+.legend{font-family:var(--font-mono);font-size:11px;color:var(--muted);display:flex;gap:18px;flex-wrap:wrap;margin:34px 0 8px}
+@media(max-width:1100px){.grid-metrics,.taxo-2,.taxo-3{grid-template-columns:1fr 1fr}.pagewrap{padding-left:256px}}
+@media(max-width:760px){.grid-metrics,.taxo-2,.taxo-3{grid-template-columns:1fr}}
+</style>
+
+<style>/* =====================================================================
+   CALLBACK DESIGN SYSTEM — LIQUID GLASS MATERIAL LAYER (LEADING)
+   The canonical surface material on top of the "Dry Poster" language
+   (design/brand/tokens.json ramps + design/design-system/RESEARCH.md).
+
+   MODEL
+     Dry Poster  = the language  (color/type/geometry/states/hierarchy)
+     Liquid Glass= the material  (surface translucency, refraction, depth)
+   They are orthogonal. Dry Poster says WHAT a component is; this layer
+   says how elevated, overlapping and interactive surfaces are MADE.
+
+   PRINCIPLE — restraint is the identity.
+     • Glass ONLY where elevation already legitimately exists: floating
+       rail, modal, fly-tips, cards-as-panes. Never the whole page.
+     • Flat, blunt, honest De Stijl rhetoric is preserved; the flat
+       voice-verb and data rows stay solid so glass reads as *signal*,
+       not frosted-over-the-top.
+     • Translucency is real (backdrop-filter + saturation + a visible
+       ambient field) but tuned quiet (SOFT tokens in light, more solid
+       in dark so big display numerals stay crisp).
+     • A11y-first: prefers-reduced-motion kills ambient drift + sheen +
+       button ripple; glass never blurs text-bearing surfaces on top of
+       itself (dark cards bump to 80% opacity for legibility).
+
+   == MIGRATION NOTE (IMPLEMENTATION.md seam C / task order)
+   This file is the SOURCE the theme generator / component adapters read.
+   The glass tokens become part of the generated theme module ; the
+   ambient field + pointer sheen ship as a tiny runtime (a fixed layer +
+   a mousemove watcher that sets --px/--py CSS vars, reduced-motion-gated).
+   ===================================================================== */
+
+
+/* =====================================================================
+   A. GLASS MATERIAL TOKENS (theme-aware; extend the DESIGN layer)
+   ===================================================================== */
+:root,[data-theme="light"]{
+  --glass-blur:20px;
+  --glass-saturate:1.55;
+  --glass-bg:color-mix(in oklch,var(--surface) 55%,transparent);        /* rail / chrome */
+  --glass-bg-strong:color-mix(in oklch,var(--surface) 74%,transparent); /* cards-as-panes */
+  --glass-border:color-mix(in oklch,var(--hairline) 60%,transparent);
+  --glass-edge:inset 0 1px 0 0 rgba(255,255,255,.42);                   /* top specular */
+  --glass-edge-soft:inset 0 1px 0 0 rgba(255,255,255,.30);
+  --glass-shadow:0 18px 50px -12px rgba(33,31,26,.28),0 2px 10px rgba(33,31,26,.10);
+  --glass-amb-blur:90px;
+  --glass-amb-opacity:.22;
+}
+[data-theme="dark"]{
+  --glass-blur:20px;
+  --glass-saturate:1.35;                     /* cooler, less boost in dark */
+  --glass-bg:color-mix(in oklch,var(--night-900) 46%,transparent);
+  --glass-bg-strong:color-mix(in oklch,var(--night-900) 80%,transparent); /* ↑ …crisp numerals */
+  --glass-border:color-mix(in oklch,var(--night-800) 60%,transparent);
+  --glass-edge:inset 0 1px 0 0 rgba(255,255,255,.07);
+  --glass-edge-soft:inset 0 1px 0 0 rgba(255,255,255,.05);
+  --glass-shadow:0 18px 50px -12px rgba(0,0,0,.6),0 2px 10px rgba(0,0,0,.4);
+  --glass-amb-blur:90px;
+  --glass-amb-opacity:.16;
+}
+@supports not ((backdrop-filter:blur(1px)) or (-webkit-backdrop-filter:blur(1px))){
+  /* no glass support → fall back to near-solid surfaces (still elevated via edge/shadow) */
+  :root{--glass-bg-strong:color-mix(in oklch,var(--surface) 96%,transparent)
+        --glass-bg:color-mix(in oklch,var(--surface) 96%,transparent)}
+  [data-theme="dark"]{--glass-bg-strong:color-mix(in oklch,var(--night-900) 96%,transparent)
+        --glass-bg:color-mix(in oklch,var(--night-900) 96%,transparent)}
+}
+
+
+/* =====================================================================
+   B. AMBIENT FIELD — the reason glass can read.
+   A restful, very-muted drift of the three brand hues behind content.
+   On a flat page backdrop-filter has nothing to refract; this field gives
+   the material its colour-from-context (Apple's "color informed by
+   surroundings") while staying tasteful.
+   ===================================================================== */
+.material-ambient{position:fixed;inset:0;z-index:-2;overflow:hidden;
+  background:var(--background);transition:background var(--dur) var(--ease)}
+.material-ambient > i{position:absolute;border-radius:50%;will-change:transform;
+  filter:blur(var(--glass-amb-blur));mix-blend-mode:multiply;opacity:var(--glass-amb-opacity)}
+.material-ambient > i:nth-child(1){width:52vmax;height:52vmax;top:-18vmax;left:-12vmax;
+  background:radial-gradient(circle at center,var(--vermilion-400),transparent 65%)}
+.material-ambient > i:nth-child(2){width:46vmax;height:46vmax;bottom:-16vmax;right:-10vmax;
+  background:radial-gradient(circle at center,var(--ultramarine-400),transparent 65%)}
+.material-ambient > i:nth-child(3){width:30vmax;height:30vmax;top:34%;right:22%;
+  background:radial-gradient(circle at center,var(--sun-400),transparent 65%);opacity:calc(var(--glass-amb-opacity)*.64)}
+[data-theme="dark"] .material-ambient > i{mix-blend-mode:screen;opacity:var(--glass-amb-opacity)}
+@keyframes material-drift-a{0%,100%{transform:translate(0,0) scale(1)}50%{transform:translate(4vmax,2vmax) scale(1.08)}}
+@keyframes material-drift-b{0%,100%{transform:translate(0,0) scale(1)}50%{transform:translate(-3vmax,-2.5vmax) scale(1.06)}}
+.material-ambient > i:nth-child(1){animation:material-drift-a 26s ease-in-out infinite}
+.material-ambient > i:nth-child(2){animation:material-drift-b 32s ease-in-out infinite}
+.material-ambient > i:nth-child(3){animation:material-drift-a 20s ease-in-out infinite}
+
+
+/* =====================================================================
+   C. POINTER SHEEN — the "specular" response to movement (Apple's
+   "reacts to movement with specular highlights"). A faint radial light
+   trails the cursor; light theme carries a brand-heat hue (white-on-bone
+   is invisible), dark a cooler neutral light.
+   Set --px/--py from a mousemove watcher; disable under reduced motion.
+   ===================================================================== */
+.material-sheen{position:fixed;inset:0;z-index:-1;pointer-events:none;opacity:0;
+  transition:opacity .5s ease;
+  background:radial-gradient(circle 340px at var(--px,50%) var(--py,50%),
+    color-mix(in oklch,var(--vermilion-200) 34%,transparent),transparent 62%)}
+[data-theme="dark"] .material-sheen{background:radial-gradient(circle 340px at var(--px,50%) var(--py,50%),
+  color-mix(in oklch,var(--neutral-100) 10%,transparent),transparent 62%)}
+body.material-live .material-sheen{opacity:.6}
+
+
+/* =====================================================================
+   D. GLASS APPLICATIONS (restrained — glass = elevation)
+   ===================================================================== */
+
+/* --- D1. Floating rail: the hero glass moment --- */
+.material-live .rail{
+  background:var(--glass-bg);
+  -webkit-backdrop-filter:blur(var(--glass-blur)) saturate(var(--glass-saturate));
+  backdrop-filter:blur(var(--glass-blur)) saturate(var(--glass-saturate));
+  border-color:var(--glass-border);
+  box-shadow:var(--glass-edge),var(--glass-shadow)}
+/* nav hover / active read as frosted pills within the glass rail */
+.material-live .navitem:hover,.material-live .overview-item:hover,
+.material-live .navres-row:hover,.material-live .step:hover{background:var(--glass-bg-strong)}
+.material-live .navitem.active,.material-live .overview-item.active,
+.material-live .navres-row.active{
+  background:color-mix(in oklch,var(--surface) 46%,transparent);
+  -webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px)}
+
+/* --- D2. Cards & metrics: panes, not slabs. Slightly translucent, soft edge --- */
+.material-live .card,.material-live .metric,.material-live .job,
+.material-live .group-card,.material-live .component-block,.material-live .pill,
+.material-live .badge-pill,.material-live .ats-gauge::after{
+  background:var(--glass-bg-strong);
+  -webkit-backdrop-filter:blur(14px) saturate(var(--glass-saturate));
+  backdrop-filter:blur(14px) saturate(var(--glass-saturate));
+  border-color:var(--glass-border);
+  box-shadow:var(--glass-edge-soft)}
+/* keep the ONE loud voice metric a solid verb (Dry Poster rule: one fill per view) */
+.material-live .metric.voice{background:var(--voice-fill);backdrop-filter:none;
+  -webkit-backdrop-filter:none;border-color:var(--voice-fill);
+  box-shadow:0 2px 14px -2px color-mix(in oklch,var(--voice-fill) 55%,transparent)}
+
+/* --- D3. Modal: glass dialog over the ambient field --- */
+.material-live .modal{background:var(--glass-bg-strong);
+  -webkit-backdrop-filter:blur(26px) saturate(var(--glass-saturate));
+  backdrop-filter:blur(26px) saturate(var(--glass-saturate));
+  border-color:var(--glass-border);box-shadow:var(--glass-edge),var(--glass-shadow)}
+.material-live .modal-overlay{background:rgba(15,13,8,.35);
+  -webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px)}
+
+/* --- D4. Fly-out tips (popovers): light glass --- */
+.material-live .flytip{background:var(--glass-bg-strong);
+  -webkit-backdrop-filter:blur(18px) saturate(var(--glass-saturate));
+  backdrop-filter:blur(18px) saturate(var(--glass-saturate));
+  border-color:var(--glass-border);box-shadow:var(--glass-edge-soft),var(--glass-shadow)}
+
+/* --- D5. Inputs: faint frosted field; focus brightens --- */
+.material-live .field-input input,.material-live .field-input textarea,.material-live .field-input select{
+  background:color-mix(in oklch,var(--surface) 52%,transparent);
+  -webkit-backdrop-filter:blur(8px) saturate(1.2);backdrop-filter:blur(8px) saturate(1.2)}
+.material-live .field-input input:focus,.material-live .field-input textarea:focus,
+.material-live .field-input select:focus{
+  background:color-mix(in oklch,var(--surface) 68%,transparent)}
+
+/* --- D6. Collapse button & theme switch tint --- */
+.material-live .collapse-btn{background:var(--glass-bg);border-color:var(--glass-border);
+  -webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px)}
+.material-live .theme-switch{background:color-mix(in oklch,var(--surface) 32%,transparent);
+  backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px)}
+
+
+/* =====================================================================
+   E. LAYOUT — close the rail→content dead zone (applies in both modes).
+   Centering the content inside an already-padded wrapper strands a big
+   empty band beside the floating rail. Left-align with a read-width cap.
+   ===================================================================== */
+.pagewrap{padding-left:256px}
+.pagewrap.collapsed{padding-left:92px}
+.page{margin:0;max-width:none;padding-left:28px}
+.page-title,.page-sub{max-width:none}
+.section-desc{max-width:72ch}
+
+
+/* =====================================================================
+   F. BUTTON MICRO-INTERACTIONS — subtle, snappy (the "fluidity" of glass).
+   Hover: tiny growth (~1.035) on a fast ease-out = snappy.
+   Active: press-down shrink + a one-shot specular ripple expanding from
+   the centre, like liquid responding to the touch.
+   Disabled ignored. Reduced-motion kills the ripple + growth.
+   ===================================================================== */
+.material-live .btn{position:relative;overflow:hidden;
+  transition:transform .16s cubic-bezier(.3,.9,.4,1),background var(--dur-fast) var(--ease),
+             color var(--dur-fast) var(--ease),box-shadow var(--dur-fast) var(--ease)}
+.material-live .btn:not(:disabled):hover{transform:scale(1.035)}
+.material-live .btn:not(:disabled):active{transform:scale(.96)}
+.material-live .btn::after{content:"";position:absolute;left:50%;top:50%;width:120%;aspect-ratio:1;
+  transform:translate(-50%,-50%) scale(0);opacity:0;border-radius:50%;pointer-events:none;
+  will-change:transform,opacity;
+  background:radial-gradient(circle,color-mix(in oklch,currentColor 24%,transparent),transparent 62%)}
+.material-live .btn--voice::after,.material-live .btn--info::after,.material-live .btn--sun::after{
+  background:radial-gradient(circle,rgba(255,255,255,.55),transparent 62%)}
+.material-live .btn:not(:disabled):active::after{animation:material-bubble .4s ease-out forwards}
+@keyframes material-bubble{
+  0%{transform:translate(-50%,-50%) scale(0);opacity:.85}
+  100%{transform:translate(-50%,-50%) scale(1.9);opacity:0}}
+
+
+/* =====================================================================
+   G. RICH HOVER on interactive panes (mirrors the Dry job-card hover:
+   border firms up + a hint of background lift). Ported to group cards &
+   alerts for a consistent, tactile surface.
+   ===================================================================== */
+.material-live .job{transition:border-color var(--dur-fast) var(--ease),background var(--dur-fast) var(--ease)}
+.material-live .job:hover{border-color:var(--hairline-strong);background:color-mix(in oklch,var(--card) 90%,var(--surface-2))}
+.material-live .group-card{transition:border-color var(--dur-fast) var(--ease),background var(--dur-fast) var(--ease)}
+.material-live .group-card:hover{border-color:var(--hairline-strong);background:color-mix(in oklch,var(--card) 92%,var(--surface-2))}
+.material-live .alert{transition:border-color var(--dur-fast) var(--ease),box-shadow var(--dur-fast) var(--ease)}
+.material-live .alert:hover{border-color:var(--hairline-strong);box-shadow:var(--glass-edge-soft)}
+
+
+/* =====================================================================
+   H. A11Y / TONAL FIXES that landed during review.
+   H1 — `.ats-row.alert` collides with the global `.alert` component: it
+        picked up the component's 1px border/flex/padding and the border
+        resolved to currentColor (= --text = near-black) → the harsh black
+        ring around "Keywords". "alert" here only names a notify-coloured
+        bar, so strip the component chrome off that row.
+   H2 — Soften the *active* resume-step node: the base used border:--text
+        (near-black #191713). Drop to a firm quiet grey, keep the halo.
+   ===================================================================== */
+.material-live .ats-row.alert{display:grid;grid-template-columns:110px 1fr 30px;gap:10px;align-items:center;
+  padding:0;margin:0;border:none;border-radius:0;font-size:unset;background:none}
+.material-live .ats-row.alert .bar>span{background:var(--notify-fill)}
+.material-live .step .node.cur,.material-live .rail.collapsed .steps-strip .s.cur{border-color:var(--grey-600)}
+.material-live .rail.collapsed .steps-strip .s.cur{border-width:2px}
+
+
+/* =====================================================================
+   I. REDUCED MOTION — the whole material layer is a11y safe.
+   Ambient drift + sheen + button ripple all die; sheen must not be shown.
+   ===================================================================== */
+@media (prefers-reduced-motion: reduce){
+  .material-ambient > i{animation:none}
+  .material-sheen{display:none}
+  body.material-live .material-sheen{opacity:0}
+  .material-live .btn::after{display:none}
+  .material-live .btn:not(:disabled):hover{transform:none}
+  .material-live .btn:not(:disabled):active{transform:none}
+}</style>
+</head>
+<body class="material-live">
+<!-- LIQUID GLASS MATERIAL (leading): ambient field + pointer sheen -->
+<div class="material-ambient" aria-hidden="true"><i></i><i></i><i></i></div>
+<div class="material-sheen" aria-hidden="true"></div>
+
+
+<!-- ================= FLOATING RAIL ================= -->
+<nav class="rail" id="rail" role="navigation" aria-label="primary">
+  <div class="brand">
+    <svg class="brandmark" viewBox="0 0 512 512">
+      <g transform="rotate(45 256 256)">
+        <path fill="none" stroke="var(--voice)" stroke-width="60" stroke-linejoin="miter"
+          d="M88 224 L208 224 L268 164 L424 164 L424 308 L316 416 L196 416 L88 308 Z"/>
+      </g>
+    </svg>
+    <span class="brandword hide-c">call<b>back</b></span>
+  </div>
+
+  <div class="nav">
+    <div class="navlabel">Track</div>
+    <button class="navitem active" onclick="nav(this)">
+      <svg viewBox="0 0 24 24" stroke-width="2"><rect x="3" y="3" width="7" height="9" rx="1"/><rect x="14" y="3" width="7" height="5" rx="1"/><rect x="14" y="12" width="7" height="9" rx="1"/><rect x="3" y="16" width="7" height="5" rx="1"/></svg>
+      <span class="hide-c">Dashboard</span><span class="flytip"><span class="tip-title">Dashboard</span><div class="tip-file">/</div></span>
+    </button>
+    <button class="navitem" onclick="nav(this)">
+      <svg viewBox="0 0 24 24" stroke-width="2"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/></svg>
+      <span class="hide-c">Jobs</span><span class="flytip"><span class="tip-title">Jobs</span><div class="tip-file">/jobs</div></span>
+    </button>
+    <button class="navitem" onclick="nav(this)">
+      <svg viewBox="0 0 24 24" stroke-width="2"><path d="M12 2l2.4 6.9L22 8l-5.6 4.6L17.5 20 12 16.3 6.5 20l1.1-7.4L2 8l7.6-1.1z"/></svg>
+      <span class="hide-c">Applications</span><span class="flytip"><span class="tip-title">Applications</span><div class="tip-file">/applications</div></span>
+    </button>
+    <button class="navitem" onclick="nav(this)">
+      <svg viewBox="0 0 24 24" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+      <span class="hide-c">Profile</span><span class="flytip"><span class="tip-title">Profile</span><div class="tip-file">/profile</div></span>
+    </button>
+
+    <div class="navlabel">Resume</div>
+    <button class="overview-item active" onclick="ov(this)">
+      <svg viewBox="0 0 24 24" stroke-width="2"><rect x="3" y="3" width="7" height="9" rx="1"/><rect x="14" y="3" width="7" height="5" rx="1"/><rect x="14" y="12" width="7" height="9" rx="1"/><rect x="3" y="16" width="7" height="5" rx="1"/></svg>
+      <span class="hide-c">Resume overview</span>
+      <span class="flytip"><span class="tip-title">Resume overview</span><div class="tip-file">/resume</div></span>
+    </button>
+
+    <div class="res-divider" aria-hidden="true"></div>
+
+    <!-- RESUMES + steps -->
+    <div class="res-row">
+      <button class="navres-row open" onclick="resRow(this)">
+        <svg class="r-ic primary" viewBox="0 0 24 24" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg>
+        <span class="lbl hide-c">application-v2</span><span class="carrot hide-c">▸</span>
+        <span class="flytip"><span class="tip-title">application-v2</span><div class="tip-file">· primary · 5/8 steps</div></span>
+      </button>
+      <!-- collapsed numeric strip (numbers readable) -->
+      <div class="steps-strip">
+        <span class="s done">01</span><span class="s done">02</span><span class="s done">03</span><span class="s done">04</span>
+        <span class="s cur">05</span><span class="s">06</span><span class="s">07</span><span class="s">08</span>
+      </div>
+      <!-- expanded numbered steps + connector line -->
+      <div class="steps-wrap steps-strip-full">
+        <div class="steps-line"></div>
+        <button class="step"><span class="node done"></span><span class="num">01</span><span class="lbl">Details</span></button>
+        <button class="step"><span class="node done"></span><span class="num">02</span><span class="lbl">Contact</span></button>
+        <button class="step"><span class="node done"></span><span class="num">03</span><span class="lbl">Summary</span></button>
+        <button class="step"><span class="node done"></span><span class="num">04</span><span class="lbl">Experience</span></button>
+        <button class="step active"><span class="node cur"></span><span class="num">05</span><span class="lbl">Education</span></button>
+        <button class="step"><span class="node"></span><span class="num">06</span><span class="lbl">Skills</span></button>
+        <button class="step"><span class="node"></span><span class="num">07</span><span class="lbl">Certs</span></button>
+        <button class="step"><span class="node"></span><span class="num">08</span><span class="lbl">Finish</span></button>
+      </div>
+    </div>
+
+    <button class="navres-row" onclick="resRow(this)" style="margin-top:2px">
+      <svg class="r-ic" viewBox="0 0 24 24" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg>
+      <span class="lbl hide-c">warm-lead</span><span class="carrot hide-c">▸</span>
+      <span class="flytip"><span class="tip-title">warm-lead</span><div class="tip-file">0/8 steps</div></span>
+    </button>
+    <button class="navres-row" onclick="resRow(this)">
+      <svg class="r-ic" viewBox="0 0 24 24" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg>
+      <span class="lbl hide-c">walmart-app</span><span class="carrot hide-c">▸</span>
+      <span class="flytip"><span class="tip-title">walmart-app</span><div class="tip-file">2/8 steps</div></span>
+    </button>
+  </div>
+
+  <div class="rail-foot">
+    <div class="theme-switch" id="themeSwitch"></div>
+    <button class="collapse-btn" onclick="toggleRail()">
+      <svg class="chev-collapse" viewBox="0 0 24 24" stroke-width="2.4"><path d="M9 6l6 6-6 6"/></svg>
+      <svg class="chev-expand" viewBox="0 0 24 24" stroke-width="2.4"><path d="M15 6l-6 6 6 6"/></svg>
+      <span class="hide-c">Collapse</span>
+    </button>
+  </div>
+</nav>
+
+<!-- ================= PAGE (expandable fluid wrapper) ================= -->
+<div class="pagewrap" id="pagewrap">
+  <main class="page">
+
+    <div class="eyebrow">overview · track</div>
+    <h1 class="page-title">Dashboard</h1>
+    <p class="page-sub">The honest score, never a fake one. <span class="mono">Get the call back.</span></p>
+
+    <!-- METRICS: voice / info / plain / sun — De Stijl balance -->
+    <div class="grid grid-metrics">
+      <div class="metric voice"><div class="m-top"><span class="m-label">live jobs</span><span class="m-glyph"><svg viewBox="0 0 24 24" stroke-width="2"><rect x="3" y="3" width="7" height="9" rx="1"/><rect x="14" y="3" width="7" height="5" rx="1"/><rect x="14" y="12" width="7" height="9" rx="1"/><rect x="3" y="16" width="7" height="5" rx="1"/></svg></span></div><div class="m-value">128</div><div class="m-delta"><b>↑ 12</b> this week</div></div>
+      <div class="metric info"><div class="m-top"><span class="m-label">applications</span><span class="m-glyph"><svg viewBox="0 0 24 24" stroke-width="2"><path d="M12 2l2.4 6.9L22 8l-5.6 4.6L17.5 20 12 16.3 6.5 20l1.1-7.4L2 8l7.6-1.1z"/></svg></span></div><div class="m-value">53</div><div class="m-delta">31 submitted</div></div>
+      <div class="metric plain"><div class="m-top"><span class="m-label">interviews</span><span class="m-glyph"><svg viewBox="0 0 24 24" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg></span></div><div class="m-value">09</div><div class="m-delta">2 this week</div></div>
+      <div class="metric plain"><div class="m-top"><span class="m-label">offers</span><span class="m-glyph"><svg viewBox="0 0 24 24" stroke-width="2"><path d="M22 7l-8.5 8.5-5-5L2 17"/><path d="M16 7h6v6"/></svg></span></div><div class="m-value">03</div><div class="m-delta"><b>+1</b> this month</div></div>
+    </div>
+
+    <!-- JOB CARD — Apply = voice, Save = info (both visible), color-balanced -->
+    <div class="section-title">Job card <span class="mono">components/jobs/JobCard.tsx</span></div>
+    <div class="job">
+      <div class="job-top">
+        <div style="flex:1">
+          <div class="job-title">Senior Frontend Engineer — Design Systems</div>
+          <div class="job-company"><svg viewBox="0 0 24 24" stroke-width="2"><rect x="2" y="6" width="20" height="14" rx="2"/><path d="M2 9h20"/></svg>Chalk · San Francisco</div>
+          <div class="meta">
+            <span><svg viewBox="0 0 24 24" stroke-width="2"><circle cx="12" cy="7" r="4"/><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/></svg>Remote</span>
+            <span><svg viewBox="0 0 24 24" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>2 days ago</span>
+            <span><svg viewBox="0 0 24 24" stroke-width="2"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>$170k–$210k</span>
+          </div>
+          <div class="tags"><span class="tag">TYPESCRIPT</span><span class="tag">REACT</span><span class="tag">SHADCN</span><span class="tag">+3</span></div>
+        </div>
+        <div style="display:flex;flex-direction:column;align-items:flex-end;gap:8px"><span class="score">94</span><span class="chip chip--voice" style="font-weight:700">matched</span></div>
+      </div>
+      <div class="job-actions">
+        <div class="left" role="group" aria-label="job actions">
+          <button class="btn btn--outline btn--sm" aria-label="Save this job"><svg viewBox="0 0 24 24" stroke-width="2"><path d="M12 3v14M5 8l7-5 7 5M19 21H5"/></svg>Save</button>
+          <button class="btn btn--voice btn--sm" aria-label="Apply to this job"><svg viewBox="0 0 24 24" stroke-width="2.4"><path d="M12 5v14M5 12h14"/></svg>Apply</button>
+        </div>
+        <a href="#" class="src"><svg viewBox="0 0 24 24" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><path d="M15 3h6v6"/></svg>View source</a>
+      </div>
+    </div>
+
+    <!-- =====================================================================
+         COMPONENT TAXONOMY
+         ===================================================================== -->
+    <div class="section-title">Component taxonomy <span class="mono">primitive kit — components/ui/</span></div>
+    <p class="section-desc">shadcn `base-nova` on Base UI + bespoke composites, re-themed under the Dry Poster rules. All self-contained; no colors outside the ramps.</p>
+
+    <!-- Actions -->
+    <div class="section-title" style="margin-top:16px">Actions <span class="mono">ui/button.tsx — voice · info · sun · outline · ghost</span></div>
+    <div class="taxo"><div class="component-block">
+      <div class="c-name">Button <span class="file">voice / info / sun / outline / ghost / sm / icon / disabled · block · group</span></div>
+      <div class="c-demo">
+        <button class="btn btn--voice"><svg viewBox="0 0 24 24" stroke-width="2.4"><path d="M12 5v14M5 12h14"/></svg>Create resume</button>
+        <button class="btn btn--info"><svg viewBox="0 0 24 24" stroke-width="2.4"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4-4"/></svg>View ATS report</button>
+        <button class="btn btn--sun">Auto-fit</button>
+        <button class="btn btn--outline">Save</button>
+        <button class="btn btn--ghost">Ghost</button>
+        <button class="btn btn--voice btn--sm">sm</button>
+        <button class="btn btn--icon btn--outline"><svg viewBox="0 0 24 24" stroke-width="2"><path d="M6 3l12 9-12 9V3z"/></svg></button>
+        <button class="btn btn--info" disabled>disabled</button>
+      </div>
+      <div class="c-name" style="margin-top:16px">Full-width group <span class="file">.btn-group</span></div>
+      <div class="c-demo" style="width:100%;flex-direction:column;gap:8px">
+        <div class="btn-group"><button class="btn btn--voice"><svg viewBox="0 0 24 24" stroke-width="2.4"><path d="M12 5v14M5 12h14"/></svg>Save</button><button class="btn btn--info">Cancel</button><button class="btn btn--outline">Discard</button></div>
+      </div>
+    </div></div>
+
+    <!-- ATS status + group cards (the real forms components) -->
+    <div class="section-title" style="margin-top:24px">Resume Studio fields <span class="mono">forms/field.tsx · AtsStatusButton · editor-sections GroupCard</span></div>
+    <div class="taxo taxo-2">
+      <div class="component-block"><div class="c-name">ATS inline addon <span class="file">AtsStatusButton — per-field advisory</span></div>
+        <div class="c-demo" style="flex-direction:column;align-items:stretch;gap:10px">
+          <div class="field">
+            <label>Professional summary</label>
+            <div class="field-input align-top">
+              <textarea rows="3">Drove the design-system token migration, cutting visual bugs by 40%.</textarea>
+              <div class="ats-addon ats-addon--advice"><svg viewBox="0 0 24 24" stroke-width="2.2"><path d="M12 3l1.9 5.8L20 9l-4.9 3.7L16.4 19 12 15.3 7.6 19l1.3-6.3L4 9l6.1-.2z"/></svg>2</div>
+            </div>
+            <div class="hint">advisory · derived from the draft, never blocks save</div>
+          </div>
+          <div class="field">
+            <label>Role title <span class="mono" style="color:var(--muted)">(enforced)</span></label>
+            <div class="field-input">
+              <input value="Senior Frontend Engineer">
+              <span class="ats-addon ats-addon--pass"><svg viewBox="0 0 24 24" stroke-width="3"><path d="M20 6L9 17l-5-5"/></svg></span>
+            </div>
+            <div class="hint err">min 30 chars — enforced</div>
+          </div>
+          <div class="field">
+            <label>Company</label>
+            <div class="field-input">
+              <input value="Chalk">
+              <span class="ats-addon ats-addon--ok"><svg viewBox="0 0 24 24" stroke-width="3"><circle cx="12" cy="12" r="9"/></svg></span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="component-block"><div class="c-name">Group card <span class="file">GripVertical drag · collapse caret · close ×</span></div>
+        <div class="c-demo" style="flex-direction:column;align-items:stretch;gap:8px">
+          <div class="group-card open">
+            <div class="g-head" onclick="this.parentElement.classList.toggle('open')">
+              <span class="g-grip"><svg viewBox="0 0 24 24" stroke-width="2"><circle cx="9" cy="6" r="1" fill="currentColor"/><circle cx="15" cy="6" r="1" fill="currentColor"/><circle cx="9" cy="12" r="1" fill="currentColor"/><circle cx="15" cy="12" r="1" fill="currentColor"/><circle cx="9" cy="18" r="1" fill="currentColor"/><circle cx="15" cy="18" r="1" fill="currentColor"/></svg></span>
+              <div class="g-title"><div class="t">Senior Frontend Engineer</div><div class="s">Chalk · 2019–2024</div></div>
+              <span class="g-close" onclick="event.stopPropagation()" title="Delete">×</span>
+              <span class="g-caret open"><svg viewBox="0 0 24 24" stroke-width="2.4"><path d="M9 6l6 6-6 6"/></svg></span>
+            </div>
+            <div class="g-body">
+              <div class="row row-2">
+                <div class="field"><label>Role</label><div class="field-input"><input value="Senior Frontend Engineer"></div></div>
+                <div class="field"><label>Company</label><div class="field-input"><input value="Chalk"></div></div>
+              </div>
+              <div class="row row-2">
+                <div class="field"><label>Dates</label><div class="field-input"><input value="2019–2024"></div></div>
+                <div class="field"><label>Location</label><div class="field-input"><input value="Amsterdam"></div></div>
+              </div>
+              <div class="field"><label>Bullets (one per line)</label><div class="field-input align-top"><textarea rows="3">Shipped the design-system token layer, cutting visual bugs by 40%.</textarea></div></div>
+            </div>
+          </div>
+
+          <div class="group-card rounded-lg">
+            <div class="g-head" onclick="this.parentElement.classList.toggle('open')">
+              <span class="g-grip"><svg viewBox="0 0 24 24" stroke-width="2"><circle cx="9" cy="6" r="1" fill="currentColor"/><circle cx="15" cy="6" r="1" fill="currentColor"/><circle cx="9" cy="12" r="1" fill="currentColor"/><circle cx="15" cy="12" r="1" fill="currentColor"/><circle cx="9" cy="18" r="1" fill="currentColor"/><circle cx="15" cy="18" r="1" fill="currentColor"/></svg></span>
+              <div class="g-title"><div class="t">MSc Computer Science</div><div class="s">TU Delft · 2013–2017</div></div>
+              <span class="g-close" onclick="event.stopPropagation()">×</span>
+              <span class="g-caret"><svg viewBox="0 0 24 24" stroke-width="2.4"><path d="M9 6l6 6-6 6"/></svg></span>
+            </div>
+          </div>
+
+          <div style="display:flex;gap:8px"><button class="btn btn--outline btn--sm"><svg viewBox="0 0 24 24" stroke-width="2.4"><path d="M12 5v14M5 12h14"/></svg>Add experience</button><button class="btn btn--outline btn--sm">↑ Move</button></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Select with hugging chevron -->
+    <div class="section-title" style="margin-top:24px">Form inputs <span class="mono">select (chevron hugs text) · switch · textarea · progress</span></div>
+    <div class="taxo taxo-2">
+      <div class="component-block"><div class="c-name">Select / fields</div>
+        <div style="display:grid;gap:12px;max-width:380px">
+          <div class="field"><label>Typeface</label>
+            <div class="field-input">
+              <select><option>Inter (Sans)</option><option>Serif</option><option>Mono</option></select>
+              <span class="caret"><svg viewBox="0 0 24 24" stroke-width="2.4"><path d="M6 9l6 6 6-6"/></svg></span>
+            </div>
+          </div>
+          <div class="field"><label>Section</label>
+            <div class="field-input">
+              <select><option>01 · Details</option><option>02 · Contact</option><option>03 · Summary</option></select>
+              <span class="caret"><svg viewBox="0 0 24 24" stroke-width="2.4"><path d="M6 9l6 6 6-6"/></svg></span>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="component-block"><div class="c-name">Switch · Progress · Avatar · Tooltip</div>
+        <div class="c-demo" style="flex-direction:column;align-items:flex-start;gap:12px">
+          <div style="display:flex;align-items:center;gap:10px"><span class="switch on" onclick="this.classList.toggle('on')"></span><span style="font-size:13px">Remote only</span></div>
+          <div style="display:flex;align-items:center;gap:10px"><span class="switch" onclick="this.classList.toggle('on')"></span><span style="font-size:13px">Include certs</span></div>
+          <div style="display:flex;align-items:center;gap:10px;width:240px"><span class="progress"><span style="width:72%"></span></span><span class="mono" style="font-size:11px;color:var(--muted)">parse 72%</span></div>
+          <div style="display:flex;align-items:center;gap:10px"><span class="avatar">AR</span><span class="avatar" style="background:var(--info-fill);color:var(--on-info)">C</span><span class="tooltip">ATS score 74</span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Feedback -->
+    <div class="section-title" style="margin-top:24px">Feedback &amp; status <span class="mono">alert · StatusBadge · ScoreBadge</span></div>
+    <div class="taxo taxo-2">
+      <div class="component-block"><div class="c-name">Alert <span class="file">ui/alert + ActionAlert.tsx — action center, impactful</span></div>
+        <div class="c-demo" style="flex-direction:column;align-items:stretch;gap:8px">
+          <div class="alert alert--info" role="alert"><span class="a-ic"><svg viewBox="0 0 24 24" stroke-width="2.4"><circle cx="12" cy="12" r="9"/><path d="M12 7v6M12 16.5h.01"/></svg></span><div class="a-body"><b>Watchlist refreshed</b>14 new roles matched your profile.</div><span class="a-act"><button class="btn btn--info btn--sm">Review</button></span></div>
+          <div class="alert alert--warn" role="alert"><span class="a-ic"><svg viewBox="0 0 24 24" stroke-width="2.4"><path d="M12 3l10 18H2z"/><path d="M12 10v4M12 17h.01"/></svg></span><div class="a-body"><b>2 advisory suggestions</b>3 highlight keywords under-utilised.</div><span class="a-act"><button class="btn btn--outline btn--sm">Improve</button></span></div>
+          <div class="alert alert--success" role="alert"><span class="a-ic"><svg viewBox="0 0 24 24" stroke-width="2.4"><path d="M20 6L9 17l-5-5"/></svg></span><div class="a-body"><b>Looks complete</b>0 issues across this section.</div><span class="a-act"><button class="btn btn--outline btn--sm">Run checks</button></span></div>
+        </div>
+      </div>
+      <div class="component-block"><div class="c-name">State chips + score <span class="file">ui/badge · StatusBadge · ScoreBadge</span></div>
+        <div class="c-demo">
+          <span class="chip chip--success">accepted</span>
+          <span class="chip chip--info">interview</span>
+          <span class="chip chip--warn">pending</span>
+          <span class="chip chip--danger">rejected</span>
+          <span class="chip chip--voice">matched 82%</span>
+          <span class="chip chip--grey">archived</span>
+          <span class="badge-pill voice">primary</span>
+          <span class="badge-pill info">info</span>
+          <span class="score">92</span><span class="score">68</span><span class="score">41</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- ATS score + modal -->
+    <div class="section-title" style="margin-top:24px">ATS Score <span class="mono">studio right rail · ScoreDial + report</span></div>
+    <div class="taxo"><div class="component-block">
+      <div class="ats-card">
+        <div class="ats-gauge"><div class="val"><b>74</b><span>overall</span></div></div>
+        <div class="ats-rows">
+          <div class="ats-row"><span class="k">Parseability</span><span class="bar"><span style="width:88%"></span></span><span class="v">88</span></div>
+          <div class="ats-row"><span class="k">Contact</span><span class="bar"><span style="width:100%"></span></span><span class="v">100</span></div>
+          <div class="ats-row"><span class="k">Structure</span><span class="bar"><span style="width:72%"></span></span><span class="v">72</span></div>
+          <div class="ats-row alert"><span class="k">Keywords</span><span class="bar"><span style="width:46%"></span></span><span class="v" style="color:var(--warn)">46</span></div>
+        </div>
+      </div>
+      <div style="display:flex;gap:8px;margin-top:14px"><button class="btn btn--info"><svg viewBox="0 0 24 24" stroke-width="2.4"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4-4"/></svg>View ATS report</button><button class="btn btn--voice" onclick="openModal()">Run checks</button></div>
+    </div></div>
+
+    <!-- Data -->
+    <div class="section-title" style="margin-top:24px">Data <span class="mono">table · tabs · skeleton · empty</span></div>
+    <div class="taxo taxo-3">
+      <div class="component-block" style="grid-column:1/-1"><div class="c-name">Table <span class="file">ui/table.tsx</span></div>
+        <div style="padding:0 6px"><table>
+          <thead><tr><th>company</th><th>role</th><th>match</th><th>status</th><th>updated</th></tr></thead>
+          <tbody>
+            <tr><td><b>Chalk</b><div class="td-sub">San Francisco</div></td><td class="td-title">Frontend Engineer</td><td><span class="score">94</span></td><td><span class="chip chip--info">screening</span></td><td class="td-sub">2d</td></tr>
+            <tr><td><b>ChipAgents</b><div class="td-sub">Remote</div></td><td class="td-title">Staff Engineer</td><td><span class="score">67</span></td><td><span class="chip chip--voice">matched</span></td><td class="td-sub">5d</td></tr>
+            <tr><td><b>Beacon AI</b><div class="td-sub">Remote (US)</div></td><td class="td-title">Sr. Eng — Infra</td><td><span class="score">41</span></td><td><span class="chip chip--warn">pending</span></td><td class="td-sub">1w</td></tr>
+          </tbody>
+        </table></div>
+      </div>
+      <div class="component-block"><div class="c-name">Tabs</div>
+        <div style="display:flex;gap:2px;border-bottom:1px solid var(--hairline)"><button style="padding:8px 12px;font-size:13px;font-weight:600;color:var(--info);border:none;background:none;border-bottom:2px solid var(--info)">Overview</button><button style="padding:8px 12px;font-size:13px;color:var(--muted);border:none;background:none">Activity</button></div>
+      </div>
+      <div class="component-block" style="grid-column:1/-1"><div class="c-name">Empty / Loading / Error — full state coverage <span class="file">every composite needs all three</span></div>
+        <div style="display:grid;gap:10px;grid-template-columns:repeat(auto-fit,minmax(240px,1fr))">
+          <!-- loading -->
+          <div style="border:1px solid var(--hairline);border-radius:10px;padding:12px">
+            <div class="mono" style="font-size:10px;color:var(--muted);margin-bottom:10px">LOADING · skeleton</div>
+            <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px"><span class="skel" style="width:26px;height:26px;border-radius:6px"></span><span style="flex:1"><span class="skel" style="width:70%"></span></span></div>
+            <div style="display:flex;gap:8px;align-items:center"><span class="skel" style="width:60%"></span><span class="skel" style="width:30%"></span></div>
+            <div style="margin-top:10px;display:flex;gap:8px"><span class="skel" style="width:60px;height:26px;border-radius:6px"></span><span class="skel" style="width:60px;height:26px;border-radius:6px"></span></div>
+          </div>
+          <!-- empty -->
+          <div style="border:1px solid var(--hairline);border-radius:10px;padding:12px">
+            <div class="mono" style="font-size:10px;color:var(--muted);margin-bottom:8px">EMPTY · clear call to action</div>
+            <div class="empty-state" style="padding:20px 12px"><div class="ic"><svg viewBox="0 0 24 24" stroke-width="2"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/></svg></div><h4>No jobs matched</h4><p>Try adjusting filters, or search again.</p><div class="btn-group" style="max-width:240px"><button class="btn btn--voice btn--sm">Search again</button><button class="btn btn--outline btn--sm">Clear</button></div></div>
+          </div>
+          <!-- error -->
+          <div style="border:1px solid var(--hairline);border-radius:10px;padding:12px">
+            <div class="mono" style="font-size:10px;color:var(--muted);margin-bottom:10px">ERROR · recoverable, retry</div>
+            <div class="alert alert--danger"><span class="a-ic"><svg viewBox="0 0 24 24" stroke-width="2.4"><circle cx="12" cy="12" r="9"/><path d="M12 7v6M12 16.5h.01"/></svg></span><div class="a-body"><b>Couldn't load jobs</b>Network error — 4 sources unreachable.</div><span class="a-act"><button class="btn btn--sm" style="background:var(--danger);color:#fff">Retry</button></span></div>
+          </div>
+          <div style="border:1px solid var(--hairline);border-radius:10px;padding:12px">
+            <div class="mono" style="font-size:10px;color:var(--muted);margin-bottom:10px">ERRATA · degraded success (persistent)</div>
+            <div class="alert alert--warn"><span class="a-ic"><svg viewBox="0 0 24 24" stroke-width="2.4"><path d="M12 3l10 18H2z"/><path d="M12 10v4M12 17h.01"/></svg></span><div class="a-body"><b>Partial match</b>3 of 7 sources returned jobs. <span class="mono" style="font-size:10px">2 err</span></div><span class="a-act"><button class="btn btn--sm" style="background:var(--notify-fill);color:var(--on-sun)">View errors</button></span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="legend">
+      <span><b style="color:var(--voice-fill)">■</b> vermilion — voice · CTA</span>
+      <span><b style="color:var(--info-fill)">■</b> ultramarine — info · reporting · saved</span>
+      <span><b style="color:var(--notify-fill)">■</b> sun — notify · sparse</span>
+      <span><b style="color:var(--grey-500)">■</b> grey — passive</span>
+      <span>success <b style="color:var(--success)">■</b> Dutch-field green</span>
+    </div>
+    <p style="font-family:var(--font-mono);font-size:12px;color:var(--muted);margin-top:8px">
+      "Dry Poster" v0.5 — De Stijl color breathe. Fluid page expand on collapse · explicit ‹/› chevrons ·
+      unified collapsed hover tips · real ATS + group-card components · custom select chevron. Toggle Dark / 〈.
+    </p>
+  </main>
+</div>
+
+<!-- MODAL -->
+<div class="modal-overlay" id="modal" onclick="if(event.target===this)closeModal()">
+  <div class="modal">
+    <div class="modal-head"><h3>Discard this resume?</h3><button class="close" onclick="closeModal()">×</button></div>
+    <div class="modal-body"><p style="font-size:13.5px;color:var(--muted)">Your changes in <b style="color:var(--text)">Education</b> aren't saved. Going back will lose them.</p></div>
+    <div class="modal-foot"><button class="btn btn--ghost" onclick="closeModal()">Keep editing</button><button class="btn btn--voice" onclick="closeModal()">Discard</button></div>
+  </div>
+</div>
+
+<script>
+(function(){
+  const ts=document.getElementById('themeSwitch');
+  ts.innerHTML='<button data-t="light" class="on"><svg viewBox="0 0 24 24" stroke-width="2"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg></button>'+
+    '<button data-t="dark"><svg viewBox="0 0 24 24" stroke-width="2"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg></button>'+
+    '<button data-t="system">Sys</button>';
+  ts.querySelectorAll('button').forEach(b=>b.addEventListener('click',()=>{
+    const root=document.documentElement;
+    if(b.dataset.t==='system'){const d=matchMedia('(prefers-color-scheme: dark)').matches;root.setAttribute('data-theme',d?'dark':'light')}
+    else root.setAttribute('data-theme',b.dataset.t);
+    ts.querySelectorAll('button').forEach(x=>x.classList.toggle('on',x===b));
+  }));
+})();
+// collapse: toggle BOTH the rail and the page wrapper for fluid layout
+function toggleRail(){
+  document.getElementById('rail').classList.toggle('collapsed');
+  document.getElementById('pagewrap').classList.toggle('collapsed');
+}
+function nav(el){document.querySelectorAll('.navitem').forEach(n=>n.classList.remove('active'));el.classList.add('active')}
+function ov(el){document.querySelectorAll('.overview-item').forEach(n=>n.classList.remove('active'));el.classList.add('active')}
+function resRow(el){el.classList.toggle('open');document.querySelectorAll('.navres-row').forEach(n=>n.classList.remove('active'));el.classList.add('active')}
+function openModal(){document.getElementById('modal').classList.add('open')}
+function closeModal(){document.getElementById('modal').classList.remove('open')}
+</script>
+
+<!-- LIQUID GLASS material runtime: sheen pos + Dry/Liquid review toggle.
+     Glass is the LEADING default (body.material-live); "Dry" is for
+     comparison only and is not a production mode. -->
+<div class="lg-toggle" role="group" aria-label="Material review" id="lgToggle">
+  <button data-mode="glass" class="on">Liquid</button><button data-mode="dry">Dry</button>
+</div>
+<script>
+(function(){
+  var body=document.body;
+  var toggle=document.getElementById('lgToggle');
+  toggle.querySelectorAll('button').forEach(function(b){
+    b.addEventListener('click',function(){
+      body.classList.toggle('material-live', b.dataset.mode==='glass');
+      toggle.querySelectorAll('button').forEach(function(x){x.classList.toggle('on',x===b);});
+    });
+  });
+  document.addEventListener('mousemove',function(e){
+    document.documentElement.style.setProperty('--px',e.clientX+'px');
+    document.documentElement.style.setProperty('--py',e.clientY+'px');
+  },{passive:true});
+})();
+</script>
+
+</body>
+</html>

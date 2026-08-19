@@ -1,0 +1,449 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Callback — Logo Explorations · Round 09</title>
+<style>
+  html[data-theme="light"]{
+    --bg:#F4EFE4; --surface:#FFFFFF; --surface2:#FAF6EC; --text:#17171C; --muted:#6B675C;
+    --border:#E2DBC9; --accent:#D23A1E; --chip:#17171C; --chip-text:#FAF6EC;
+  }
+  html[data-theme="dark"]{
+    --bg:#121216; --surface:#1B1B21; --surface2:#22222A; --text:#F1EDE2; --muted:#9B968A;
+    --border:#2E2E38; --accent:#F0512F; --chip:#FBCF3C; --chip-text:#17171C;
+  }
+  *{box-sizing:border-box; margin:0}
+  body{font-family:"Segoe UI", system-ui, -apple-system, sans-serif; background:var(--bg); color:var(--text); transition:background .25s, color .25s}
+  header.top{position:sticky; top:0; z-index:10; display:flex; align-items:center; gap:16px; padding:18px 28px; background:var(--surface); border-bottom:1px solid var(--border); flex-wrap:wrap}
+  .wordmark{font-weight:800; font-size:26px; letter-spacing:-0.04em; text-transform:lowercase}
+  .wordmark b{color:var(--accent)}
+  .subtitle{color:var(--muted); font-size:13px}
+  .spacer{flex:1}
+  .theme-toggle{display:flex; border:1px solid var(--border); border-radius:999px; overflow:hidden}
+  .theme-toggle button{border:0; background:transparent; color:var(--muted); padding:8px 16px; cursor:pointer; font-size:13px; font-weight:600}
+  .theme-toggle button[aria-pressed="true"]{background:var(--chip); color:var(--chip-text)}
+  .palette{display:flex; gap:14px; align-items:center; padding:14px 28px; border-bottom:1px solid var(--border); background:var(--surface); flex-wrap:wrap}
+  .palette .label{font-size:12px; font-weight:700; text-transform:uppercase; letter-spacing:.12em; color:var(--muted); margin-right:2px}
+  .swatch{display:flex; align-items:center; gap:7px; font-size:12px; color:var(--muted)}
+  .swatch i{width:22px; height:22px; border-radius:6px; display:inline-block; border:1px solid rgba(0,0,0,.12)}
+  main{max-width:1460px; margin:0 auto; padding:28px}
+  .intro{margin-bottom:24px; color:var(--muted); font-size:14px; line-height:1.55; max-width:860px}
+  .intro strong{color:var(--text)}
+  .grid{display:grid; grid-template-columns:repeat(auto-fill, minmax(430px, 1fr)); gap:22px; padding-bottom:130px}
+  .card{background:var(--surface); border:1px solid var(--border); border-radius:20px; padding:20px; display:flex; flex-direction:column; gap:16px; transition:border-color .2s, box-shadow .2s}
+  .card.locked{border-color:#2C5FD3; box-shadow:0 0 0 3px color-mix(in srgb, #2C5FD3 22%, transparent)}
+  .card.locked .code{background:#2C5FD3; color:#FAF6EC}
+  .card.shortlisted{border-color:var(--accent); box-shadow:0 0 0 3px color-mix(in srgb, var(--accent) 25%, transparent)}
+  .card-head{display:flex; align-items:flex-start; gap:12px}
+  .code{background:var(--chip); color:var(--chip-text); font-weight:800; font-size:13px; border-radius:8px; padding:5px 9px; flex:none}
+  .head-text{flex:1; min-width:0}
+  .head-text h3{font-size:18px; letter-spacing:-0.02em}
+  .tag{font-size:13px; color:var(--muted); margin-top:2px}
+  .shortlist-btn{border:1px solid var(--border); background:var(--surface2); color:var(--text); border-radius:999px; padding:7px 13px; font-size:13px; font-weight:600; cursor:pointer; flex:none}
+  .card.shortlisted .shortlist-btn{background:var(--accent); border-color:var(--accent); color:#fff}
+  .duo{display:grid; grid-template-columns:1fr 1fr; gap:12px}
+  .duo .pane{display:grid; place-items:center; border-radius:14px; padding:22px 10px}
+  .pane-light{background:#FAF6EC; border:1px solid #E2DBC9}
+  .pane-dark{background:#141419; border:1px solid #2E2E38}
+  .pane img{width:170px; height:170px}
+  .pane .plabel{display:block; text-align:center; font-size:11px; margin-top:8px}
+  .pane-light .plabel{color:#6B675C}
+  .pane-dark .plabel{color:#8B877B}
+  .sizes{display:grid; grid-template-columns:1fr 1fr; gap:12px}
+  .strip{display:flex; gap:16px; align-items:flex-end; justify-content:center; border-radius:12px; padding:12px 10px}
+  .strip-light{background:#FAF6EC; border:1px solid #E2DBC9}
+  .strip-dark{background:#141419; border:1px solid #2E2E38}
+  .sizebox{display:flex; flex-direction:column; align-items:center; gap:5px}
+  .sizebox img{display:block}
+  .sizebox span{font-size:10px}
+  .strip-light span{color:#6B675C}
+  .strip-dark span{color:#8B877B}
+  textarea.notes{width:100%; min-height:64px; resize:vertical; border:1px solid var(--border); background:var(--surface2); color:var(--text); border-radius:12px; padding:10px 12px; font:inherit; font-size:13px}
+  textarea.notes:focus{outline:2px solid var(--accent); border-color:transparent}
+  .reviewbar{position:fixed; left:50%; transform:translateX(-50%); bottom:20px; display:flex; align-items:center; gap:14px; background:var(--surface); border:1px solid var(--border); border-radius:999px; padding:10px 18px; box-shadow:0 10px 30px rgba(0,0,0,.18); z-index:20}
+  .reviewbar .count{font-size:13px; font-weight:700}
+  .reviewbar button.copy{border:0; background:var(--accent); color:#fff; font-weight:700; font-size:13px; border-radius:999px; padding:9px 16px; cursor:pointer}
+  .toast{position:fixed; bottom:86px; left:50%; transform:translateX(-50%); background:var(--chip); color:var(--chip-text); font-size:13px; font-weight:600; padding:9px 16px; border-radius:999px; opacity:0; transition:opacity .3s; pointer-events:none; z-index:21}
+  .toast.show{opacity:1}
+</style>
+</head>
+<body>
+<header class="top">
+  <div class="wordmark">call<b>back</b></div>
+  <div class="subtitle">logo explorations · round 09 · depth + phi</div>
+  <div class="spacer"></div>
+  <div class="theme-toggle" role="group" aria-label="Theme">
+    <button id="t-light" onclick="setTheme('light')" aria-pressed="true">Light</button>
+    <button id="t-dark" onclick="setTheme('dark')" aria-pressed="false">Dark</button>
+  </div>
+</header>
+<div class="palette">
+  <span class="label">Palette (locked)</span>
+  <span class="swatch"><i style="background:#E8482B"></i>Vermilion #E8482B</span>
+  <span class="swatch"><i style="background:#2C5FD3"></i>Ultramarine #2C5FD3</span>
+  <span class="swatch"><i style="background:#FBCF3C"></i>Sun #FBCF3C</span>
+  <span class="swatch"><i style="background:#17171C"></i>Ink #17171C</span>
+  <span class="swatch"><i style="background:#FAF6EC; border-color:#C9C2B0"></i>Bone #FAF6EC</span>
+</div>
+<main>
+  <p class="intro">Round 09: four keepers locked. Eight abstract-CB studies on <strong>depth and φ</strong>: hard-shadow extrusion (T1, T5), phi-nested tunnel (T2), one-point perspective doorway (T3), gestalt closure (T4), receding-bowl B with top bowl = bottom / φ (T6), sheared depth planes (T7), golden-rectangle C:B = 1 : 1/φ (T8). Symmetry is kept except where broken on purpose (T6, T7). Judge at 32px and both surfaces; star, note, copy the summary back.</p>
+  <div class="grid">
+    <article class="card locked" id="card-g8-poly-e" data-key="g8-poly-e" data-name="Poly-E">
+      <header class="card-head">
+        <span class="code">G8</span>
+        <div class="head-text"><h3>Poly-E</h3><p class="tag">LOCKED keeper — closed octagon ring + wave bar</p></div>
+        <button class="shortlist-btn" id="btn-g8-poly-e" onclick="toggleShortlist('g8-poly-e')">&#9734; Shortlist</button>
+      </header>
+      <div class="duo">
+        <div class="pane pane-light"><div><img src="callback-logo/g8-poly-e.svg" alt="Poly-E on light"><span class="plabel">on light</span></div></div>
+        <div class="pane pane-dark"><div><img src="callback-logo/g8-poly-e.svg" alt="Poly-E on dark"><span class="plabel">on dark</span></div></div>
+      </div>
+      <div class="sizes">
+        <div class="strip strip-light">
+          <div class="sizebox"><img src="callback-logo/g8-poly-e.svg" width="128" height="128" alt=""><span>128</span></div>
+          <div class="sizebox"><img src="callback-logo/g8-poly-e.svg" width="64" height="64" alt=""><span>64</span></div>
+          <div class="sizebox"><img src="callback-logo/g8-poly-e.svg" width="32" height="32" alt=""><span>32</span></div>
+        </div>
+        <div class="strip strip-dark">
+          <div class="sizebox"><img src="callback-logo/g8-poly-e.svg" width="128" height="128" alt=""><span>128</span></div>
+          <div class="sizebox"><img src="callback-logo/g8-poly-e.svg" width="64" height="64" alt=""><span>64</span></div>
+          <div class="sizebox"><img src="callback-logo/g8-poly-e.svg" width="32" height="32" alt=""><span>32</span></div>
+        </div>
+      </div>
+      <textarea class="notes" id="note-g8-poly-e" placeholder="Iteration notes for Poly-E… (autosaved)" oninput="saveNote('g8-poly-e', this.value)"></textarea>
+    </article>
+
+    <article class="card locked" id="card-g11-kom" data-key="g11-kom" data-name="Kom">
+      <header class="card-head">
+        <span class="code">G11</span>
+        <div class="head-text"><h3>Kom</h3><p class="tag">LOCKED keeper — the receiving bowl</p></div>
+        <button class="shortlist-btn" id="btn-g11-kom" onclick="toggleShortlist('g11-kom')">&#9734; Shortlist</button>
+      </header>
+      <div class="duo">
+        <div class="pane pane-light"><div><img src="callback-logo/g11-kom.svg" alt="Kom on light"><span class="plabel">on light</span></div></div>
+        <div class="pane pane-dark"><div><img src="callback-logo/g11-kom.svg" alt="Kom on dark"><span class="plabel">on dark</span></div></div>
+      </div>
+      <div class="sizes">
+        <div class="strip strip-light">
+          <div class="sizebox"><img src="callback-logo/g11-kom.svg" width="128" height="128" alt=""><span>128</span></div>
+          <div class="sizebox"><img src="callback-logo/g11-kom.svg" width="64" height="64" alt=""><span>64</span></div>
+          <div class="sizebox"><img src="callback-logo/g11-kom.svg" width="32" height="32" alt=""><span>32</span></div>
+        </div>
+        <div class="strip strip-dark">
+          <div class="sizebox"><img src="callback-logo/g11-kom.svg" width="128" height="128" alt=""><span>128</span></div>
+          <div class="sizebox"><img src="callback-logo/g11-kom.svg" width="64" height="64" alt=""><span>64</span></div>
+          <div class="sizebox"><img src="callback-logo/g11-kom.svg" width="32" height="32" alt=""><span>32</span></div>
+        </div>
+      </div>
+      <textarea class="notes" id="note-g11-kom" placeholder="Iteration notes for Kom… (autosaved)" oninput="saveNote('g11-kom', this.value)"></textarea>
+    </article>
+
+    <article class="card locked" id="card-x4-v-ring" data-key="x4-v-ring" data-name="V-Ring">
+      <header class="card-head">
+        <span class="code">X4</span>
+        <div class="head-text"><h3>V-Ring</h3><p class="tag">LOCKED keeper — the V housed in the octagon</p></div>
+        <button class="shortlist-btn" id="btn-x4-v-ring" onclick="toggleShortlist('x4-v-ring')">&#9734; Shortlist</button>
+      </header>
+      <div class="duo">
+        <div class="pane pane-light"><div><img src="callback-logo/x4-v-ring.svg" alt="V-Ring on light"><span class="plabel">on light</span></div></div>
+        <div class="pane pane-dark"><div><img src="callback-logo/x4-v-ring.svg" alt="V-Ring on dark"><span class="plabel">on dark</span></div></div>
+      </div>
+      <div class="sizes">
+        <div class="strip strip-light">
+          <div class="sizebox"><img src="callback-logo/x4-v-ring.svg" width="128" height="128" alt=""><span>128</span></div>
+          <div class="sizebox"><img src="callback-logo/x4-v-ring.svg" width="64" height="64" alt=""><span>64</span></div>
+          <div class="sizebox"><img src="callback-logo/x4-v-ring.svg" width="32" height="32" alt=""><span>32</span></div>
+        </div>
+        <div class="strip strip-dark">
+          <div class="sizebox"><img src="callback-logo/x4-v-ring.svg" width="128" height="128" alt=""><span>128</span></div>
+          <div class="sizebox"><img src="callback-logo/x4-v-ring.svg" width="64" height="64" alt=""><span>64</span></div>
+          <div class="sizebox"><img src="callback-logo/x4-v-ring.svg" width="32" height="32" alt=""><span>32</span></div>
+        </div>
+      </div>
+      <textarea class="notes" id="note-x4-v-ring" placeholder="Iteration notes for V-Ring… (autosaved)" oninput="saveNote('x4-v-ring', this.value)"></textarea>
+    </article>
+
+    <article class="card locked" id="card-z4-kom-45" data-key="z4-kom-45" data-name="Kom 45">
+      <header class="card-head">
+        <span class="code">Z4</span>
+        <div class="head-text"><h3>Kom 45</h3><p class="tag">LOCKED keeper — the bowl turned 45°</p></div>
+        <button class="shortlist-btn" id="btn-z4-kom-45" onclick="toggleShortlist('z4-kom-45')">&#9734; Shortlist</button>
+      </header>
+      <div class="duo">
+        <div class="pane pane-light"><div><img src="callback-logo/z4-kom-45.svg" alt="Kom 45 on light"><span class="plabel">on light</span></div></div>
+        <div class="pane pane-dark"><div><img src="callback-logo/z4-kom-45.svg" alt="Kom 45 on dark"><span class="plabel">on dark</span></div></div>
+      </div>
+      <div class="sizes">
+        <div class="strip strip-light">
+          <div class="sizebox"><img src="callback-logo/z4-kom-45.svg" width="128" height="128" alt=""><span>128</span></div>
+          <div class="sizebox"><img src="callback-logo/z4-kom-45.svg" width="64" height="64" alt=""><span>64</span></div>
+          <div class="sizebox"><img src="callback-logo/z4-kom-45.svg" width="32" height="32" alt=""><span>32</span></div>
+        </div>
+        <div class="strip strip-dark">
+          <div class="sizebox"><img src="callback-logo/z4-kom-45.svg" width="128" height="128" alt=""><span>128</span></div>
+          <div class="sizebox"><img src="callback-logo/z4-kom-45.svg" width="64" height="64" alt=""><span>64</span></div>
+          <div class="sizebox"><img src="callback-logo/z4-kom-45.svg" width="32" height="32" alt=""><span>32</span></div>
+        </div>
+      </div>
+      <textarea class="notes" id="note-z4-kom-45" placeholder="Iteration notes for Kom 45… (autosaved)" oninput="saveNote('z4-kom-45', this.value)"></textarea>
+    </article>
+
+    <article class="card" id="card-t1-diepte-cb" data-key="t1-diepte-cb" data-name="Diepte-CB">
+      <header class="card-head">
+        <span class="code">T1</span>
+        <div class="head-text"><h3>Diepte-CB</h3><p class="tag">Hard-shadow extrusion: open C + B core, offset shadows</p></div>
+        <button class="shortlist-btn" id="btn-t1-diepte-cb" onclick="toggleShortlist('t1-diepte-cb')">&#9734; Shortlist</button>
+      </header>
+      <div class="duo">
+        <div class="pane pane-light"><div><img src="callback-logo/t1-diepte-cb.svg" alt="Diepte-CB on light"><span class="plabel">on light</span></div></div>
+        <div class="pane pane-dark"><div><img src="callback-logo/t1-diepte-cb.svg" alt="Diepte-CB on dark"><span class="plabel">on dark</span></div></div>
+      </div>
+      <div class="sizes">
+        <div class="strip strip-light">
+          <div class="sizebox"><img src="callback-logo/t1-diepte-cb.svg" width="128" height="128" alt=""><span>128</span></div>
+          <div class="sizebox"><img src="callback-logo/t1-diepte-cb.svg" width="64" height="64" alt=""><span>64</span></div>
+          <div class="sizebox"><img src="callback-logo/t1-diepte-cb.svg" width="32" height="32" alt=""><span>32</span></div>
+        </div>
+        <div class="strip strip-dark">
+          <div class="sizebox"><img src="callback-logo/t1-diepte-cb.svg" width="128" height="128" alt=""><span>128</span></div>
+          <div class="sizebox"><img src="callback-logo/t1-diepte-cb.svg" width="64" height="64" alt=""><span>64</span></div>
+          <div class="sizebox"><img src="callback-logo/t1-diepte-cb.svg" width="32" height="32" alt=""><span>32</span></div>
+        </div>
+      </div>
+      <textarea class="notes" id="note-t1-diepte-cb" placeholder="Iteration notes for Diepte-CB… (autosaved)" oninput="saveNote('t1-diepte-cb', this.value)"></textarea>
+    </article>
+
+    <article class="card" id="card-t2-tunnel-b" data-key="t2-tunnel-b" data-name="Tunnel-B">
+      <header class="card-head">
+        <span class="code">T2</span>
+        <div class="head-text"><h3>Tunnel-B</h3><p class="tag">Phi-nested rings receding; B at the end of the corridor</p></div>
+        <button class="shortlist-btn" id="btn-t2-tunnel-b" onclick="toggleShortlist('t2-tunnel-b')">&#9734; Shortlist</button>
+      </header>
+      <div class="duo">
+        <div class="pane pane-light"><div><img src="callback-logo/t2-tunnel-b.svg" alt="Tunnel-B on light"><span class="plabel">on light</span></div></div>
+        <div class="pane pane-dark"><div><img src="callback-logo/t2-tunnel-b.svg" alt="Tunnel-B on dark"><span class="plabel">on dark</span></div></div>
+      </div>
+      <div class="sizes">
+        <div class="strip strip-light">
+          <div class="sizebox"><img src="callback-logo/t2-tunnel-b.svg" width="128" height="128" alt=""><span>128</span></div>
+          <div class="sizebox"><img src="callback-logo/t2-tunnel-b.svg" width="64" height="64" alt=""><span>64</span></div>
+          <div class="sizebox"><img src="callback-logo/t2-tunnel-b.svg" width="32" height="32" alt=""><span>32</span></div>
+        </div>
+        <div class="strip strip-dark">
+          <div class="sizebox"><img src="callback-logo/t2-tunnel-b.svg" width="128" height="128" alt=""><span>128</span></div>
+          <div class="sizebox"><img src="callback-logo/t2-tunnel-b.svg" width="64" height="64" alt=""><span>64</span></div>
+          <div class="sizebox"><img src="callback-logo/t2-tunnel-b.svg" width="32" height="32" alt=""><span>32</span></div>
+        </div>
+      </div>
+      <textarea class="notes" id="note-t2-tunnel-b" placeholder="Iteration notes for Tunnel-B… (autosaved)" oninput="saveNote('t2-tunnel-b', this.value)"></textarea>
+    </article>
+
+    <article class="card" id="card-t3-deur-c" data-key="t3-deur-c" data-name="Deur-C">
+      <header class="card-head">
+        <span class="code">T3</span>
+        <div class="head-text"><h3>Deur-C</h3><p class="tag">Perspective arms to a vanishing point; B in the doorway</p></div>
+        <button class="shortlist-btn" id="btn-t3-deur-c" onclick="toggleShortlist('t3-deur-c')">&#9734; Shortlist</button>
+      </header>
+      <div class="duo">
+        <div class="pane pane-light"><div><img src="callback-logo/t3-deur-c.svg" alt="Deur-C on light"><span class="plabel">on light</span></div></div>
+        <div class="pane pane-dark"><div><img src="callback-logo/t3-deur-c.svg" alt="Deur-C on dark"><span class="plabel">on dark</span></div></div>
+      </div>
+      <div class="sizes">
+        <div class="strip strip-light">
+          <div class="sizebox"><img src="callback-logo/t3-deur-c.svg" width="128" height="128" alt=""><span>128</span></div>
+          <div class="sizebox"><img src="callback-logo/t3-deur-c.svg" width="64" height="64" alt=""><span>64</span></div>
+          <div class="sizebox"><img src="callback-logo/t3-deur-c.svg" width="32" height="32" alt=""><span>32</span></div>
+        </div>
+        <div class="strip strip-dark">
+          <div class="sizebox"><img src="callback-logo/t3-deur-c.svg" width="128" height="128" alt=""><span>128</span></div>
+          <div class="sizebox"><img src="callback-logo/t3-deur-c.svg" width="64" height="64" alt=""><span>64</span></div>
+          <div class="sizebox"><img src="callback-logo/t3-deur-c.svg" width="32" height="32" alt=""><span>32</span></div>
+        </div>
+      </div>
+      <textarea class="notes" id="note-t3-deur-c" placeholder="Iteration notes for Deur-C… (autosaved)" oninput="saveNote('t3-deur-c', this.value)"></textarea>
+    </article>
+
+    <article class="card" id="card-t4-sluiting" data-key="t4-sluiting" data-name="Sluiting">
+      <header class="card-head">
+        <span class="code">T4</span>
+        <div class="head-text"><h3>Sluiting</h3><p class="tag">The B plugs the C's gap — gestalt closure</p></div>
+        <button class="shortlist-btn" id="btn-t4-sluiting" onclick="toggleShortlist('t4-sluiting')">&#9734; Shortlist</button>
+      </header>
+      <div class="duo">
+        <div class="pane pane-light"><div><img src="callback-logo/t4-sluiting.svg" alt="Sluiting on light"><span class="plabel">on light</span></div></div>
+        <div class="pane pane-dark"><div><img src="callback-logo/t4-sluiting.svg" alt="Sluiting on dark"><span class="plabel">on dark</span></div></div>
+      </div>
+      <div class="sizes">
+        <div class="strip strip-light">
+          <div class="sizebox"><img src="callback-logo/t4-sluiting.svg" width="128" height="128" alt=""><span>128</span></div>
+          <div class="sizebox"><img src="callback-logo/t4-sluiting.svg" width="64" height="64" alt=""><span>64</span></div>
+          <div class="sizebox"><img src="callback-logo/t4-sluiting.svg" width="32" height="32" alt=""><span>32</span></div>
+        </div>
+        <div class="strip strip-dark">
+          <div class="sizebox"><img src="callback-logo/t4-sluiting.svg" width="128" height="128" alt=""><span>128</span></div>
+          <div class="sizebox"><img src="callback-logo/t4-sluiting.svg" width="64" height="64" alt=""><span>64</span></div>
+          <div class="sizebox"><img src="callback-logo/t4-sluiting.svg" width="32" height="32" alt=""><span>32</span></div>
+        </div>
+      </div>
+      <textarea class="notes" id="note-t4-sluiting" placeholder="Iteration notes for Sluiting… (autosaved)" oninput="saveNote('t4-sluiting', this.value)"></textarea>
+    </article>
+
+    <article class="card" id="card-t5-diepte-ring" data-key="t5-diepte-ring" data-name="Diepte-Ring">
+      <header class="card-head">
+        <span class="code">T5</span>
+        <div class="head-text"><h3>Diepte-Ring</h3><p class="tag">The V-Ring keeper extruded with hard shadow</p></div>
+        <button class="shortlist-btn" id="btn-t5-diepte-ring" onclick="toggleShortlist('t5-diepte-ring')">&#9734; Shortlist</button>
+      </header>
+      <div class="duo">
+        <div class="pane pane-light"><div><img src="callback-logo/t5-diepte-ring.svg" alt="Diepte-Ring on light"><span class="plabel">on light</span></div></div>
+        <div class="pane pane-dark"><div><img src="callback-logo/t5-diepte-ring.svg" alt="Diepte-Ring on dark"><span class="plabel">on dark</span></div></div>
+      </div>
+      <div class="sizes">
+        <div class="strip strip-light">
+          <div class="sizebox"><img src="callback-logo/t5-diepte-ring.svg" width="128" height="128" alt=""><span>128</span></div>
+          <div class="sizebox"><img src="callback-logo/t5-diepte-ring.svg" width="64" height="64" alt=""><span>64</span></div>
+          <div class="sizebox"><img src="callback-logo/t5-diepte-ring.svg" width="32" height="32" alt=""><span>32</span></div>
+        </div>
+        <div class="strip strip-dark">
+          <div class="sizebox"><img src="callback-logo/t5-diepte-ring.svg" width="128" height="128" alt=""><span>128</span></div>
+          <div class="sizebox"><img src="callback-logo/t5-diepte-ring.svg" width="64" height="64" alt=""><span>64</span></div>
+          <div class="sizebox"><img src="callback-logo/t5-diepte-ring.svg" width="32" height="32" alt=""><span>32</span></div>
+        </div>
+      </div>
+      <textarea class="notes" id="note-t5-diepte-ring" placeholder="Iteration notes for Diepte-Ring… (autosaved)" oninput="saveNote('t5-diepte-ring', this.value)"></textarea>
+    </article>
+
+    <article class="card" id="card-t6-perspectief-b" data-key="t6-perspectief-b" data-name="Perspectief-B">
+      <header class="card-head">
+        <span class="code">T6</span>
+        <div class="head-text"><h3>Perspectief-B</h3><p class="tag">B with receding bowls; top bowl = bottom / φ</p></div>
+        <button class="shortlist-btn" id="btn-t6-perspectief-b" onclick="toggleShortlist('t6-perspectief-b')">&#9734; Shortlist</button>
+      </header>
+      <div class="duo">
+        <div class="pane pane-light"><div><img src="callback-logo/t6-perspectief-b.svg" alt="Perspectief-B on light"><span class="plabel">on light</span></div></div>
+        <div class="pane pane-dark"><div><img src="callback-logo/t6-perspectief-b.svg" alt="Perspectief-B on dark"><span class="plabel">on dark</span></div></div>
+      </div>
+      <div class="sizes">
+        <div class="strip strip-light">
+          <div class="sizebox"><img src="callback-logo/t6-perspectief-b.svg" width="128" height="128" alt=""><span>128</span></div>
+          <div class="sizebox"><img src="callback-logo/t6-perspectief-b.svg" width="64" height="64" alt=""><span>64</span></div>
+          <div class="sizebox"><img src="callback-logo/t6-perspectief-b.svg" width="32" height="32" alt=""><span>32</span></div>
+        </div>
+        <div class="strip strip-dark">
+          <div class="sizebox"><img src="callback-logo/t6-perspectief-b.svg" width="128" height="128" alt=""><span>128</span></div>
+          <div class="sizebox"><img src="callback-logo/t6-perspectief-b.svg" width="64" height="64" alt=""><span>64</span></div>
+          <div class="sizebox"><img src="callback-logo/t6-perspectief-b.svg" width="32" height="32" alt=""><span>32</span></div>
+        </div>
+      </div>
+      <textarea class="notes" id="note-t6-perspectief-b" placeholder="Iteration notes for Perspectief-B… (autosaved)" oninput="saveNote('t6-perspectief-b', this.value)"></textarea>
+    </article>
+
+    <article class="card" id="card-t7-verschuiving" data-key="t7-verschuiving" data-name="Verschuiving">
+      <header class="card-head">
+        <span class="code">T7</span>
+        <div class="head-text"><h3>Verschuiving</h3><p class="tag">Sheared halves: C-plane red, B-plane blue, shifted</p></div>
+        <button class="shortlist-btn" id="btn-t7-verschuiving" onclick="toggleShortlist('t7-verschuiving')">&#9734; Shortlist</button>
+      </header>
+      <div class="duo">
+        <div class="pane pane-light"><div><img src="callback-logo/t7-verschuiving.svg" alt="Verschuiving on light"><span class="plabel">on light</span></div></div>
+        <div class="pane pane-dark"><div><img src="callback-logo/t7-verschuiving.svg" alt="Verschuiving on dark"><span class="plabel">on dark</span></div></div>
+      </div>
+      <div class="sizes">
+        <div class="strip strip-light">
+          <div class="sizebox"><img src="callback-logo/t7-verschuiving.svg" width="128" height="128" alt=""><span>128</span></div>
+          <div class="sizebox"><img src="callback-logo/t7-verschuiving.svg" width="64" height="64" alt=""><span>64</span></div>
+          <div class="sizebox"><img src="callback-logo/t7-verschuiving.svg" width="32" height="32" alt=""><span>32</span></div>
+        </div>
+        <div class="strip strip-dark">
+          <div class="sizebox"><img src="callback-logo/t7-verschuiving.svg" width="128" height="128" alt=""><span>128</span></div>
+          <div class="sizebox"><img src="callback-logo/t7-verschuiving.svg" width="64" height="64" alt=""><span>64</span></div>
+          <div class="sizebox"><img src="callback-logo/t7-verschuiving.svg" width="32" height="32" alt=""><span>32</span></div>
+        </div>
+      </div>
+      <textarea class="notes" id="note-t7-verschuiving" placeholder="Iteration notes for Verschuiving… (autosaved)" oninput="saveNote('t7-verschuiving', this.value)"></textarea>
+    </article>
+
+    <article class="card" id="card-t8-gouden-cb" data-key="t8-gouden-cb" data-name="Gouden-CB">
+      <header class="card-head">
+        <span class="code">T8</span>
+        <div class="head-text"><h3>Gouden-CB</h3><p class="tag">C and B sized 1 : 1/φ on a golden rectangle</p></div>
+        <button class="shortlist-btn" id="btn-t8-gouden-cb" onclick="toggleShortlist('t8-gouden-cb')">&#9734; Shortlist</button>
+      </header>
+      <div class="duo">
+        <div class="pane pane-light"><div><img src="callback-logo/t8-gouden-cb.svg" alt="Gouden-CB on light"><span class="plabel">on light</span></div></div>
+        <div class="pane pane-dark"><div><img src="callback-logo/t8-gouden-cb.svg" alt="Gouden-CB on dark"><span class="plabel">on dark</span></div></div>
+      </div>
+      <div class="sizes">
+        <div class="strip strip-light">
+          <div class="sizebox"><img src="callback-logo/t8-gouden-cb.svg" width="128" height="128" alt=""><span>128</span></div>
+          <div class="sizebox"><img src="callback-logo/t8-gouden-cb.svg" width="64" height="64" alt=""><span>64</span></div>
+          <div class="sizebox"><img src="callback-logo/t8-gouden-cb.svg" width="32" height="32" alt=""><span>32</span></div>
+        </div>
+        <div class="strip strip-dark">
+          <div class="sizebox"><img src="callback-logo/t8-gouden-cb.svg" width="128" height="128" alt=""><span>128</span></div>
+          <div class="sizebox"><img src="callback-logo/t8-gouden-cb.svg" width="64" height="64" alt=""><span>64</span></div>
+          <div class="sizebox"><img src="callback-logo/t8-gouden-cb.svg" width="32" height="32" alt=""><span>32</span></div>
+        </div>
+      </div>
+      <textarea class="notes" id="note-t8-gouden-cb" placeholder="Iteration notes for Gouden-CB… (autosaved)" oninput="saveNote('t8-gouden-cb', this.value)"></textarea>
+    </article>
+  </main>
+<div class="reviewbar">
+  <span class="count" id="sl-count">0 shortlisted</span>
+  <button class="copy" onclick="copySummary()">Copy review summary</button>
+</div>
+<div class="toast" id="toast">Review summary copied — paste it back in chat</div>
+<script>
+"use strict";
+var KEYS = ["g8-poly-e","g11-kom","x4-v-ring","z4-kom-45","t1-diepte-cb","t2-tunnel-b","t3-deur-c","t4-sluiting","t5-diepte-ring","t6-perspectief-b","t7-verschuiving","t8-gouden-cb"];
+var LS = "cb-logo-review-r9";
+function getState(){ try { return JSON.parse(localStorage.getItem(LS)) || {shortlist:[], notes:{}}; } catch(e){ return {shortlist:[], notes:{}}; } }
+function setState(s){ localStorage.setItem(LS, JSON.stringify(s)); }
+function toggleShortlist(k){
+  var s = getState();
+  var i = s.shortlist.indexOf(k);
+  if (i >= 0) s.shortlist.splice(i,1); else s.shortlist.push(k);
+  setState(s); paint();
+}
+function saveNote(k, v){ var s = getState(); s.notes[k] = v; setState(s); }
+function paint(){
+  var s = getState();
+  KEYS.forEach(function(k){
+    var card = document.getElementById("card-" + k);
+    var btn = document.getElementById("btn-" + k);
+    var on = s.shortlist.indexOf(k) >= 0;
+    card.classList.toggle("shortlisted", on);
+    btn.innerHTML = on ? "&#9733; Shortlisted" : "&#9734; Shortlist";
+    var ta = document.getElementById("note-" + k);
+    if (ta && ta.value === "" && s.notes[k]) ta.value = s.notes[k];
+  });
+  document.getElementById("sl-count").textContent = s.shortlist.length + " shortlisted";
+}
+function setTheme(t){
+  document.documentElement.setAttribute("data-theme", t);
+  localStorage.setItem("cb-logo-theme", t);
+  document.getElementById("t-light").setAttribute("aria-pressed", String(t === "light"));
+  document.getElementById("t-dark").setAttribute("aria-pressed", String(t === "dark"));
+}
+function copySummary(){
+  var s = getState();
+  var lines = ["# Callback logo review — round 02", "Date: " + new Date().toISOString().slice(0,10), "", "## Shortlist"];
+  if (s.shortlist.length === 0) lines.push("(none)");
+  s.shortlist.forEach(function(k){ lines.push("- " + k + " (" + document.getElementById("card-" + k).dataset.name + ")"); });
+  lines.push("", "## Notes");
+  var any = false;
+  KEYS.forEach(function(k){ if (s.notes[k] && s.notes[k].trim()){ lines.push("- " + k + ": " + s.notes[k].trim()); any = true; } });
+  if (!any) lines.push("(none)");
+  navigator.clipboard.writeText(lines.join("\n")).then(function(){
+    var t = document.getElementById("toast");
+    t.classList.add("show"); setTimeout(function(){ t.classList.remove("show"); }, 2200);
+  });
+}
+(function init(){
+  var t = localStorage.getItem("cb-logo-theme") || (window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+  setTheme(t); paint();
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <defs>
+    <linearGradient id="c2-bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#2E63DB"/><stop offset="1" stop-color="#1B3E96"/>
+    </linearGradient>
+    <linearGradient id="c2-arrow" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#FDFBF4"/><stop offset="1" stop-color="#F0EADA"/>
+    </linearGradient>
+    <linearGradient id="c2-yellow" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#FBCF3C"/><stop offset="1" stop-color="#F0B417"/>
+    </linearGradient>
+    <linearGradient id="c2-red" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#F0512F"/><stop offset="1" stop-color="#D23A1E"/>
+    </linearGradient>
+    <clipPath id="c2-clip"><rect x="0" y="0" width="512" height="512" rx="100"/></clipPath>
+  </defs>
+  <rect x="0" y="0" width="512" height="512" rx="100" fill="url(#c2-bg)"/>
+  <g clip-path="url(#c2-clip)">
+    <rect x="368" y="64" width="76" height="76" fill="url(#c2-yellow)"/>
+    <rect x="64" y="416" width="52" height="52" fill="url(#c2-red)"/>
+    <path d="M 92 288 L 240 168 L 240 236 L 420 236 L 240 340 L 240 408 Z" fill="none"/>
+    <path d="M 92 288 L 240 168 L 240 236 L 420 236 L 420 340 L 240 340 L 240 408 Z"
+          fill="url(#c2-arrow)" stroke="url(#c2-arrow)" stroke-width="28" stroke-linejoin="round"/>
+  </g>
+</svg>

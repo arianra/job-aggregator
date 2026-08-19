@@ -1,0 +1,3 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <g transform="translate(150 256) scale(0.8) translate(-256 -256)"><path fill="none" stroke="#E8482B" stroke-width="62" stroke-linejoin="miter" d="M196 88 L316 88 L424 196 L424 316 L316 424 L196 424 L88 316 L88 196 Z"/></g><g transform="translate(392 256) scale(0.5) translate(-256 -256)"><path fill="#2C5FD3" d="M204 176 L240 176 L240 336 L204 336 Z M240 176 L284 176 L308 200 L308 232 L284 256 L240 256 Z M240 256 L284 256 L308 280 L308 312 L284 336 L240 336 Z"/></g>
+</svg>

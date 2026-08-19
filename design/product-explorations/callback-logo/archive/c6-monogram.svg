@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <defs>
+    <linearGradient id="c6-bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#2E63DB"/><stop offset="1" stop-color="#1B3E96"/>
+    </linearGradient>
+    <linearGradient id="c6-bone" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#FDFBF4"/><stop offset="1" stop-color="#E9E2D0"/>
+    </linearGradient>
+    <linearGradient id="c6-yellow" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#FBCF3C"/><stop offset="1" stop-color="#F0B417"/>
+    </linearGradient>
+    <clipPath id="c6-clip"><rect x="0" y="0" width="512" height="512" rx="100"/></clipPath>
+  </defs>
+  <rect x="0" y="0" width="512" height="512" rx="100" fill="url(#c6-bg)"/>
+  <g clip-path="url(#c6-clip)">
+    <path d="M 267.7 189.1 A 104 104 0 1 0 267.7 322.9" fill="none" stroke="url(#c6-bone)" stroke-width="52" stroke-linecap="round"/>
+    <path d="M 344 140 L 344 372" fill="none" stroke="url(#c6-bone)" stroke-width="52" stroke-linecap="round"/>
+    <circle cx="384" cy="296" r="72" fill="none" stroke="url(#c6-bone)" stroke-width="52"/>
+    <circle cx="460" cy="128" r="34" fill="url(#c6-yellow)"/>
+  </g>
+</svg>

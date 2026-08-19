@@ -1,0 +1,73 @@
+/* Callback brand tokens v2 — generated from tokens.json 2026-08-16. OKLCH ramps. Not consumed by app yet. */
+:root {
+  --vermilion-50: #FFE7DC;
+  --vermilion-100: #FFD2C2;
+  --vermilion-200: #FFB29C;
+  --vermilion-300: #FF8970;
+  --vermilion-400: #F15F44;
+  --vermilion-500: #E8482B;
+  --vermilion-600: #C83310;
+  --vermilion-700: #A71D00;
+  --vermilion-800: #831100;
+  --vermilion-900: #620E00;
+  --vermilion-950: #400600;
+  --ultramarine-50: #E5F6FF;
+  --ultramarine-100: #CEE8FF;
+  --ultramarine-200: #ABD1FF;
+  --ultramarine-300: #83B2FF;
+  --ultramarine-400: #5D90FC;
+  --ultramarine-500: #2C5FD3;
+  --ultramarine-600: #306BD7;
+  --ultramarine-700: #1354B7;
+  --ultramarine-800: #003F95;
+  --ultramarine-900: #002E75;
+  --ultramarine-950: #001C50;
+  --sun-50: #FFF5D1;
+  --sun-100: #FAE7B1;
+  --sun-200: #E8CF86;
+  --sun-300: #D1B151;
+  --sun-400: #B59100;
+  --sun-500: #FBCF3C;
+  --sun-600: #8F6D00;
+  --sun-700: #735700;
+  --sun-800: #574300;
+  --sun-900: #403200;
+  --sun-950: #281F00;
+  --grey-50: #F7F5F1;
+  --grey-100: #EAE8E2;
+  --grey-200: #D4D1C8;
+  --grey-300: #B9B4A9;
+  --grey-400: #9A9589;
+  --grey-500: #8A8477;
+  --grey-600: #777165;
+  --grey-700: #5F5A50;
+  --grey-800: #49453B;
+  --grey-900: #36322B;
+  --grey-950: #211F1A;
+  --neutral-50: #FAF6EC;
+  --neutral-100: #DBD8CE;
+  --neutral-200: #BBB8AF;
+  --neutral-300: #9C9991;
+  --neutral-400: #807D75;
+  --neutral-500: #65635C;
+  --neutral-600: #504D47;
+  --neutral-700: #3B3933;
+  --neutral-800: #2C2A24;
+  --neutral-900: #22201B;
+  --neutral-950: #191713;
+  --night-800: #2C291F;
+  --night-850: #221F17;
+  --night-900: #18160F;
+  --night-950: #0F0D08;
+}
+
+[data-theme='light'], :root {
+  --bg: var(--neutral-50); --surface: #FFFFFF; --surface-2: var(--grey-50);
+  --text: var(--neutral-950); --muted: var(--grey-600); --border: var(--grey-200);
+  --accent: var(--vermilion-600); --accent-2: var(--ultramarine-600); --notify: var(--sun-500);
+}
+[data-theme='dark'] {
+  --bg: var(--night-950); --surface: var(--night-900); --surface-2: var(--night-850);
+  --text: var(--neutral-100); --muted: var(--grey-400); --border: var(--night-800);
+  --accent: var(--vermilion-500); --accent-2: var(--ultramarine-400); --notify: var(--sun-400);
+}

@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <path fill="#E8482B" d="M416 96 H144 L96 144 V368 L144 416 H416 V328 H184 V184 H416 Z"/>
+  <g transform="translate(272 262) rotate(90) scale(0.42) translate(-256 -224)">
+    <path fill="#2C5FD3" d="M88 240 L88 148 L188 148 L188 212 L324 212 L324 148 L424 148 L424 240 L368 300 L144 300 Z"/>
+  </g>
+</svg>

@@ -1,0 +1,249 @@
+/* =====================================================================
+   CALLBACK DESIGN SYSTEM — LIQUID GLASS MATERIAL LAYER (LEADING)
+   The canonical surface material on top of the "Dry Poster" language
+   (design/brand/tokens.json ramps + design/design-system/RESEARCH.md).
+
+   MODEL
+     Dry Poster  = the language  (color/type/geometry/states/hierarchy)
+     Liquid Glass= the material  (surface translucency, refraction, depth)
+   They are orthogonal. Dry Poster says WHAT a component is; this layer
+   says how elevated, overlapping and interactive surfaces are MADE.
+
+   PRINCIPLE — restraint is the identity.
+     • Glass ONLY where elevation already legitimately exists: floating
+       rail, modal, fly-tips, cards-as-panes. Never the whole page.
+     • Flat, blunt, honest De Stijl rhetoric is preserved; the flat
+       voice-verb and data rows stay solid so glass reads as *signal*,
+       not frosted-over-the-top.
+     • Translucency is real (backdrop-filter + saturation + a visible
+       ambient field) but tuned quiet (SOFT tokens in light, more solid
+       in dark so big display numerals stay crisp).
+     • A11y-first: prefers-reduced-motion kills ambient drift + sheen +
+       button ripple; glass never blurs text-bearing surfaces on top of
+       itself (dark cards bump to 80% opacity for legibility).
+
+   == MIGRATION NOTE (IMPLEMENTATION.md seam C / task order)
+   This file is the SOURCE the theme generator / component adapters read.
+   The glass tokens become part of the generated theme module ; the
+   ambient field + pointer sheen ship as a tiny runtime (a fixed layer +
+   a mousemove watcher that sets --px/--py CSS vars, reduced-motion-gated).
+   ===================================================================== */
+
+
+/* =====================================================================
+   A. GLASS MATERIAL TOKENS (theme-aware; extend the DESIGN layer)
+   ===================================================================== */
+:root,[data-theme="light"]{
+  --glass-blur:20px;
+  --glass-saturate:1.55;
+  --glass-bg:color-mix(in oklch,var(--surface) 55%,transparent);        /* rail / chrome */
+  --glass-bg-strong:color-mix(in oklch,var(--surface) 74%,transparent); /* cards-as-panes */
+  --glass-border:color-mix(in oklch,var(--hairline) 60%,transparent);
+  --glass-edge:inset 0 1px 0 0 rgba(255,255,255,.42);                   /* top specular */
+  --glass-edge-soft:inset 0 1px 0 0 rgba(255,255,255,.30);
+  --glass-shadow:0 18px 50px -12px rgba(33,31,26,.28),0 2px 10px rgba(33,31,26,.10);
+  --glass-amb-blur:90px;
+  --glass-amb-opacity:.22;
+}
+[data-theme="dark"]{
+  --glass-blur:20px;
+  --glass-saturate:1.35;                     /* cooler, less boost in dark */
+  --glass-bg:color-mix(in oklch,var(--night-900) 46%,transparent);
+  --glass-bg-strong:color-mix(in oklch,var(--night-900) 80%,transparent); /* ↑ …crisp numerals */
+  --glass-border:color-mix(in oklch,var(--night-800) 60%,transparent);
+  --glass-edge:inset 0 1px 0 0 rgba(255,255,255,.07);
+  --glass-edge-soft:inset 0 1px 0 0 rgba(255,255,255,.05);
+  --glass-shadow:0 18px 50px -12px rgba(0,0,0,.6),0 2px 10px rgba(0,0,0,.4);
+  --glass-amb-blur:90px;
+  --glass-amb-opacity:.16;
+}
+@supports not ((backdrop-filter:blur(1px)) or (-webkit-backdrop-filter:blur(1px))){
+  /* no glass support → fall back to near-solid surfaces (still elevated via edge/shadow) */
+  :root{--glass-bg-strong:color-mix(in oklch,var(--surface) 96%,transparent)
+        --glass-bg:color-mix(in oklch,var(--surface) 96%,transparent)}
+  [data-theme="dark"]{--glass-bg-strong:color-mix(in oklch,var(--night-900) 96%,transparent)
+        --glass-bg:color-mix(in oklch,var(--night-900) 96%,transparent)}
+}
+
+
+/* =====================================================================
+   B. AMBIENT FIELD — the reason glass can read.
+   A restful, very-muted drift of the three brand hues behind content.
+   On a flat page backdrop-filter has nothing to refract; this field gives
+   the material its colour-from-context (Apple's "color informed by
+   surroundings") while staying tasteful.
+   ===================================================================== */
+.material-ambient{position:fixed;inset:0;z-index:-2;overflow:hidden;
+  background:var(--background);transition:background var(--dur) var(--ease)}
+.material-ambient > i{position:absolute;border-radius:50%;will-change:transform;
+  filter:blur(var(--glass-amb-blur));mix-blend-mode:multiply;opacity:var(--glass-amb-opacity)}
+.material-ambient > i:nth-child(1){width:52vmax;height:52vmax;top:-18vmax;left:-12vmax;
+  background:radial-gradient(circle at center,var(--vermilion-400),transparent 65%)}
+.material-ambient > i:nth-child(2){width:46vmax;height:46vmax;bottom:-16vmax;right:-10vmax;
+  background:radial-gradient(circle at center,var(--ultramarine-400),transparent 65%)}
+.material-ambient > i:nth-child(3){width:30vmax;height:30vmax;top:34%;right:22%;
+  background:radial-gradient(circle at center,var(--sun-400),transparent 65%);opacity:calc(var(--glass-amb-opacity)*.64)}
+[data-theme="dark"] .material-ambient > i{mix-blend-mode:screen;opacity:var(--glass-amb-opacity)}
+@keyframes material-drift-a{0%,100%{transform:translate(0,0) scale(1)}50%{transform:translate(4vmax,2vmax) scale(1.08)}}
+@keyframes material-drift-b{0%,100%{transform:translate(0,0) scale(1)}50%{transform:translate(-3vmax,-2.5vmax) scale(1.06)}}
+.material-ambient > i:nth-child(1){animation:material-drift-a 26s ease-in-out infinite}
+.material-ambient > i:nth-child(2){animation:material-drift-b 32s ease-in-out infinite}
+.material-ambient > i:nth-child(3){animation:material-drift-a 20s ease-in-out infinite}
+
+
+/* =====================================================================
+   C. POINTER SHEEN — the "specular" response to movement (Apple's
+   "reacts to movement with specular highlights"). A faint radial light
+   trails the cursor; light theme carries a brand-heat hue (white-on-bone
+   is invisible), dark a cooler neutral light.
+   Set --px/--py from a mousemove watcher; disable under reduced motion.
+   ===================================================================== */
+.material-sheen{position:fixed;inset:0;z-index:-1;pointer-events:none;opacity:0;
+  transition:opacity .5s ease;
+  background:radial-gradient(circle 340px at var(--px,50%) var(--py,50%),
+    color-mix(in oklch,var(--vermilion-200) 34%,transparent),transparent 62%)}
+[data-theme="dark"] .material-sheen{background:radial-gradient(circle 340px at var(--px,50%) var(--py,50%),
+  color-mix(in oklch,var(--neutral-100) 10%,transparent),transparent 62%)}
+body.material-live .material-sheen{opacity:.6}
+
+
+/* =====================================================================
+   D. GLASS APPLICATIONS (restrained — glass = elevation)
+   ===================================================================== */
+
+/* --- D1. Floating rail: the hero glass moment --- */
+.material-live .rail{
+  background:var(--glass-bg);
+  -webkit-backdrop-filter:blur(var(--glass-blur)) saturate(var(--glass-saturate));
+  backdrop-filter:blur(var(--glass-blur)) saturate(var(--glass-saturate));
+  border-color:var(--glass-border);
+  box-shadow:var(--glass-edge),var(--glass-shadow)}
+/* nav hover / active read as frosted pills within the glass rail */
+.material-live .navitem:hover,.material-live .overview-item:hover,
+.material-live .navres-row:hover,.material-live .step:hover{background:var(--glass-bg-strong)}
+.material-live .navitem.active,.material-live .overview-item.active,
+.material-live .navres-row.active{
+  background:color-mix(in oklch,var(--surface) 46%,transparent);
+  -webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px)}
+
+/* --- D2. Cards & metrics: panes, not slabs. Slightly translucent, soft edge --- */
+.material-live .card,.material-live .metric,.material-live .job,
+.material-live .group-card,.material-live .component-block,.material-live .pill,
+.material-live .badge-pill,.material-live .ats-gauge::after{
+  background:var(--glass-bg-strong);
+  -webkit-backdrop-filter:blur(14px) saturate(var(--glass-saturate));
+  backdrop-filter:blur(14px) saturate(var(--glass-saturate));
+  border-color:var(--glass-border);
+  box-shadow:var(--glass-edge-soft)}
+/* keep the ONE loud voice metric a solid verb (Dry Poster rule: one fill per view) */
+.material-live .metric.voice{background:var(--voice-fill);backdrop-filter:none;
+  -webkit-backdrop-filter:none;border-color:var(--voice-fill);
+  box-shadow:0 2px 14px -2px color-mix(in oklch,var(--voice-fill) 55%,transparent)}
+
+/* --- D3. Modal: glass dialog over the ambient field --- */
+.material-live .modal{background:var(--glass-bg-strong);
+  -webkit-backdrop-filter:blur(26px) saturate(var(--glass-saturate));
+  backdrop-filter:blur(26px) saturate(var(--glass-saturate));
+  border-color:var(--glass-border);box-shadow:var(--glass-edge),var(--glass-shadow)}
+.material-live .modal-overlay{background:rgba(15,13,8,.35);
+  -webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px)}
+
+/* --- D4. Fly-out tips (popovers): light glass --- */
+.material-live .flytip{background:var(--glass-bg-strong);
+  -webkit-backdrop-filter:blur(18px) saturate(var(--glass-saturate));
+  backdrop-filter:blur(18px) saturate(var(--glass-saturate));
+  border-color:var(--glass-border);box-shadow:var(--glass-edge-soft),var(--glass-shadow)}
+
+/* --- D5. Inputs: faint frosted field; focus brightens --- */
+.material-live .field-input input,.material-live .field-input textarea,.material-live .field-input select{
+  background:color-mix(in oklch,var(--surface) 52%,transparent);
+  -webkit-backdrop-filter:blur(8px) saturate(1.2);backdrop-filter:blur(8px) saturate(1.2)}
+.material-live .field-input input:focus,.material-live .field-input textarea:focus,
+.material-live .field-input select:focus{
+  background:color-mix(in oklch,var(--surface) 68%,transparent)}
+
+/* --- D6. Collapse button & theme switch tint --- */
+.material-live .collapse-btn{background:var(--glass-bg);border-color:var(--glass-border);
+  -webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px)}
+.material-live .theme-switch{background:color-mix(in oklch,var(--surface) 32%,transparent);
+  backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px)}
+
+
+/* =====================================================================
+   E. LAYOUT — close the rail→content dead zone (applies in both modes).
+   Centering the content inside an already-padded wrapper strands a big
+   empty band beside the floating rail. Left-align with a read-width cap.
+   ===================================================================== */
+.pagewrap{padding-left:256px}
+.pagewrap.collapsed{padding-left:92px}
+.page{margin:0;max-width:none;padding-left:28px}
+.page-title,.page-sub{max-width:none}
+.section-desc{max-width:72ch}
+
+
+/* =====================================================================
+   F. BUTTON MICRO-INTERACTIONS — subtle, snappy (the "fluidity" of glass).
+   Hover: tiny growth (~1.035) on a fast ease-out = snappy.
+   Active: press-down shrink + a one-shot specular ripple expanding from
+   the centre, like liquid responding to the touch.
+   Disabled ignored. Reduced-motion kills the ripple + growth.
+   ===================================================================== */
+.material-live .btn{position:relative;overflow:hidden;
+  transition:transform .16s cubic-bezier(.3,.9,.4,1),background var(--dur-fast) var(--ease),
+             color var(--dur-fast) var(--ease),box-shadow var(--dur-fast) var(--ease)}
+.material-live .btn:not(:disabled):hover{transform:scale(1.035)}
+.material-live .btn:not(:disabled):active{transform:scale(.96)}
+.material-live .btn::after{content:"";position:absolute;left:50%;top:50%;width:120%;aspect-ratio:1;
+  transform:translate(-50%,-50%) scale(0);opacity:0;border-radius:50%;pointer-events:none;
+  will-change:transform,opacity;
+  background:radial-gradient(circle,color-mix(in oklch,currentColor 24%,transparent),transparent 62%)}
+.material-live .btn--voice::after,.material-live .btn--info::after,.material-live .btn--sun::after{
+  background:radial-gradient(circle,rgba(255,255,255,.55),transparent 62%)}
+.material-live .btn:not(:disabled):active::after{animation:material-bubble .4s ease-out forwards}
+@keyframes material-bubble{
+  0%{transform:translate(-50%,-50%) scale(0);opacity:.85}
+  100%{transform:translate(-50%,-50%) scale(1.9);opacity:0}}
+
+
+/* =====================================================================
+   G. RICH HOVER on interactive panes (mirrors the Dry job-card hover:
+   border firms up + a hint of background lift). Ported to group cards &
+   alerts for a consistent, tactile surface.
+   ===================================================================== */
+.material-live .job{transition:border-color var(--dur-fast) var(--ease),background var(--dur-fast) var(--ease)}
+.material-live .job:hover{border-color:var(--hairline-strong);background:color-mix(in oklch,var(--card) 90%,var(--surface-2))}
+.material-live .group-card{transition:border-color var(--dur-fast) var(--ease),background var(--dur-fast) var(--ease)}
+.material-live .group-card:hover{border-color:var(--hairline-strong);background:color-mix(in oklch,var(--card) 92%,var(--surface-2))}
+.material-live .alert{transition:border-color var(--dur-fast) var(--ease),box-shadow var(--dur-fast) var(--ease)}
+.material-live .alert:hover{border-color:var(--hairline-strong);box-shadow:var(--glass-edge-soft)}
+
+
+/* =====================================================================
+   H. A11Y / TONAL FIXES that landed during review.
+   H1 — `.ats-row.alert` collides with the global `.alert` component: it
+        picked up the component's 1px border/flex/padding and the border
+        resolved to currentColor (= --text = near-black) → the harsh black
+        ring around "Keywords". "alert" here only names a notify-coloured
+        bar, so strip the component chrome off that row.
+   H2 — Soften the *active* resume-step node: the base used border:--text
+        (near-black #191713). Drop to a firm quiet grey, keep the halo.
+   ===================================================================== */
+.material-live .ats-row.alert{display:grid;grid-template-columns:110px 1fr 30px;gap:10px;align-items:center;
+  padding:0;margin:0;border:none;border-radius:0;font-size:unset;background:none}
+.material-live .ats-row.alert .bar>span{background:var(--notify-fill)}
+.material-live .step .node.cur,.material-live .rail.collapsed .steps-strip .s.cur{border-color:var(--grey-600)}
+.material-live .rail.collapsed .steps-strip .s.cur{border-width:2px}
+
+
+/* =====================================================================
+   I. REDUCED MOTION — the whole material layer is a11y safe.
+   Ambient drift + sheen + button ripple all die; sheen must not be shown.
+   ===================================================================== */
+@media (prefers-reduced-motion: reduce){
+  .material-ambient > i{animation:none}
+  .material-sheen{display:none}
+  body.material-live .material-sheen{opacity:0}
+  .material-live .btn::after{display:none}
+  .material-live .btn:not(:disabled):hover{transform:none}
+  .material-live .btn:not(:disabled):active{transform:none}
+}

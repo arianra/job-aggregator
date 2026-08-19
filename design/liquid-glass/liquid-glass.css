@@ -1,0 +1,233 @@
+/* =====================================================================
+   LIQUID GLASS experiment — layered override on the Dry Poster prototype
+   "Dry Poster" v0.5 + a SUBTLE liquid-glass material.
+   Principle: glass only where elevation already legitimately exists
+   (floating rail, modal, fly-tips, cards-as-panes). Flat, blunt, honest
+   De Stijl rhetoric is preserved; translucency stays restrained so it
+   never reads as frosted-over-the-top.
+   ===================================================================== */
+
+/* ---------- glass material tokens (theme-aware) ---------- */
+:root,[data-theme="light"]{
+  --glass-blur:20px;
+  --glass-saturate:1.55;
+  --glass-bg:color-mix(in oklch,var(--surface) 55%,transparent);
+  --glass-bg-strong:color-mix(in oklch,var(--surface) 74%,transparent);
+  --glass-border:color-mix(in oklch,var(--hairline) 60%,transparent);
+  --glass-edge:inset 0 1px 0 0 rgba(255,255,255,.42);
+  --glass-edge-soft:inset 0 1px 0 0 rgba(255,255,255,.30);
+  --glass-shadow:0 18px 50px -12px rgba(33,31,26,.28),0 2px 10px rgba(33,31,26,.10);
+}
+[data-theme="dark"]{
+  --glass-blur:20px;
+  --glass-saturate:1.35;
+  --glass-bg:color-mix(in oklch,var(--night-900) 46%,transparent);
+  --glass-bg-strong:color-mix(in oklch,var(--night-900) 80%,transparent);  /* ↑ …crisp text on metric numbers in dark */
+  --glass-border:color-mix(in oklch,var(--night-800) 60%,transparent);
+  --glass-edge:inset 0 1px 0 0 rgba(255,255,255,.07);
+  --glass-edge-soft:inset 0 1px 0 0 rgba(255,255,255,.05);
+  --glass-shadow:0 18px 50px -12px rgba(0,0,0,.6),0 2px 10px rgba(0,0,0,.4);
+}
+
+/* =====================================================================
+   1. AMBIENT FIELD — the reason glass can read.
+   A restful, very-muted drift of the three brand hues behind the content.
+   The blur layer picks this up; on a flat bg backdrop-filter does nothing.
+   ===================================================================== */
+.lg-amb{
+  position:fixed;inset:0;z-index:-2;overflow:hidden;
+  background:var(--background);
+  transition:background var(--dur) var(--ease);
+}
+.lg-amb i{position:absolute;display:block;border-radius:50%;will-change:transform;
+  filter:blur(90px);mix-blend-mode:multiply;opacity:.22}
+.lg-amb i:nth-child(1){width:52vmax;height:52vmax;top:-18vmax;left:-12vmax;
+  background:radial-gradient(circle at center,var(--vermilion-400),transparent 65%)}
+.lg-amb i:nth-child(2){width:46vmax;height:46vmax;bottom:-16vmax;right:-10vmax;
+  background:radial-gradient(circle at center,var(--ultramarine-400),transparent 65%)}
+.lg-amb i:nth-child(3){width:30vmax;height:30vmax;top:34%;right:22%;
+  background:radial-gradient(circle at center,var(--sun-400),transparent 65%);opacity:.14}
+[data-theme="dark"] .lg-amb i{mix-blend-mode:screen;opacity:.16}
+@keyframes lg-drift-a{0%,100%{transform:translate(0,0) scale(1)}50%{transform:translate(4vmax,2vmax) scale(1.08)}}
+@keyframes lg-drift-b{0%,100%{transform:translate(0,0) scale(1)}50%{transform:translate(-3vmax,-2.5vmax) scale(1.06)}}
+.lg-glass .lg-amb i:nth-child(1){animation:lg-drift-a 26s ease-in-out infinite}
+.lg-glass .lg-amb i:nth-child(2){animation:lg-drift-b 32s ease-in-out infinite}
+.lg-glass .lg-amb i:nth-child(3){animation:lg-drift-a 20s ease-in-out infinite}
+
+/* =====================================================================
+   2. POINTER SHEEN — the "specular" response to movement.
+   A faint radial light that trails the cursor over the shell. Deliberately
+   low opacity; reduced-motion kills it. Surface-agnostic.
+   ===================================================================== */
+.lg-sheen{position:fixed;inset:0;z-index:-1;pointer-events:none;opacity:0;
+  transition:opacity .5s ease;
+  /* light: a warm luminous hue follows the cursor — white-on-bone is invisible, so
+     we tint it with the brand heat (subtle) so the "light behind the mouse" reads */
+  background:radial-gradient(circle 340px at var(--px,50%) var(--py,50%),
+    color-mix(in oklch,var(--vermilion-200) 34%,transparent),transparent 62%)}
+[data-theme="dark"] .lg-sheen{background:radial-gradient(circle 340px at var(--px,50%) var(--py,50%),
+  color-mix(in oklch,var(--neutral-100) 10%,transparent),transparent 62%)}
+.lg-glass.no-pref-motion .lg-sheen{opacity:0}
+.lg-glass.lg-sheen-on .lg-sheen{opacity:.6}
+
+/* =====================================================================
+   3. THE GLASS APPLICATIONS (restrained)
+   ===================================================================== */
+
+/* --- A. Floating rail: the hero glass moment --- */
+.lg-glass .rail{
+  background:var(--glass-bg);
+  -webkit-backdrop-filter:blur(var(--glass-blur)) saturate(var(--glass-saturate));
+  backdrop-filter:blur(var(--glass-blur)) saturate(var(--glass-saturate));
+  border-color:var(--glass-border);
+  box-shadow:var(--glass-edge),var(--glass-shadow);
+}
+/* nav hover / active panels read as frosted pills within the glass rail */
+.lg-glass .navitem:hover,.lg-glass .overview-item:hover,.lg-glass .navres-row:hover,
+.lg-glass .step:hover{background:var(--glass-bg-strong)}
+.lg-glass .navitem.active,.lg-glass .overview-item.active,.lg-glass .navres-row.active{
+  background:color-mix(in oklch,var(--surface) 46%,transparent);
+  -webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px)
+}
+
+/* --- B. Cards & metrics: panes, not slabs. Slightly translucent, soft edge --- */
+.lg-glass .card,.lg-glass .metric,.lg-glass .job,.lg-glass .group-card,
+.lg-glass .component-block,.lg-glass .pill,.lg-glass .badge-pill,.lg-glass .ats-gauge::after{
+  background:var(--glass-bg-strong);
+  -webkit-backdrop-filter:blur(14px) saturate(var(--glass-saturate));
+  backdrop-filter:blur(14px) saturate(var(--glass-saturate));
+  border-color:var(--glass-border);
+  box-shadow:var(--glass-edge-soft)
+}
+/* keep the ONE loud voice metric a solid verb (De Stijl rule: one fill per view) */
+.lg-glass .metric.voice{background:var(--voice-fill);backdrop-filter:none;
+  -webkit-backdrop-filter:none;border-color:var(--voice-fill);
+  box-shadow:0 2px 14px -2px color-mix(in oklch,var(--voice-fill) 55%,transparent)}
+
+/* --- C. Modal: glass dialog over the ambient field --- */
+.lg-glass .modal{background:var(--glass-bg-strong);
+  -webkit-backdrop-filter:blur(26px) saturate(var(--glass-saturate));
+  backdrop-filter:blur(26px) saturate(var(--glass-saturate));
+  border-color:var(--glass-border);box-shadow:var(--glass-edge),var(--glass-shadow)}
+.lg-glass .modal-overlay{background:rgba(15,13,8,.35);
+  -webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px)}
+
+/* --- D. Fly-out tips (popovers): light glass --- */
+.lg-glass .flytip{background:var(--glass-bg-strong);
+  -webkit-backdrop-filter:blur(18px) saturate(var(--glass-saturate));
+  backdrop-filter:blur(18px) saturate(var(--glass-saturate));
+  border-color:var(--glass-border);box-shadow:var(--glass-edge-soft),var(--glass-shadow)}
+
+/* --- E. Inputs: faint frosted field, focus glows brighter --- */
+.lg-glass .field-input input,.lg-glass .field-input textarea,.lg-glass .field-input select{
+  background:color-mix(in oklch,var(--surface) 52%,transparent);
+  -webkit-backdrop-filter:blur(8px) saturate(1.2);backdrop-filter:blur(8px) saturate(1.2)}
+.lg-glass .field-input input:focus,.lg-glass .field-input textarea:focus,.lg-glass .field-input select:focus{
+  background:color-mix(in oklch,var(--surface) 68%,transparent)}
+
+/* --- F. Collapse button & theme switch tint --- */
+.lg-glass .collapse-btn{background:var(--glass-bg);border-color:var(--glass-border);
+  -webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px)}
+.lg-glass .theme-switch{background:color-mix(in oklch,var(--surface) 32%,transparent);
+  backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px)}
+
+/* =====================================================================
+   4. LAYOUT FIX — close the rail→content dead zone.
+   The `.page` used `max-width:1120px; margin:0 auto`, which CENTERS the
+   content inside the already-padded wrapper and, on wide panes, leaves a
+   big empty band beside the floating rail. Left-align the content block
+   (keep a read-width cap, keep the page gutters) so it hugs the rail.
+   ===================================================================== */
+.lg-global .pagewrap{padding-left:256px}
+.lg-global .pagewrap.collapsed{padding-left:92px}
+.lg-global .page{
+  margin:0;                       /* was 0 auto — killed the centering band */
+  max-width:none;                 /* container controls width, not centering */
+  padding-left:28px;              /* tuck content closer to the rail */
+}
+/* keep grid rows from over-stretching text on very wide panes */
+.lg-global .page,.lg-global .page-title,.lg-global .page-sub{max-width:none}
+.lg-global .section-desc{max-width:72ch}
+
+/* =====================================================================
+   5. BUTTON MICRO-INTERACTIONS — subtle, snappy.
+   Hover: tiny growth (scale ~1.035) on a fast ease-out = "snappy".
+   Active: press-down shrink + a one-shot "bubble" (specular ripple)
+   expanding from the centre, like liquid responding to the touch.
+   Both respect :disabled. Reduced-motion kills the bubble animation.
+   ===================================================================== */
+.lg-glass .btn{
+  position:relative;overflow:hidden;
+  transition:transform .16s cubic-bezier(.3,.9,.4,1),background var(--dur-fast) var(--ease),
+             color var(--dur-fast) var(--ease),box-shadow var(--dur-fast) var(--ease);
+}
+.lg-glass .btn:not(:disabled):hover{transform:scale(1.035)}
+.lg-glass .btn:not(:disabled):active{transform:scale(.96)}
+/* the click bubble — a ripple that blooms from centre and dissolves */
+.lg-glass .btn::after{
+  content:"";position:absolute;left:50%;top:50%;
+  width:120%;aspect-ratio:1;
+  transform:translate(-50%,-50%) scale(0);opacity:0;
+  border-radius:50%;pointer-events:none;will-change:transform,opacity;
+  background:radial-gradient(circle,color-mix(in oklch,currentColor 24%,transparent),transparent 62%);
+}
+.lg-glass .btn--voice::after,.lg-glass .btn--info::after,.lg-glass .btn--sun::after,
+.lg-glass .btn--sun::after{
+  background:radial-gradient(circle,rgba(255,255,255,.55),transparent 62%)
+}
+.lg-glass .btn:not(:disabled):active::after{
+  animation:lg-bubble .4s ease-out forwards
+}
+@keyframes lg-bubble{
+  0%{transform:translate(-50%,-50%) scale(0);opacity:.85}
+  100%{transform:translate(-50%,-50%) scale(1.9);opacity:0}
+}
+/* the rail collapse + small icon buttons shouldn't feel like CTA buttons — keep growth,
+   but a quieter bubble for the ghost/collapse controls is fine since it's hair-like now */
+.lg-glass.no-pref-motion .btn::after{display:none}
+.lg-glass.no-pref-motion .btn:not(:disabled):hover{transform:none}
+.lg-glass.no-pref-motion .btn:not(:disabled):active{transform:none}
+
+/* --- G. Rich hover on interactive panes (mirrors the Dry job-card hover:
+       border firms up + a hint of background lift; borders are fragile on glass) --- */
+.lg-glass .job{transition:border-color var(--dur-fast) var(--ease),background var(--dur-fast) var(--ease)}
+.lg-glass .job:hover{
+  border-color:var(--hairline-strong);
+  background:color-mix(in oklch,var(--card) 90%,var(--surface-2));
+}
+.lg-glass .group-card{transition:border-color var(--dur-fast) var(--ease),background var(--dur-fast) var(--ease)}
+.lg-glass .group-card:hover{
+  border-color:var(--hairline-strong);
+  background:color-mix(in oklch,var(--card) 92%,var(--surface-2));
+}
+.lg-glass .alert{transition:border-color var(--dur-fast) var(--ease),box-shadow var(--dur-fast) var(--ease)}
+.lg-glass .alert:hover{
+  border-color:var(--hairline-strong);
+  box-shadow:var(--glass-edge-soft);
+}
+
+/* --- H. ATS row `alert` class collides with the global `.alert` component:
+       it picked up that component's 1px border, flex, padding, margin — and the
+       border resolved to currentColor (= --text = near-black) → the harsh black
+       ring around "Keywords". Since "alert" here only means a notify-coloured bar,
+       strip the component chrome from that row entirely. --- */
+.lg-glass .ats-row.alert{
+  display:grid;grid-template-columns:110px 1fr 30px;gap:10px;align-items:center;
+  padding:0;margin:0;border:none;border-radius:0;font-size:unset;background:none}
+.lg-glass .ats-row.alert .bar>span{background:var(--notify-fill)}
+
+/* --- I. Soften the *active* resume-step node (base used `border:var(--text)` =
+       near-black #191713, harsh). Drop to a firm-but-quiet grey, keep the halo. --- */
+.lg-glass .step .node.cur,.lg-glass .rail.collapsed .steps-strip .s.cur{
+  border-color:var(--grey-600)}
+.lg-glass .rail.collapsed .steps-strip .s.cur{border-width:2px}
+
+/* ---------------- the A/B toggle control ---------------- */
+.lg-toggle{position:fixed;right:22px;bottom:22px;z-index:200;display:inline-flex;align-items:center;
+  gap:4px;padding:4px;border-radius:11px;border:1px solid var(--hairline);
+  background:var(--glass-bg-strong);box-shadow:var(--rail-shadow);
+  -webkit-backdrop-filter:blur(12px);backdrop-filter:blur(12px)}
+.lg-toggle button{border:none;background:none;cursor:pointer;padding:7px 12px;border-radius:8px;
+  font-size:12px;font-weight:600;color:var(--muted);display:flex;align-items:center;gap:6px}
+.lg-toggle button svg{width:14px;height:14px}
+.lg-toggle button.on{background:var(--card);color:var(--text);box-shadow:0 0 0 1px var(--hairline)}
